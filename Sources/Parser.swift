@@ -447,15 +447,41 @@ func parse(tokens: [Token]) throws -> Program {
 
         let iterable = try parseExpression()
 
+        let iterableExpr: Expression
+        if typeof(.if) {
+            current += 1 // consume if token
+            let predicate = try parseExpression()
+            iterableExpr = SelectExpression(iterable: iterable as! Expression, test: predicate as! Expression)
+        } else {
+            iterableExpr = iterable as! Expression
+        }
+
         try expect(type: .closeStatement, error: "Expected closing statement token")
 
         var body: [Statement] = []
-        while not(.openStatement, .endFor) {
+        var defaultBlock: [Statement] = []
+
+        while not(.openStatement, .endFor) && not(.openStatement, .else) {
             try body.append(parseAny())
         }
 
+        if typeof(.openStatement, .else) {
+            current += 1 // consume {%
+            try expect(type: .else, error: "Expected else token")
+            try expect(type: .closeStatement, error: "Expected closing statement token")
+
+            while not(.openStatement, .endFor) {
+                try defaultBlock.append(parseAny())
+            }
+        }
+
         if let loopVariable = loopVariable as? Loopvar {
-            return For(loopvar: loopVariable, iterable: iterable as! Expression, body: body)
+            return For(
+                loopvar: loopVariable,
+                iterable: iterableExpr,
+                body: body,
+                defaultBlock: defaultBlock
+            )
         }
 
         throw JinjaError.syntax(

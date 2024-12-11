@@ -67,6 +67,7 @@ struct For: Statement {
     var loopvar: Loopvar
     var iterable: Expression
     var body: [Statement]
+    var defaultBlock: [Statement]
 }
 
 struct MemberExpression: Expression {
@@ -123,4 +124,24 @@ struct KeywordArgumentExpression: Expression {
 
 struct NullLiteral: Literal {
     var value: Any? = nil
+}
+
+struct SelectExpression: Expression {
+    var iterable: Expression
+    var test: Expression
+}
+
+struct Macro: Statement {
+    var name: Identifier
+    var args: [Expression]
+    var body: [Statement]
+}
+
+struct KeywordArgumentsValue: RuntimeValue {
+    var value: [String: any RuntimeValue]
+    var builtins: [String: any RuntimeValue] = [:]
+
+    func bool() -> Bool {
+        !value.isEmpty
+    }
 }

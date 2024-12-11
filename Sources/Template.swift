@@ -27,7 +27,6 @@ public struct Template {
                 throw JinjaError.runtime("\(args)")
             }
         )
-        try env.set(name: "range", value: range)
 
         for (key, value) in items {
             try env.set(name: key, value: value)
