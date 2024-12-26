@@ -296,7 +296,7 @@ struct Interpreter {
                         throw JinjaError.runtime("Cannot unpack non-iterable type: \(type(of:current))")
                     }
                 default:
-                        throw JinjaError.syntaxNotSupported(String(describing: node.loopvar))
+                    throw JinjaError.syntaxNotSupported(String(describing: node.loopvar))
                 }
 
                 let evaluated = try self.evaluateBlock(statements: node.body, environment: scope)
@@ -429,18 +429,22 @@ struct Interpreter {
 
         if left is StringValue, right is ObjectValue {
             switch node.operation.value {
-                case "in":
-                    if let leftString = (left as? StringValue)?.value,
-                       let rightObject = right as? ObjectValue {
-                        return BooleanValue(value: rightObject.value.keys.contains(leftString))
-                    }
-                case "not in":
-                    if let leftString = (left as? StringValue)?.value,
-                       let rightObject = right as? ObjectValue {
-                        return BooleanValue(value: !rightObject.value.keys.contains(leftString))
-                    }
-                default:
-                    throw JinjaError.runtime("Unsupported operation '\(node.operation.value)' between StringValue and ObjectValue")
+            case "in":
+                if let leftString = (left as? StringValue)?.value,
+                    let rightObject = right as? ObjectValue
+                {
+                    return BooleanValue(value: rightObject.value.keys.contains(leftString))
+                }
+            case "not in":
+                if let leftString = (left as? StringValue)?.value,
+                    let rightObject = right as? ObjectValue
+                {
+                    return BooleanValue(value: !rightObject.value.keys.contains(leftString))
+                }
+            default:
+                throw JinjaError.runtime(
+                    "Unsupported operation '\(node.operation.value)' between StringValue and ObjectValue"
+                )
             }
         }
 
@@ -683,7 +687,8 @@ struct Interpreter {
         if let testFunction = environment.tests[node.test.value] {
             let result = try testFunction(operand)
             return BooleanValue(value: node.negate ? !result : result)
-        } else {
+        }
+        else {
             throw JinjaError.runtime("Unknown test: \(node.test.value)")
         }
     }
@@ -718,11 +723,13 @@ struct Interpreter {
             case let statement as FilterExpression:
                 return try self.evaluateFilterExpression(node: statement, environment: environment)
             case let statement as TestExpression:
-              return try self.evaluateTestExpression(node: statement, environment: environment)
+                return try self.evaluateTestExpression(node: statement, environment: environment)
             case is NullLiteral:
                 return NullValue()
             default:
-                throw JinjaError.runtime("Unknown node type: \(type(of:statement)), statement: \(String(describing: statement))")
+                throw JinjaError.runtime(
+                    "Unknown node type: \(type(of:statement)), statement: \(String(describing: statement))"
+                )
             }
         }
         else {

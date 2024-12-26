@@ -14,13 +14,13 @@ enum JinjaError: Error, LocalizedError {
     case todo(String)
     case syntaxNotSupported(String)
 
-  var errorDescription: String? {
-    switch self {
-      case .syntax(let message): return "Syntax error: \(message)"
-      case .parser(let message): return "Parser error: \(message)"
-      case .runtime(let message): return "Runtime error: \(message)"
-      case .todo(let message): return "Todo error: \(message)"
-      case .syntaxNotSupported(let string): return "Syntax not supported: \(string)"
+    var errorDescription: String? {
+        switch self {
+        case .syntax(let message): return "Syntax error: \(message)"
+        case .parser(let message): return "Parser error: \(message)"
+        case .runtime(let message): return "Runtime error: \(message)"
+        case .todo(let message): return "Todo error: \(message)"
+        case .syntaxNotSupported(let string): return "Syntax not supported: \(string)"
+        }
     }
-  }
 }

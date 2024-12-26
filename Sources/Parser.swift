@@ -193,12 +193,14 @@ func parse(tokens: [Token]) throws -> Program {
             var filter = try parsePrimaryExpression()
             if let boolLiteralFilter = filter as? BoolLiteral {
                 filter = Identifier(value: String(boolLiteralFilter.value))
-            } else if filter is NullLiteral {
+            }
+            else if filter is NullLiteral {
                 filter = Identifier(value: "none")
             }
             if let test = filter as? Identifier {
                 operand = TestExpression(operand: operand as! Expression, negate: negate, test: test)
-            } else {
+            }
+            else {
                 throw JinjaError.syntax("Expected identifier for the test")
             }
         }
