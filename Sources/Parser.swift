@@ -449,7 +449,7 @@ func parse(tokens: [Token]) throws -> Program {
 
         let iterableExpr: Expression
         if typeof(.if) {
-            current += 1 // consume if token
+            current += 1  // consume if token
             let predicate = try parseExpression()
             iterableExpr = SelectExpression(iterable: iterable as! Expression, test: predicate as! Expression)
         } else {
@@ -466,7 +466,7 @@ func parse(tokens: [Token]) throws -> Program {
         }
 
         if typeof(.openStatement, .else) {
-            current += 1 // consume {%
+            current += 1  // consume {%
             try expect(type: .else, error: "Expected else token")
             try expect(type: .closeStatement, error: "Expected closing statement token")
 
