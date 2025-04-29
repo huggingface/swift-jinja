@@ -189,6 +189,30 @@ struct StringValue: RuntimeValue {
             "lstrip": FunctionValue(value: { _, _ in
                 StringValue(value: value.replacingOccurrences(of: "^\\s+", with: "", options: .regularExpression))
             }),
+            "split": FunctionValue(value: { args, _ in
+                guard let separatorArg = args.first as? StringValue else {
+                    // Default split by whitespace if no separator is provided or if it's not a string
+                    // (This mimics Python's str.split() behavior loosely)
+                    let components = value.split(whereSeparator: { $0.isWhitespace })
+                    return ArrayValue(value: components.map { StringValue(value: String($0)) })
+                }
+                let separator = separatorArg.value
+                // TODO: Add optional maxsplit argument handling if needed
+                let components = value.components(separatedBy: separator)
+                return ArrayValue(value: components.map { StringValue(value: $0) })
+            }),
+            "startswith": FunctionValue(value: { args, _ in
+                guard let prefixArg = args.first as? StringValue else {
+                    throw JinjaError.runtime("startswith requires a string prefix argument")
+                }
+                return BooleanValue(value: value.hasPrefix(prefixArg.value))
+            }),
+            "endswith": FunctionValue(value: { args, _ in
+                guard let suffixArg = args.first as? StringValue else {
+                    throw JinjaError.runtime("endswith requires a string suffix argument")
+                }
+                return BooleanValue(value: value.hasSuffix(suffixArg.value))
+            }),
         ]
     }
 
