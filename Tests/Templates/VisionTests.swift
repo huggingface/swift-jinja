@@ -219,7 +219,7 @@ final class VisionTests: XCTestCase {
 
             Environment: ipython
             Cutting Knowledge Date: December 2023
-            Today Date: 26 Jul 2024
+            Today Date: \(Environment.formatDate(Date(), withFormat: "%d %b %Y"))
 
             You are a helpful assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>
 

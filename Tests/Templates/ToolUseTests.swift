@@ -584,7 +584,7 @@ final class ToolUseTests: XCTestCase {
 
             Environment: ipython
             Cutting Knowledge Date: December 2023
-            Today Date: 26 Jul 2024
+            Today Date: \(Environment.formatDate(Date(), withFormat: "%d %b %Y"))
 
             <|eot_id|><|start_header_id|>user<|end_header_id|>
 

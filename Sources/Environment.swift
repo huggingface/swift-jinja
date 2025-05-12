@@ -20,7 +20,24 @@ class Environment {
                 throw JinjaError.runtime("`namespace` expects either zero arguments or a single object argument")
             }
             return objectArg
-        })
+        }),
+
+        // Add strftime_now function to handle date formatting in templates
+        "strftime_now": FunctionValue(value: { args, _ in
+            let now = Date()
+
+            if args.count > 0, let formatArg = args[0] as? StringValue {
+                let format = formatArg.value
+
+                let result = formatDate(now, withFormat: format)
+                return StringValue(value: result)
+            }
+
+            // Default format if no arguments
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM dd, yyyy"
+            return StringValue(value: formatter.string(from: now))
+        }),
     ]
 
     lazy var tests: [String: (any RuntimeValue...) throws -> Bool] = [
@@ -442,7 +459,7 @@ class Environment {
             )
         },
         "format": { args, env in
-            guard let formatString = args[0] as? StringValue else {
+            guard let format = args[0] as? StringValue else {
                 throw JinjaError.runtime("format filter requires a format string")
             }
             // Get the values after the format string
@@ -461,7 +478,7 @@ class Environment {
                 return String(describing: arg)
             }
             // Replace %s with values one by one
-            var result = formatString.value
+            var result = format.value
             for value in formatValues {
                 if let range = result.range(of: "%s") {
                     result.replaceSubrange(range, with: value)
@@ -1669,8 +1686,22 @@ class Environment {
 
     func lookupVariable(name: String) -> any RuntimeValue {
         do {
-            return try self.resolve(name: name).variables[name] ?? UndefinedValue()
+            // Look up the variable in the environment chain
+            let env = try self.resolve(name: name)
+
+            // Get the value, handling potential conversions from Swift native types
+            if let value = env.variables[name] {
+                // If we have a raw Swift boolean, ensure it's properly converted to BooleanValue
+                if let boolValue = value.value as? Bool {
+                    return BooleanValue(value: boolValue)
+                }
+                return value
+            }
+
+            // Variable doesn't exist
+            return UndefinedValue()
         } catch {
+            // Cannot resolve variable name
             return UndefinedValue()
         }
     }
@@ -1772,5 +1803,155 @@ class Environment {
 
     private func doLessThanOrEqual(_ args: [any RuntimeValue]) throws -> Bool {
         return try doLessThan(args) || doEqualTo(args)
+    }
+
+    /// Formats a date using strftime-style format specifiers
+    /// - Parameters:
+    ///   - date: The date to format
+    ///   - format: A strftime-compatible format string
+    /// - Returns: The formatted date string
+    static func formatDate(_ date: Date, withFormat format: String) -> String {
+
+        let calendar = Calendar.current
+        let components = calendar.dateComponents(
+            [
+                .year, .month, .day, .weekday, .hour, .minute, .second, .nanosecond, .timeZone, .weekOfYear,
+                .yearForWeekOfYear, .weekdayOrdinal, .quarter,
+            ],
+            from: date
+        )
+
+        var result = ""
+        var i = 0
+
+        while i < format.count {
+            let currentIndex = format.index(format.startIndex, offsetBy: i)
+            let currentChar = format[currentIndex]
+
+            if currentChar == "%" && i + 1 < format.count {
+                let nextIndex = format.index(format.startIndex, offsetBy: i + 1)
+                let nextChar = format[nextIndex]
+
+                // Check for non-padded variant
+                var isPadded = true
+                var formatChar = nextChar
+
+                if nextChar == "-" && i + 2 < format.count {
+                    isPadded = false
+                    let formatCharIndex = format.index(format.startIndex, offsetBy: i + 2)
+                    formatChar = format[formatCharIndex]
+                    i += 1  // Skip the "-" character
+                }
+
+                switch formatChar {
+                case "a":
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "EEE"
+                    result += formatter.string(from: date)
+                case "A":
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "EEEE"
+                    result += formatter.string(from: date)
+                case "w":
+                    let weekday = (components.weekday ?? 1) - 1
+                    result += "\(weekday)"
+                case "d":
+                    let day = components.day ?? 1
+                    result += isPadded ? String(format: "%02d", day) : "\(day)"
+                case "b":
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "MMM"
+                    result += formatter.string(from: date)
+                case "B":
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "MMMM"
+                    result += formatter.string(from: date)
+                case "m":
+                    let month = components.month ?? 1
+                    result += isPadded ? String(format: "%02d", month) : "\(month)"
+                case "y":
+                    let year = components.year ?? 0
+                    let shortYear = year % 100
+                    result += isPadded ? String(format: "%02d", shortYear) : "\(shortYear)"
+                case "Y":
+                    let year = components.year ?? 0
+                    result += "\(year)"
+                case "H":
+                    let hour = components.hour ?? 0
+                    result += isPadded ? String(format: "%02d", hour) : "\(hour)"
+                case "I":
+                    var hour12 = (components.hour ?? 0) % 12
+                    if hour12 == 0 { hour12 = 12 }
+                    result += isPadded ? String(format: "%02d", hour12) : "\(hour12)"
+                case "p":
+                    let hour = components.hour ?? 0
+                    result += hour < 12 ? "AM" : "PM"
+                case "M":
+                    let minute = components.minute ?? 0
+                    result += isPadded ? String(format: "%02d", minute) : "\(minute)"
+                case "S":
+                    let second = components.second ?? 0
+                    result += isPadded ? String(format: "%02d", second) : "\(second)"
+                case "f":
+                    let nano = components.nanosecond ?? 0
+                    let micro = nano / 1000
+                    result += String(format: "%06d", micro)
+                case "z":
+                    guard let timeZone = components.timeZone else {
+                        result += "+0000"
+                        break
+                    }
+                    let hours = timeZone.secondsFromGMT() / 3600
+                    let minutes = abs(timeZone.secondsFromGMT() % 3600) / 60
+                    let sign = hours >= 0 ? "+" : "-"
+                    result += "\(sign)\(String(format: "%02d", abs(hours)))\(String(format: "%02d", minutes))"
+                case "Z":
+                    guard let timeZone = components.timeZone else {
+                        result += ""
+                        break
+                    }
+                    result += timeZone.abbreviation() ?? ""
+                case "j":
+                    let dayOfYear = calendar.ordinality(of: .day, in: .year, for: date) ?? 1
+                    result += isPadded ? String(format: "%03d", dayOfYear) : "\(dayOfYear)"
+                case "U":
+                    var cal = Calendar(identifier: .gregorian)
+                    cal.firstWeekday = 1  // Sunday
+                    let week = cal.component(.weekOfYear, from: date)
+                    result += String(format: "%02d", week)
+                case "W":
+                    var cal = Calendar(identifier: .gregorian)
+                    cal.firstWeekday = 2  // Monday
+                    let week = cal.component(.weekOfYear, from: date)
+                    result += String(format: "%02d", week)
+                case "c":
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .full
+                    formatter.timeStyle = .full
+                    result += formatter.string(from: date)
+                case "x":
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .short
+                    formatter.timeStyle = .none
+                    result += formatter.string(from: date)
+                case "X":
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .none
+                    formatter.timeStyle = .medium
+                    result += formatter.string(from: date)
+                case "%":
+                    result += "%"
+                default:
+                    // Unknown format, just append as is
+                    result += "%\(formatChar)"
+                }
+
+                i += 2  // Skip the % and the format character
+            } else {
+                result.append(currentChar)
+                i += 1
+            }
+        }
+        return result
     }
 }

@@ -268,7 +268,7 @@ struct Interpreter {
             try environment.setVariable(name: variableName, value: rhs)
         } else if let member = node.assignee as? MemberExpression {
             let object = try self.evaluate(statement: member.object, environment: environment)
-            guard var objectValue = object as? ObjectValue else {
+            guard let objectValue = object as? ObjectValue else {
                 throw JinjaError.runtime("Cannot assign to member of non-object")
             }
             guard let property = member.property as? Identifier else {
@@ -289,6 +289,16 @@ struct Interpreter {
     }
 
     func evaluateIf(node: If, environment: Environment) throws -> StringValue {
+        // Special handling for direct variable checks
+        if let identifier = node.test as? Identifier {
+            // For cases like {% if thinking %}, get the variable directly
+            let value = environment.lookupVariable(name: identifier.value)
+            // Use the bool method which will return false for undefined values
+            let testResult = value.bool()
+            return try self.evaluateBlock(statements: testResult ? node.body : node.alternate, environment: environment)
+        }
+
+        // For non-identifier checks, evaluate normally
         let test = try self.evaluate(statement: node.test, environment: environment)
         return try self.evaluateBlock(statements: test.bool() ? node.body : node.alternate, environment: environment)
     }
@@ -572,10 +582,30 @@ struct Interpreter {
                 return BooleanValue(value: true)
             }
         }
-        if left is UndefinedValue || right is UndefinedValue {
-            throw JinjaError.runtime("Cannot perform operation on undefined values")
-        } else if left is NullValue || right is NullValue {
-            throw JinjaError.runtime("Cannot perform operation on null values")
+
+        // Handle operations with undefined or null values
+        if left is UndefinedValue || right is UndefinedValue || left is NullValue || right is NullValue {
+            // Boolean operations return false
+            if ["and", "or", "==", "!=", ">", "<", ">=", "<=", "in", "not in"].contains(node.operation.value) {
+                return BooleanValue(value: false)
+            }
+
+            // String concatenation with undefined/null
+            if node.operation.value == "+" {
+                if left is StringValue && !(right is UndefinedValue || right is NullValue) {
+                    return left
+                } else if right is StringValue && !(left is UndefinedValue || left is NullValue) {
+                    return right
+                }
+                return StringValue(value: "")
+            }
+
+            // Math operations with undefined/null
+            if ["-", "*", "/", "%"].contains(node.operation.value) {
+                return NumericValue(value: 0)
+            }
+
+            return BooleanValue(value: false)
         } else if let left = left as? NumericValue, let right = right as? NumericValue {
             switch node.operation.value {
             case "+":
@@ -735,7 +765,7 @@ struct Interpreter {
                     rightValue = String(describing: rightNumeric.value)
                 } else if let rightBoolean = right as? BooleanValue {
                     rightValue = String(rightBoolean.value)
-                } else if right is UndefinedValue {
+                } else if right is UndefinedValue || right is NullValue {
                     rightValue = ""
                 } else {
                     throw JinjaError.runtime("Unsupported right operand type for string concatenation")
