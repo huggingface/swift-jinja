@@ -661,34 +661,32 @@ final class ChatTemplateTests: XCTestCase {
     }
 
     func testGraniteWithoutThinking() throws {
-        let chatTemplate = """
-            {# Simplified version of granite template to test thinking variable #}\n{%- if messages[0]['role'] == 'system' %}\n     {%- set system_message = messages[0]['content'] %}\n     {%- set loop_messages = messages[1:] %}\n {%- else %}\n     {%- set system_message = \"Knowledge Cutoff Date: April 2024. Today's Date: May 26, 2024. You are Granite, developed by IBM.\" %}\n     {%- if thinking %}\n     {%- set system_message = system_message + \" You are a helpful AI assistant.\\nRespond to every user query in a comprehensive and detailed way. You can write down your thoughts and reasoning process before responding. Write your thoughts between <think></think> and write your response between <response></response> for each user query.\" %}\n     {%- else %}\n         {%- set system_message = system_message + \" You are a helpful AI assistant.\" %}\n     {%- endif %}\n     {%- set loop_messages = messages %}\n {%- endif %}\nSystem message: {{ system_message }}\n{%- for message in loop_messages %}\nMessage ({{ message['role'] }}): {{ message['content'] }}\n{%- endfor %}\n{%- if add_generation_prompt %}\n[Generation prompt enabled]\n{%- endif %}
-            """
         let userMessage = [
             "role": "user",
             "content": "What is 1+1?",
         ]
-        let template = try Template(chatTemplate)
+        let template = try Template(ChatTemplate.granite3_3)
         let result = try template.render([
             "messages": [userMessage],
             "bos_token": "<|begin_of_text|>",
             "add_generation_prompt": true,
         ])
         let target = """
-            System message: Knowledge Cutoff Date: April 2024. Today's Date: May 26, 2024. You are Granite, developed by IBM. You are a helpful AI assistant.Message (user): What is 1+1?[Generation prompt enabled]
+            <|start_of_role|>system<|end_of_role|>Knowledge Cutoff Date: April 2024.
+            Today's Date: \(Environment.formatDate(Date(), withFormat: "%B %d, %Y")).
+            You are Granite, developed by IBM. You are a helpful AI assistant.<|end_of_text|>
+            <|start_of_role|>user<|end_of_role|>What is 1+1?<|end_of_text|>
+            <|start_of_role|>assistant<|end_of_role|>
             """
         XCTAssertEqual(result, target)
     }
 
     func testGraniteWithThinking() throws {
-        let chatTemplate = """
-            {# Simplified version of granite template to test thinking variable #}\n{%- if messages[0]['role'] == 'system' %}\n     {%- set system_message = messages[0]['content'] %}\n     {%- set loop_messages = messages[1:] %}\n {%- else %}\n     {%- set system_message = \"Knowledge Cutoff Date: April 2024. Today's Date: May 26, 2024. You are Granite, developed by IBM.\" %}\n     {%- if thinking %}\n     {%- set system_message = system_message + \" You are a helpful AI assistant.\\nRespond to every user query in a comprehensive and detailed way. You can write down your thoughts and reasoning process before responding. Write your thoughts between <think></think> and write your response between <response></response> for each user query.\" %}\n     {%- else %}\n         {%- set system_message = system_message + \" You are a helpful AI assistant.\" %}\n     {%- endif %}\n     {%- set loop_messages = messages %}\n {%- endif %}\nSystem message: {{ system_message }}\n{%- for message in loop_messages %}\nMessage ({{ message['role'] }}): {{ message['content'] }}\n{%- endfor %}\n{%- if add_generation_prompt %}\n[Generation prompt enabled]\n{%- endif %}
-            """
         let userMessage = [
             "role": "user",
             "content": "What is 1+1?",
         ]
-        let template = try Template(chatTemplate)
+        let template = try Template(ChatTemplate.granite3_3)
         let result = try template.render([
             "messages": [userMessage],
             "bos_token": "<|begin_of_text|>",
@@ -696,8 +694,12 @@ final class ChatTemplateTests: XCTestCase {
             "thinking": true,
         ])
         let target = """
-            System message: Knowledge Cutoff Date: April 2024. Today's Date: May 26, 2024. You are Granite, developed by IBM. You are a helpful AI assistant.
-            Respond to every user query in a comprehensive and detailed way. You can write down your thoughts and reasoning process before responding. Write your thoughts between <think></think> and write your response between <response></response> for each user query.Message (user): What is 1+1?[Generation prompt enabled]
+            <|start_of_role|>system<|end_of_role|>Knowledge Cutoff Date: April 2024.
+            Today's Date: \(Environment.formatDate(Date(), withFormat: "%B %d, %Y")).
+            You are Granite, developed by IBM. You are a helpful AI assistant.
+            Respond to every user query in a comprehensive and detailed way. You can write down your thoughts and reasoning process before responding. In the thought process, engage in a comprehensive cycle of analysis, summarization, exploration, reassessment, reflection, backtracing, and iteration to develop well-considered thinking process. In the response section, based on various attempts, explorations, and reflections from the thoughts section, systematically present the final solution that you deem correct. The response should summarize the thought process. Write your thoughts between <think></think> and write your response between <response></response> for each user query.<|end_of_text|>
+            <|start_of_role|>user<|end_of_role|>What is 1+1?<|end_of_text|>
+            <|start_of_role|>assistant<|end_of_role|>
             """
         XCTAssertEqual(result, target)
     }
