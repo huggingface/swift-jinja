@@ -715,27 +715,29 @@ final class ChatTemplateTests: XCTestCase {
             "add_generation_prompt": true,
         ])
         let target = """
-        <|im_start|>system
-        ## Metadata
+            <|im_start|>system
+            ## Metadata
 
-        Knowledge Cutoff Date: June 2025
-        Today Date: \(Environment.formatDate(Date(), withFormat: "%d %B %Y"))
-        Reasoning Mode: /think
+            Knowledge Cutoff Date: June 2025
+            Today Date: \(Environment.formatDate(Date(), withFormat: "%d %B %Y"))
+            Reasoning Mode: /think
 
-        ## Custom Instructions
+            ## Custom Instructions
 
-        You are a helpful AI assistant named SmolLM, trained by Hugging Face. Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracking, and iteration to develop well-considered thinking process. Please structure your response into two main sections: Thought and Solution using the specified format: <think> Thought section </think> Solution section. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion.
+            You are a helpful AI assistant named SmolLM, trained by Hugging Face. Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracking, and iteration to develop well-considered thinking process. Please structure your response into two main sections: Thought and Solution using the specified format: <think> Thought section </think> Solution section. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion.
 
-        <|im_start|>user
-        What is the weather in Paris today?<|im_end|>
-        <|im_start|>assistant
+            <|im_start|>user
+            What is the weather in Paris today?<|im_end|>
+            <|im_start|>assistant
 
-        """
+            """
         XCTAssertEqual(result, target)
     }
-    
+
     func testSmolLM3FromHF() throws {
-        let data =  try? Data(contentsOf: URL(string: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B/raw/main/chat_template.jinja")!)
+        let data = try? Data(
+            contentsOf: URL(string: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B/raw/main/chat_template.jinja")!
+        )
         let chatTemplate = String(data: data!, encoding: .utf8)
         let userMessage = [
             "role": "user",
@@ -747,22 +749,22 @@ final class ChatTemplateTests: XCTestCase {
             "add_generation_prompt": true,
         ])
         let target = """
-        <|im_start|>system
-        ## Metadata
+            <|im_start|>system
+            ## Metadata
 
-        Knowledge Cutoff Date: June 2025
-        Today Date: \(Environment.formatDate(Date(), withFormat: "%d %B %Y"))
-        Reasoning Mode: /think
+            Knowledge Cutoff Date: June 2025
+            Today Date: \(Environment.formatDate(Date(), withFormat: "%d %B %Y"))
+            Reasoning Mode: /think
 
-        ## Custom Instructions
+            ## Custom Instructions
 
-        You are a helpful AI assistant named SmolLM, trained by Hugging Face. Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracking, and iteration to develop well-considered thinking process. Please structure your response into two main sections: Thought and Solution using the specified format: <think> Thought section </think> Solution section. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion.
+            You are a helpful AI assistant named SmolLM, trained by Hugging Face. Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracking, and iteration to develop well-considered thinking process. Please structure your response into two main sections: Thought and Solution using the specified format: <think> Thought section </think> Solution section. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion.
 
-        <|im_start|>user
-        What is the weather in Paris today?<|im_end|>
-        <|im_start|>assistant
+            <|im_start|>user
+            What is the weather in Paris today?<|im_end|>
+            <|im_start|>assistant
 
-        """
+            """
         XCTAssertEqual(result, target)
     }
 }
