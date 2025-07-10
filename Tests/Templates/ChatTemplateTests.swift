@@ -767,4 +767,48 @@ final class ChatTemplateTests: XCTestCase {
             """
         XCTAssertEqual(result, target)
     }
+
+    func testSmolLM3WithSystemPrompt() throws {
+        let data = try? Data(
+            contentsOf: URL(string: "https://huggingface.co/HuggingFaceTB/SmolLM3-3B/raw/main/chat_template.jinja")!
+        )
+        let chatTemplate = String(data: data!, encoding: .utf8)
+        let systemMessage = [
+            "role": "system",
+            "content": "You are a assistant.",
+        ]
+        let userMessage = [
+            "role": "user",
+            "content": "What is the weather in Paris today?",
+        ]
+        let template = try Template(chatTemplate!)
+        let result = try template.render([
+            "messages": [
+                systemMessage,
+                userMessage,
+            ],
+            "add_generation_prompt": true,
+            "eos_token": "<|im_end|>",
+            "pad_token": "<|im_end|>",
+        ])
+
+        let target = """
+            <|im_start|>system
+            ## Metadata
+
+            Knowledge Cutoff Date: June 2025
+            Today Date: \(Environment.formatDate(Date(), withFormat: "%d %B %Y"))
+            Reasoning Mode: /think
+
+            ## Custom Instructions
+
+            You are a assistant.
+
+            <|im_start|>user
+            What is the weather in Paris today?<|im_end|>
+            <|im_start|>assistant
+
+            """
+        XCTAssertEqual(result, target)
+    }
 }
