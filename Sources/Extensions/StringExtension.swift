@@ -17,4 +17,24 @@ extension String {
         let endPosition = index(startIndex, offsetBy: end)
         return String(self[startPosition ..< endPosition])
     }
+
+    func replacingOccurrences(of target: String, with replacement: String, count: Int) -> String {
+        guard count > 0 else { return self }
+
+        var result = self
+        var replacementCount = 0
+        var searchStartIndex = result.startIndex
+
+        while replacementCount < count,
+            let range = result.range(of: target, range: searchStartIndex ..< result.endIndex)
+        {
+            result.replaceSubrange(range, with: replacement)
+            replacementCount += 1
+
+            let offset = replacement.count
+            searchStartIndex = result.index(range.lowerBound, offsetBy: offset)
+        }
+
+        return result
+    }
 }

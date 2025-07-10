@@ -213,6 +213,44 @@ struct StringValue: RuntimeValue {
                 }
                 return BooleanValue(value: value.hasSuffix(suffixArg.value))
             }),
+            "replace": FunctionValue(value: { args, _ in
+                guard args.count >= 2 else {
+                    throw JinjaError.runtime("replace() requires at least two arguments")
+                }
+
+                guard let oldValue = args[0] as? StringValue else {
+                    throw JinjaError.runtime("replace() first argument must be a string")
+                }
+
+                guard let newValue = args[1] as? StringValue else {
+                    throw JinjaError.runtime("replace() second argument must be a string")
+                }
+
+                var count: any RuntimeValue = NullValue()
+                if args.count > 2 {
+                    if let countValue = args[2] as? KeywordArgumentsValue {
+                        return countValue.value["count"] ?? NullValue()
+                    } else {
+                        count = args[2]
+                    }
+                }
+
+                if !(count is NumericValue || count is NullValue) {
+                    throw JinjaError.runtime("replace() count argument must be a number or null")
+                }
+
+                if let countValue = count as? NumericValue, let maxReplacements = countValue.value as? Int {
+                    return StringValue(
+                        value: value.replacingOccurrences(
+                            of: oldValue.value,
+                            with: newValue.value,
+                            count: maxReplacements
+                        )
+                    )
+                } else {
+                    return StringValue(value: value.replacingOccurrences(of: oldValue.value, with: newValue.value))
+                }
+            }),
         ]
     }
 
