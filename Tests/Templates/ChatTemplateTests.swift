@@ -715,24 +715,22 @@ final class ChatTemplateTests: XCTestCase {
             "add_generation_prompt": true,
         ])
         let target = """
-            <|im_start|>system
-            # Tools
+        <|im_start|>system
+        ## Metadata
 
-            You may call one or more functions to assist with the user query.
+        Knowledge Cutoff Date: June 2025
+        Today Date: \(Environment.formatDate(Date(), withFormat: "%d %B %Y"))
+        Reasoning Mode: /think
 
-            You are provided with function signatures within <tools></tools> XML tags:
-            <tools>
-            {"function": {"description": "Get the current weather in a given location", "name": "get_current_weather", "parameters": {"properties": {"location": {"description": "The city and state, e.g. San Francisco, CA", "type": "string"}, "unit": {"enum": ["celsius", "fahrenheit"], "type": "string"}}, "required": ["location"], "type": "object"}}, "type": "function"}
-            </tools>
+        ## Custom Instructions
 
-            For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
-            <tool_call>
-            {"name": <function-name>, "arguments": <args-json-object>}
-            </tool_call><|im_end|>
-            <|im_start|>user
-            What is the weather in Paris today?<|im_end|>
-            <|im_start|>assistant
-            """
+        You are a helpful AI assistant named SmolLM, trained by Hugging Face. Your role as an assistant involves thoroughly exploring questions through a systematic thinking process before providing the final precise and accurate solutions. This requires engaging in a comprehensive cycle of analysis, summarizing, exploration, reassessment, reflection, backtracking, and iteration to develop well-considered thinking process. Please structure your response into two main sections: Thought and Solution using the specified format: <think> Thought section </think> Solution section. In the Thought section, detail your reasoning process in steps. Each step should include detailed considerations such as analysing questions, summarizing relevant findings, brainstorming new ideas, verifying the accuracy of the current steps, refining any errors, and revisiting previous steps. In the Solution section, based on various attempts, explorations, and reflections from the Thought section, systematically present the final solution that you deem correct. The Solution section should be logical, accurate, and concise and detail necessary steps needed to reach the conclusion.
+
+        <|im_start|>user
+        What is the weather in Paris today?<|im_end|>
+        <|im_start|>assistant
+
+        """
         XCTAssertEqual(result, target)
     }
 }

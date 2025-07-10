@@ -285,23 +285,12 @@ func parse(tokens: [Token]) throws -> Program {
         return left
     }
 
-    func parseConcatExpression() throws -> Expression {
-        var left = try parseMultiplicativeExpression()
-        while typeof(.concatBinaryOperator) {
-            let operation = tokens[current]
-            current += 1
-            let right = try parseMultiplicativeExpression()
-            left = BinaryExpression(operation: operation, left: left, right: right)
-        }
-        return left
-    }
-
     func parseAdditiveExpression() throws -> Expression {
-        var left = try parseConcatExpression()
+        var left = try parseMultiplicativeExpression()
         while typeof(.additiveBinaryOperator) {
             let operation = tokens[current]
             current += 1
-            let right = try parseConcatExpression()
+            let right = try parseMultiplicativeExpression()
             left = BinaryExpression(operation: operation, left: left, right: right)
         }
         return left
