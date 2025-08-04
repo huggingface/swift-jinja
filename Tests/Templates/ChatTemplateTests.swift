@@ -811,4 +811,24 @@ final class ChatTemplateTests: XCTestCase {
             """
         XCTAssertEqual(result, target)
     }
+
+    func testQwen3Coder() throws {
+        let userMessage = [
+            "role": "user",
+            "content": "Why is the sky blue?",
+        ]
+        let template = try Template(ChatTemplate.qwen3_coder)
+        let result = try template.render([
+            "messages": [userMessage],
+            "bos_token": "<|begin_of_text|>",
+            "add_generation_prompt": true,
+        ])
+        let target = """
+            <|im_start|>user
+            Why is the sky blue?<|im_end|>
+            <|im_start|>assistant
+
+            """
+        XCTAssertEqual(result, target)
+    }
 }

@@ -698,6 +698,10 @@ class Environment {
                 throw JinjaError.runtime("length filter expects one argument")
             }
 
+            if arg is UndefinedValue || arg is NullValue {
+                return NumericValue(value: 0)
+            }
+
             if let arrayValue = arg as? ArrayValue {
                 return NumericValue(value: arrayValue.value.count)
             } else if let stringValue = arg as? StringValue {
