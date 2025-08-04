@@ -831,7 +831,7 @@ final class ChatTemplateTests: XCTestCase {
             """
         XCTAssertEqual(result, target)
     }
-    
+
     func testQwen3CoderToolCallsAndResponse() throws {
         let toolCallMessages = [
             [
@@ -847,16 +847,16 @@ final class ChatTemplateTests: XCTestCase {
                             "name": "get_weather",
                             "arguments": [
                                 "location": "Shenzhen, China",
-                                "unit": "celsius"
-                            ]
+                                "unit": "celsius",
+                            ],
                         ]
                     ]
-                ]
+                ],
             ],
             [
                 "role": "tool",
-                "content": "The current weather in Shenzhen, China is 22°C with clear skies."
-            ]
+                "content": "The current weather in Shenzhen, China is 22°C with clear skies.",
+            ],
         ]
         let template = try Template(ChatTemplate.qwen3_coder)
         let result = try template.render([
