@@ -831,4 +831,62 @@ final class ChatTemplateTests: XCTestCase {
             """
         XCTAssertEqual(result, target)
     }
+    
+    func testQwen3CoderToolCallsAndResponse() throws {
+        let toolCallMessages = [
+            [
+                "role": "user",
+                "content": "What's the weather in Shenzhen?",
+            ],
+            [
+                "role": "assistant",
+                "content": "I'll check the weather in Shenzhen for you.",
+                "tool_calls": [
+                    [
+                        "function": [
+                            "name": "get_weather",
+                            "arguments": [
+                                "location": "Shenzhen, China",
+                                "unit": "celsius"
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            [
+                "role": "tool",
+                "content": "The current weather in Shenzhen, China is 22°C with clear skies."
+            ]
+        ]
+        let template = try Template(ChatTemplate.qwen3_coder)
+        let result = try template.render([
+            "messages": toolCallMessages,
+            "add_generation_prompt": true,
+        ])
+        let target = """
+            <|im_start|>user
+            What's the weather in Shenzhen?<|im_end|>
+            <|im_start|>assistant
+            I'll check the weather in Shenzhen for you.
+
+            <tool_call>
+            <function=get_weather>
+            <parameter=location>
+            Shenzhen, China
+            </parameter>
+            <parameter=unit>
+            celsius
+            </parameter>
+            </function>
+            </tool_call><|im_end|>
+            <|im_start|>user
+            <tool_response>
+            The current weather in Shenzhen, China is 22°C with clear skies.
+            </tool_response>
+            <|im_end|>
+            <|im_start|>assistant
+
+            """
+        XCTAssertEqual(result, target)
+    }
 }

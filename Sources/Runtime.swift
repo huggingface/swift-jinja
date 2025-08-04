@@ -136,6 +136,9 @@ class ObjectValue: RuntimeValue, Sequence {
                     }
                 )
             }),
+            "keys": FunctionValue(value: { _, _ in
+                ArrayValue(value: orderedKeys.map { StringValue(value: $0) })
+            }),
         ]
     }
 
