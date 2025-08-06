@@ -890,48 +890,63 @@ final class ChatTemplateTests: XCTestCase {
             """
         XCTAssertEqual(result, target)
     }
-    
+
     func testQwen3CoderWithEnum() throws {
         let toolWithEnum: OrderedDictionary<String, Any> = [
             "type": "function",
-            "function": OrderedDictionary<String, Any>(dictionaryLiteral:
-                ("name", "get_weather"),
+            "function": OrderedDictionary<String, Any>(
+                dictionaryLiteral: ("name", "get_weather"),
                 ("description", "Get weather information for a specified location"),
-                ("parameters", OrderedDictionary<String, Any>(dictionaryLiteral:
-                    ("type", "object"),
-                    ("properties", OrderedDictionary<String, Any>(dictionaryLiteral:
-                        ("location", OrderedDictionary<String, Any>(dictionaryLiteral:
-                            ("type", "string"),
-                            ("description", "City and state, e.g. San Francisco, CA")
-                        )),
-                        ("unit", OrderedDictionary<String, Any>(dictionaryLiteral:
-                            ("type", "string"),
-                            ("description", "Temperature unit"),
-                            ("enum", ["celsius", "fahrenheit"])
-                        )),
-                        ("format", OrderedDictionary<String, Any>(dictionaryLiteral:
-                            ("type", "string"),
-                            ("description", "Return format"),
-                            ("enum", ["json", "text", "xml"])
-                        ))
-                    )),
-                    ("required", ["location"])
-                ))
-            )
+                (
+                    "parameters",
+                    OrderedDictionary<String, Any>(
+                        dictionaryLiteral: ("type", "object"),
+                        (
+                            "properties",
+                            OrderedDictionary<String, Any>(
+                                dictionaryLiteral: (
+                                    "location",
+                                    OrderedDictionary<String, Any>(
+                                        dictionaryLiteral: ("type", "string"),
+                                        ("description", "City and state, e.g. San Francisco, CA")
+                                    )
+                                ),
+                                (
+                                    "unit",
+                                    OrderedDictionary<String, Any>(
+                                        dictionaryLiteral: ("type", "string"),
+                                        ("description", "Temperature unit"),
+                                        ("enum", ["celsius", "fahrenheit"])
+                                    )
+                                ),
+                                (
+                                    "format",
+                                    OrderedDictionary<String, Any>(
+                                        dictionaryLiteral: ("type", "string"),
+                                        ("description", "Return format"),
+                                        ("enum", ["json", "text", "xml"])
+                                    )
+                                )
+                            )
+                        ),
+                        ("required", ["location"])
+                    )
+                )
+            ),
         ]
-        
+
         let userMessage = [
             "role": "user",
             "content": "What's the weather like in Beijing today?",
         ]
-        
+
         let template = try Template(ChatTemplate.qwen3_coder)
         let result = try template.render([
             "messages": [userMessage],
             "tools": [toolWithEnum],
             "add_generation_prompt": true,
         ])
-        
+
         let target = """
             <|im_start|>system
             You are Qwen, a helpful AI assistant that can interact with a computer to solve tasks.
@@ -994,14 +1009,16 @@ final class ChatTemplateTests: XCTestCase {
             """
         XCTAssertEqual(result, target)
     }
-    
+
     func testReject() throws {
-        let template = try Template(#"""
+        let template = try Template(
+            #"""
             {%- set handled_keys = ['type', 'description', 'enum', 'required'] %}
             {%- set all_keys = ['type', 'name', 'enum', 'value', 'description', 'age', 'required', 'status'] %}
 
             Filtered keys: {{ all_keys | reject("in", handled_keys) | list }}
-            """#)
+            """#
+        )
         let result = try template.render([:])
         print(result)
     }

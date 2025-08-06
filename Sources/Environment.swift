@@ -860,16 +860,16 @@ class Environment {
             guard let test = env.tests[testName.value] else {
                 throw JinjaError.runtime("Unknown test '\(testName.value)'")
             }
-            
+
             // Pre-compute additional arguments to avoid repeated array creation
             let additionalArgs = Array(args[2...])
-            
+
             // Use compactMap for better functional style and performance
             let result = try arrayValue.value.compactMap { item -> (any RuntimeValue)? in
                 let testArgs = [item] + additionalArgs
                 return try !test(testArgs) ? item : nil
             }
-            
+
             return ArrayValue(value: result)
         },
         "rejectattr": { args, env in
