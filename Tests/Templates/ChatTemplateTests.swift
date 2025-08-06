@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import OrderedCollections
 
 @testable import Jinja
 
@@ -888,5 +889,120 @@ final class ChatTemplateTests: XCTestCase {
 
             """
         XCTAssertEqual(result, target)
+    }
+    
+    func testQwen3CoderWithEnum() throws {
+        let toolWithEnum: OrderedDictionary<String, Any> = [
+            "type": "function",
+            "function": OrderedDictionary<String, Any>(dictionaryLiteral:
+                ("name", "get_weather"),
+                ("description", "Get weather information for a specified location"),
+                ("parameters", OrderedDictionary<String, Any>(dictionaryLiteral:
+                    ("type", "object"),
+                    ("properties", OrderedDictionary<String, Any>(dictionaryLiteral:
+                        ("location", OrderedDictionary<String, Any>(dictionaryLiteral:
+                            ("type", "string"),
+                            ("description", "City and state, e.g. San Francisco, CA")
+                        )),
+                        ("unit", OrderedDictionary<String, Any>(dictionaryLiteral:
+                            ("type", "string"),
+                            ("description", "Temperature unit"),
+                            ("enum", ["celsius", "fahrenheit"])
+                        )),
+                        ("format", OrderedDictionary<String, Any>(dictionaryLiteral:
+                            ("type", "string"),
+                            ("description", "Return format"),
+                            ("enum", ["json", "text", "xml"])
+                        ))
+                    )),
+                    ("required", ["location"])
+                ))
+            )
+        ]
+        
+        let userMessage = [
+            "role": "user",
+            "content": "What's the weather like in Beijing today?",
+        ]
+        
+        let template = try Template(ChatTemplate.qwen3_coder)
+        let result = try template.render([
+            "messages": [userMessage],
+            "tools": [toolWithEnum],
+            "add_generation_prompt": true,
+        ])
+        
+        let target = """
+            <|im_start|>system
+            You are Qwen, a helpful AI assistant that can interact with a computer to solve tasks.
+
+            You have access to the following functions:
+
+            <tools>
+            <function>
+            <name>get_weather</name>
+            <description>Get weather information for a specified location</description>
+            <parameters>
+            <parameter>
+            <name>location</name>
+            <type>"string"</type>
+            <description>City and state, e.g. San Francisco, CA</description>
+            </parameter>
+            <parameter>
+            <name>unit</name>
+            <type>"string"</type>
+            <description>Temperature unit</description>
+            <enum>[`celsius`, `fahrenheit`]</enum>
+            </parameter>
+            <parameter>
+            <name>format</name>
+            <type>"string"</type>
+            <description>Return format</description>
+            <enum>[`json`, `text`, `xml`]</enum>
+            </parameter>
+            <required>[`location`]</required>
+            </parameters>
+            </function>
+            </tools>
+
+            If you choose to call a function ONLY reply in the following format with NO suffix:
+
+            <tool_call>
+            <function=example_function_name>
+            <parameter=example_parameter_1>
+            value_1
+            </parameter>
+            <parameter=example_parameter_2>
+            This is the value for the second parameter
+            that can span
+            multiple lines
+            </parameter>
+            </function>
+            </tool_call>
+
+            <IMPORTANT>
+            Reminder:
+            - Function calls MUST follow the specified format: an inner <function=...></function> block must be nested within <tool_call></tool_call> XML tags
+            - Required parameters MUST be specified
+            - You may provide optional reasoning for your function call in natural language BEFORE the function call, but NOT after
+            - If there is no function call available, answer the question like normal with your current knowledge and do not tell the user about function calls
+            </IMPORTANT><|im_end|>
+            <|im_start|>user
+            What's the weather like in Beijing today?<|im_end|>
+            <|im_start|>assistant
+
+            """
+        XCTAssertEqual(result, target)
+    }
+    
+    func testReject() throws {
+        let template = try Template(#"""
+            {%- set handled_keys = ['type', 'description', 'enum', 'required'] %}
+            {%- set all_keys = ['type', 'name', 'enum', 'value', 'description', 'age', 'required', 'status'] %}
+
+            Filtered keys: {{ all_keys | reject("in", handled_keys) | list }}
+            """#)
+        let result = try template.render([:])
+        print(result)
     }
 }

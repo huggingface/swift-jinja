@@ -40,7 +40,7 @@ class Environment {
         }),
     ]
 
-    lazy var tests: [String: (any RuntimeValue...) throws -> Bool] = [
+    lazy var tests: [String: ([any RuntimeValue]) throws -> Bool] = [
         "odd": { args in
             if let arg = args.first as? NumericValue, let intValue = arg.value as? Int {
                 return intValue % 2 != 0
@@ -75,13 +75,13 @@ class Environment {
         "undefined": { args in
             return args[0] is UndefinedValue
         },
-        "filter": { [weak self] (args: any RuntimeValue...) throws -> Bool in
+        "filter": { [weak self] (args: [any RuntimeValue]) throws -> Bool in
             guard let name = args[0] as? StringValue else {
                 throw JinjaError.runtime("filter test requires a string")
             }
             return self?.filters.keys.contains(name.value) ?? false
         },
-        "test": { [weak self] (args: any RuntimeValue...) throws -> Bool in
+        "test": { [weak self] (args: [any RuntimeValue]) throws -> Bool in
             guard let name = args[0] as? StringValue else {
                 throw JinjaError.runtime("test test requires a string")
             }
@@ -863,7 +863,7 @@ class Environment {
             var result: [any RuntimeValue] = []
             for item in arrayValue.value {
                 // Correctly pass arguments to the test function
-                if try !test(item) {  // Negate the result for 'reject'
+                if try !test([item] + Array(args[2...])) {  // Negate the result for 'reject'
                     result.append(item)
                 }
             }
@@ -893,7 +893,7 @@ class Environment {
                         throw JinjaError.runtime("Unknown test '\(testName)'")
                     }
                     // Correctly pass arguments to the test function
-                    if try !test(attrValue) {  // Note the negation (!) for rejectattr
+                    if try !test([attrValue]) {  // Note the negation (!) for rejectattr
                         result.append(item)
                     }
                 }
@@ -963,7 +963,7 @@ class Environment {
             }
             var result: [any RuntimeValue] = []
             for item in arrayValue.value {
-                if try test(item) {
+                if try test([item]) {
                     result.append(item)
                 }
             }

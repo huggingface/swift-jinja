@@ -1061,7 +1061,7 @@ struct Interpreter {
         guard let testFunction = environment.tests[node.test.value] else {
             throw JinjaError.runtime("Unknown test: \(node.test.value)")
         }
-        let result = try testFunction(operand)
+        let result = try testFunction([operand])
         return BooleanValue(value: node.negate ? !result : result)
     }
 

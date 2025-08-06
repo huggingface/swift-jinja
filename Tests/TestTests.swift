@@ -47,20 +47,8 @@ final class TestTests: XCTestCase {
                 return
             }
 
-            // Call the test function based on number of arguments
-            let result: Bool
-            switch runtimeArgs.count {
-            case 0:
-                result = try test(input)
-            case 1:
-                result = try test(input, runtimeArgs[0])
-            case 2:
-                result = try test(input, runtimeArgs[0], runtimeArgs[1])
-            case 3:
-                result = try test(input, runtimeArgs[0], runtimeArgs[1], runtimeArgs[2])
-            default:
-                throw JinjaError.runtime("Unsupported number of arguments for test: \(testName)")
-            }
+            // Call the test function with input and arguments
+            let result = try test([input] + runtimeArgs)
 
             XCTAssertEqual(result, expected, "\(testName) test failed", file: file, line: line)
         }
