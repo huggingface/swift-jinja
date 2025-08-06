@@ -835,29 +835,38 @@ final class ChatTemplateTests: XCTestCase {
 
     func testQwen3CoderToolCallsAndResponse() throws {
         let toolCallMessages = [
-            [
-                "role": "user",
-                "content": "What's the weather in Shenzhen?",
-            ],
-            [
-                "role": "assistant",
-                "content": "I'll check the weather in Shenzhen for you.",
-                "tool_calls": [
+            OrderedDictionary<String, Any>(
+                dictionaryLiteral: ("role", "user"),
+                ("content", "What's the weather in Shenzhen?")
+            ),
+            OrderedDictionary<String, Any>(
+                dictionaryLiteral: ("role", "assistant"),
+                ("content", "I'll check the weather in Shenzhen for you."),
+                (
+                    "tool_calls",
                     [
-                        "function": [
-                            "name": "get_weather",
-                            "arguments": [
-                                "location": "Shenzhen, China",
-                                "unit": "celsius",
-                            ],
-                        ]
+                        OrderedDictionary<String, Any>(
+                            dictionaryLiteral: (
+                                "function",
+                                OrderedDictionary<String, Any>(
+                                    dictionaryLiteral: ("name", "get_weather"),
+                                    (
+                                        "arguments",
+                                        OrderedDictionary<String, Any>(
+                                            dictionaryLiteral: ("location", "Shenzhen, China"),
+                                            ("unit", "celsius")
+                                        )
+                                    )
+                                )
+                            )
+                        )
                     ]
-                ],
-            ],
-            [
-                "role": "tool",
-                "content": "The current weather in Shenzhen, China is 22°C with clear skies.",
-            ],
+                )
+            ),
+            OrderedDictionary<String, Any>(
+                dictionaryLiteral: ("role", "tool"),
+                ("content", "The current weather in Shenzhen, China is 22°C with clear skies.")
+            ),
         ]
         let template = try Template(ChatTemplate.qwen3_coder)
         let result = try template.render([
