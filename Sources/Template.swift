@@ -37,7 +37,12 @@ public struct Template {
 
         let interpreter = Interpreter(env: env)
         let result = try interpreter.run(program: self.parsed) as! StringValue
-
+        
+        // Clear to fix memory leak issue
+        env.variables.removeAll()
+        env.filters.removeAll()
+        env.tests.removeAll()
+        
         return result.value
     }
 }
