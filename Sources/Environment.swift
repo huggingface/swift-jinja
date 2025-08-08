@@ -153,7 +153,7 @@ class Environment {
         },
         // TODO: Implement "sameas"
         // TODO: Implement "escaped"
-        "in": {[unowned self] args in
+        "in": { [unowned self] args in
             guard let seq = args[1] as? ArrayValue else {
                 throw JinjaError.runtime("in test requires a sequence")
             }
@@ -161,76 +161,76 @@ class Environment {
                 self.doEqualTo([args[0], item])
             }
         },
-        "==": {[unowned self] args in self.doEqualTo(args) },
-        "eq": {[unowned self] args in self.doEqualTo(args) },
-        "equalto": {[unowned self] args in self.doEqualTo(args) },
-        "!=": {[unowned self] args in
+        "==": { [unowned self] args in self.doEqualTo(args) },
+        "eq": { [unowned self] args in self.doEqualTo(args) },
+        "equalto": { [unowned self] args in self.doEqualTo(args) },
+        "!=": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("!= test requires two arguments")
             }
             return !self.doEqualTo(args)
         },
-        "ne": {[unowned self] args in
+        "ne": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("ne test requires two arguments")
             }
             return !self.doEqualTo(args)
         },
-        ">": {[unowned self] args in
+        ">": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("> test requires two arguments")
             }
             return try self.doGreaterThan(args)
         },
-        "gt": {[unowned self] args in
+        "gt": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("gt test requires two arguments")
             }
             return try self.doGreaterThan(args)
         },
-        "greaterthan": {[unowned self] args in
+        "greaterthan": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("greaterthan test requires two arguments")
             }
             return try self.doGreaterThan(args)
         },
-        ">=": {[unowned self] args in
+        ">=": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime(">= test requires two arguments")
             }
             return try self.doGreaterThanOrEqual(args)
         },
-        "ge": {[unowned self] args in
+        "ge": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("ge test requires two arguments")
             }
             return try self.doGreaterThanOrEqual(args)
         },
-        "<": {[unowned self] args in
+        "<": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("< test requires two arguments")
             }
             return try self.doLessThan(args)
         },
-        "lt": {[unowned self] args in
+        "lt": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("lt test requires two arguments")
             }
             return try self.doLessThan(args)
         },
-        "lessthan": {[unowned self] args in
+        "lessthan": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("lessthan test requires two arguments")
             }
             return try self.doLessThan(args)
         },
-        "<=": {[unowned self] args in
+        "<=": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("<= test requires two arguments")
             }
             return try self.doLessThanOrEqual(args)
         },
-        "le": {[unowned self] args in
+        "le": { [unowned self] args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("le test requires two arguments")
             }
@@ -354,8 +354,8 @@ class Environment {
             }
             throw JinjaError.runtime("Cannot count value of type \(type(of: value))")
         },
-        "d": {[unowned self] args, env in try self.doDefault(args, env) },
-        "default": {[unowned self] args, env in try self.doDefault(args, env) },
+        "d": { [unowned self] args, env in try self.doDefault(args, env) },
+        "default": { [unowned self] args, env in try self.doDefault(args, env) },
         "dictsort": { args, env in
             guard let dict = args[0] as? ObjectValue else {
                 throw JinjaError.runtime("dictsort filter requires a dictionary")
@@ -396,8 +396,8 @@ class Environment {
                 }
             )
         },
-        "e": {[unowned self] args, env in try self.doEscape(args, env) },
-        "escape": {[unowned self] args, env in try self.doEscape(args, env) },
+        "e": { [unowned self] args, env in try self.doEscape(args, env) },
+        "escape": { [unowned self] args, env in try self.doEscape(args, env) },
         "filesizeformat": { args, env in
             guard let value = args[0] as? NumericValue else {
                 throw JinjaError.runtime("filesizeformat filter requires a numeric value")
@@ -488,7 +488,7 @@ class Environment {
             }
             return StringValue(value: result)
         },
-        "groupby": {[unowned self] args, env in
+        "groupby": { [unowned self] args, env in
             guard let arrayValue = args[0] as? ArrayValue else {
                 throw JinjaError.runtime("groupby filter requires an array")
             }

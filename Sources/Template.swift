@@ -37,7 +37,7 @@ public struct Template {
 
         let interpreter = Interpreter(env: env)
         let result = try interpreter.run(program: self.parsed) as! StringValue
-        
+
         return result.value
     }
 }
