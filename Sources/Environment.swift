@@ -40,7 +40,9 @@ class Environment {
         }),
     ]
 
-    lazy var tests: [String: ([any RuntimeValue]) throws -> Bool] = [
+    var filters: [String: ([any RuntimeValue], Environment) throws -> any RuntimeValue] { Environment.sharedFilters }
+
+    static let sharedTests: [String: ([any RuntimeValue]) throws -> Bool] = [
         "odd": { args in
             if let arg = args.first as? NumericValue, let intValue = arg.value as? Int {
                 return intValue % 2 != 0
@@ -75,17 +77,17 @@ class Environment {
         "undefined": { args in
             return args[0] is UndefinedValue
         },
-        "filter": { [weak self] (args: [any RuntimeValue]) throws -> Bool in
+        "filter": { (args: [any RuntimeValue]) throws -> Bool in
             guard let name = args[0] as? StringValue else {
                 throw JinjaError.runtime("filter test requires a string")
             }
-            return self?.filters.keys.contains(name.value) ?? false
+            return Environment.sharedFilters.keys.contains(name.value)
         },
-        "test": { [weak self] (args: [any RuntimeValue]) throws -> Bool in
+        "test": { (args: [any RuntimeValue]) throws -> Bool in
             guard let name = args[0] as? StringValue else {
                 throw JinjaError.runtime("test test requires a string")
             }
-            return self?.tests.keys.contains(name.value) ?? false
+            return Environment.sharedTests.keys.contains(name.value)
         },
         "none": { args in
             return args[0] is NullValue
@@ -153,92 +155,94 @@ class Environment {
         },
         // TODO: Implement "sameas"
         // TODO: Implement "escaped"
-        "in": { [unowned self] args in
+        "in": { args in
             guard let seq = args[1] as? ArrayValue else {
                 throw JinjaError.runtime("in test requires a sequence")
             }
             return seq.value.contains { item in
-                self.doEqualTo([args[0], item])
+                Environment.doEqualTo([args[0], item])
             }
         },
-        "==": { [unowned self] args in self.doEqualTo(args) },
-        "eq": { [unowned self] args in self.doEqualTo(args) },
-        "equalto": { [unowned self] args in self.doEqualTo(args) },
-        "!=": { [unowned self] args in
+        "==": { args in Environment.doEqualTo(args) },
+        "eq": { args in Environment.doEqualTo(args) },
+        "equalto": { args in Environment.doEqualTo(args) },
+        "!=": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("!= test requires two arguments")
             }
-            return !self.doEqualTo(args)
+            return !Environment.doEqualTo(args)
         },
-        "ne": { [unowned self] args in
+        "ne": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("ne test requires two arguments")
             }
-            return !self.doEqualTo(args)
+            return !Environment.doEqualTo(args)
         },
-        ">": { [unowned self] args in
+        ">": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("> test requires two arguments")
             }
-            return try self.doGreaterThan(args)
+            return try Environment.doGreaterThan(args)
         },
-        "gt": { [unowned self] args in
+        "gt": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("gt test requires two arguments")
             }
-            return try self.doGreaterThan(args)
+            return try Environment.doGreaterThan(args)
         },
-        "greaterthan": { [unowned self] args in
+        "greaterthan": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("greaterthan test requires two arguments")
             }
-            return try self.doGreaterThan(args)
+            return try Environment.doGreaterThan(args)
         },
-        ">=": { [unowned self] args in
+        ">=": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime(">= test requires two arguments")
             }
-            return try self.doGreaterThanOrEqual(args)
+            return try Environment.doGreaterThanOrEqual(args)
         },
-        "ge": { [unowned self] args in
+        "ge": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("ge test requires two arguments")
             }
-            return try self.doGreaterThanOrEqual(args)
+            return try Environment.doGreaterThanOrEqual(args)
         },
-        "<": { [unowned self] args in
+        "<": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("< test requires two arguments")
             }
-            return try self.doLessThan(args)
+            return try Environment.doLessThan(args)
         },
-        "lt": { [unowned self] args in
+        "lt": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("lt test requires two arguments")
             }
-            return try self.doLessThan(args)
+            return try Environment.doLessThan(args)
         },
-        "lessthan": { [unowned self] args in
+        "lessthan": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("lessthan test requires two arguments")
             }
-            return try self.doLessThan(args)
+            return try Environment.doLessThan(args)
         },
-        "<=": { [unowned self] args in
+        "<=": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("<= test requires two arguments")
             }
-            return try self.doLessThanOrEqual(args)
+            return try Environment.doLessThanOrEqual(args)
         },
-        "le": { [unowned self] args in
+        "le": { args in
             guard args.count == 2 else {
                 throw JinjaError.runtime("le test requires two arguments")
             }
-            return try self.doLessThanOrEqual(args)
+            return try Environment.doLessThanOrEqual(args)
         },
     ]
 
-    lazy var filters: [String: ([any RuntimeValue], Environment) throws -> any RuntimeValue] = [
+    var tests: [String: ([any RuntimeValue]) throws -> Bool] { Environment.sharedTests }
+
+    static let sharedFilters: [String: ([any RuntimeValue], Environment) throws -> any RuntimeValue] = [
         "abs": { args, env in
             guard args.count == 1 else {
                 throw JinjaError.runtime("abs filter requires exactly one argument, but \(args.count) were provided")
@@ -354,8 +358,8 @@ class Environment {
             }
             throw JinjaError.runtime("Cannot count value of type \(type(of: value))")
         },
-        "d": { [unowned self] args, env in try self.doDefault(args, env) },
-        "default": { [unowned self] args, env in try self.doDefault(args, env) },
+        "d": { args, env in try Environment.doDefault(args, env) },
+        "default": { args, env in try Environment.doDefault(args, env) },
         "dictsort": { args, env in
             guard let dict = args[0] as? ObjectValue else {
                 throw JinjaError.runtime("dictsort filter requires a dictionary")
@@ -396,8 +400,8 @@ class Environment {
                 }
             )
         },
-        "e": { [unowned self] args, env in try self.doEscape(args, env) },
-        "escape": { [unowned self] args, env in try self.doEscape(args, env) },
+        "e": { args, env in try Environment.doEscape(args, env) },
+        "escape": { args, env in try Environment.doEscape(args, env) },
         "filesizeformat": { args, env in
             guard let value = args[0] as? NumericValue else {
                 throw JinjaError.runtime("filesizeformat filter requires a numeric value")
@@ -488,7 +492,7 @@ class Environment {
             }
             return StringValue(value: result)
         },
-        "groupby": { [unowned self] args, env in
+        "groupby": { args, env in
             guard let arrayValue = args[0] as? ArrayValue else {
                 throw JinjaError.runtime("groupby filter requires an array")
             }
@@ -550,7 +554,7 @@ class Environment {
                     ? value : (value as? StringValue).map { StringValue(value: $0.value.lowercased()) } ?? value
 
                 if let existingKey = currentKey {  // Changed to different name for binding
-                    if self.doEqualTo([key, existingKey]) {
+                    if Environment.doEqualTo([key, existingKey]) {
                         currentGroup.append(item)
                     } else {
                         if !currentGroup.isEmpty {
@@ -1540,6 +1544,11 @@ class Environment {
         },
     ]
 
+    static let sharedBase: Environment = {
+        let env = Environment(parent: nil)
+        return env
+    }()
+
     init(parent: Environment? = nil) {
         self.parent = parent
     }
@@ -1679,43 +1688,35 @@ class Environment {
         return value
     }
 
-    private func resolve(name: String) throws -> Environment {
+    private func resolveNonThrowing(name: String) -> Environment? {
         if self.variables.keys.contains(name) {
             return self
         }
-
-        if let parent = self.parent {
-            return try parent.resolve(name: name)
+        var current: Environment? = self.parent
+        while let env = current {
+            if env.variables.keys.contains(name) {
+                return env
+            }
+            current = env.parent
         }
-
-        throw JinjaError.runtime("Unknown variable: \(name)")
+        return nil
     }
 
     func lookupVariable(name: String) -> any RuntimeValue {
-        do {
-            // Look up the variable in the environment chain
-            let env = try self.resolve(name: name)
-
-            // Get the value, handling potential conversions from Swift native types
+        if let env = resolveNonThrowing(name: name) {
             if let value = env.variables[name] {
-                // If we have a raw Swift boolean, ensure it's properly converted to BooleanValue
                 if let boolValue = value.value as? Bool {
                     return BooleanValue(value: boolValue)
                 }
                 return value
             }
-
-            // Variable doesn't exist
-            return UndefinedValue()
-        } catch {
-            // Cannot resolve variable name
-            return UndefinedValue()
         }
+        return UndefinedValue()
     }
 
     // Filters
 
-    private func doDefault(_ args: [any RuntimeValue], _ env: Environment) throws -> any RuntimeValue {
+    private static func doDefault(_ args: [any RuntimeValue], _ env: Environment) throws -> any RuntimeValue {
         let value = args[0]
         let defaultValue = args.count > 1 ? args[1] : StringValue(value: "")
         let boolean = args.count > 2 ? (args[2] as? BooleanValue)?.value ?? false : false
@@ -1737,7 +1738,7 @@ class Environment {
         return value
     }
 
-    private func doEscape(_ args: [any RuntimeValue], _ env: Environment) throws -> any RuntimeValue {
+    private static func doEscape(_ args: [any RuntimeValue], _ env: Environment) throws -> any RuntimeValue {
         guard let stringValue = args[0] as? StringValue else {
             throw JinjaError.runtime("escape filter requires a string")
         }
@@ -1750,7 +1751,7 @@ class Environment {
         )
     }
 
-    private func doEqualTo(_ args: [any RuntimeValue]) -> Bool {
+    private static func doEqualTo(_ args: [any RuntimeValue]) -> Bool {
         if args.count == 2 {
             if let left = args[0] as? StringValue, let right = args[1] as? StringValue {
                 return left.value == right.value
@@ -1770,7 +1771,7 @@ class Environment {
 
     // Tests
 
-    private func doGreaterThan(_ args: [any RuntimeValue]) throws -> Bool {
+    private static func doGreaterThan(_ args: [any RuntimeValue]) throws -> Bool {
         if let left = args[0] as? StringValue, let right = args[1] as? StringValue {
             return left.value > right.value
         } else if let left = args[0] as? NumericValue, let right = args[1] as? NumericValue {
@@ -1787,11 +1788,11 @@ class Environment {
         throw JinjaError.runtime("Cannot compare values of different types")
     }
 
-    private func doGreaterThanOrEqual(_ args: [any RuntimeValue]) throws -> Bool {
+    private static func doGreaterThanOrEqual(_ args: [any RuntimeValue]) throws -> Bool {
         return try doGreaterThan(args) || doEqualTo(args)
     }
 
-    private func doLessThan(_ args: [any RuntimeValue]) throws -> Bool {
+    private static func doLessThan(_ args: [any RuntimeValue]) throws -> Bool {
         if let left = args[0] as? StringValue, let right = args[1] as? StringValue {
             return left.value < right.value
         } else if let left = args[0] as? NumericValue, let right = args[1] as? NumericValue {
@@ -1808,7 +1809,7 @@ class Environment {
         throw JinjaError.runtime("Cannot compare values of different types")
     }
 
-    private func doLessThanOrEqual(_ args: [any RuntimeValue]) throws -> Bool {
+    private static func doLessThanOrEqual(_ args: [any RuntimeValue]) throws -> Bool {
         return try doLessThan(args) || doEqualTo(args)
     }
 

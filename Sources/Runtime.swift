@@ -274,28 +274,27 @@ struct Interpreter {
     }
 
     func evaluateBlock(statements: [Statement], environment: Environment) throws -> StringValue {
-        var result = ""
+        var parts: [String] = []
+        parts.reserveCapacity(statements.count)
         for statement in statements {
             let lastEvaluated = try self.evaluate(statement: statement, environment: environment)
             if !(lastEvaluated is NullValue), !(lastEvaluated is UndefinedValue) {
                 if let stringValue = lastEvaluated as? StringValue {
-                    result += stringValue.value
+                    parts.append(stringValue.value)
                 } else if let numericValue = lastEvaluated as? NumericValue {
-                    result += String(describing: numericValue.value)
+                    parts.append(String(describing: numericValue.value))
                 } else if let booleanValue = lastEvaluated as? BooleanValue {
-                    result += String(booleanValue.value)
+                    parts.append(String(booleanValue.value))
                 } else if let arrayValue = lastEvaluated as? ArrayValue {
-                    // Convert array to JSON string
-                    result += try toJSON(arrayValue)
+                    parts.append(try toJSON(arrayValue))
                 } else if let objectValue = lastEvaluated as? ObjectValue {
-                    // Convert object to JSON string
-                    result += try toJSON(objectValue)
+                    parts.append(try toJSON(objectValue))
                 } else {
                     throw JinjaError.runtime("Cannot convert to string: \(type(of: lastEvaluated))")
                 }
             }
         }
-        return StringValue(value: result)
+        return StringValue(value: parts.joined())
     }
 
     func evalProgram(program: Program, environment: Environment) throws -> StringValue {
@@ -492,9 +491,9 @@ struct Interpreter {
         var result = ""
         var noIteration = true
         for i in 0 ..< items.count {
-            // Get the previous and next items that passed the filter
-            let previousIndex = filteredIndices.firstIndex(of: filteredIndices[i])! - 1
-            let nextIndex = filteredIndices.firstIndex(of: filteredIndices[i])! + 1
+            // Compute previous and next indices directly
+            let previousIndex = i - 1
+            let nextIndex = i + 1
             let previtem: any RuntimeValue
             if previousIndex >= 0 {
                 let previousFilteredIndex = filteredIndices[previousIndex]
@@ -940,7 +939,7 @@ struct Interpreter {
         var value: (any RuntimeValue)?
         if let object = object as? ObjectValue {
             if let property = property as? StringValue {
-                value = object.value[property.value] ?? object.builtins[property.value]
+                value = object.storage[property.value] ?? object.builtins[property.value]
             } else {
                 throw JinjaError.runtime("Cannot access property with non-string: got \(type(of:property))")
             }

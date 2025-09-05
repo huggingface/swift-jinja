@@ -105,9 +105,9 @@ func toJSON(_ input: any RuntimeValue, indent: Int? = nil, depth: Int = 0, white
             return "[\(core.joined(separator: ", "))]"
         }
     case let obj as ObjectValue:
-        // Use orderedKeys to maintain insertion order
+        // Use storage to avoid copying and orderedKeys to maintain insertion order
         let pairs = try obj.orderedKeys.map { key in
-            guard let value = obj.value[key] else {
+            guard let value = obj.storage[key] else {
                 throw JinjaError.runtime("Missing value for key: \(key)")
             }
             let jsonValue = try toJSON(
