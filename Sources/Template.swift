@@ -16,18 +16,12 @@ public struct Template {
     }
 
     public func render(_ items: [String: Any?]) throws -> String {
-        let env = Environment()
+        return try self.render(items, environment: nil)
+    }
 
-        try env.set(name: "false", value: false)
-        try env.set(name: "true", value: true)
-        try env.set(name: "none", value: NullValue())
-        try env.set(
-            name: "raise_exception",
-            value: { (args: String) throws in
-                throw JinjaError.runtime("\(args)")
-            }
-        )
-        try env.set(name: "range", value: range)
+    func render(_ items: [String: Any?], environment parentEnvironment: Environment?) throws -> String {
+        let base = parentEnvironment ?? Environment.sharedBase
+        let env = Environment(parent: base)
 
         for (key, value) in items {
             if let value {

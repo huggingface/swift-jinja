@@ -1,6 +1,9 @@
 //
 //  PerformanceTests.swift
 //
+//
+//  Created by Terence Pae on 2025/09/05.
+//
 
 import XCTest
 
@@ -23,27 +26,19 @@ final class PerformanceTests: XCTestCase {
     }
 
     func testTemplateRenderPerformance() throws {
-        let templateString = """
-        {% for i in range(0, 100) %}
-        {{ i }} {{ 'x' ~ 'x' }}\n
-        {% endfor %}
-        """
-        let template = try Template(templateString)
+        let template = try Template(ChatTemplate.llama3_2)
 
         let avgMs = try measureMs {
-            _ = try template.render([:])
+            _ = try template.render([
+                "messages": Messages.weatherQuery,
+                "add_generation_prompt": true,
+            ])
         }
         print("Template.render avg: \(String(format: "%.3f", avgMs)) ms")
     }
 
     func testPipelineStagesPerformance() throws {
-        let tpl = """
-        {% set ns = namespace(total=0) %}
-        {% for i in range(0, 100) %}
-        {% set ns.total = ns.total + i %}
-        {% endfor %}
-        {{ ns.total }}
-        """
+        let tpl = ChatTemplate.llama3_2
 
         // tokenize
         let tokenizeMs = try measureMs {
@@ -65,6 +60,8 @@ final class PerformanceTests: XCTestCase {
         try env.set(name: "false", value: false)
         try env.set(name: "none", value: NullValue())
         try env.set(name: "range", value: range)
+        try env.set(name: "messages", value: Messages.weatherQuery)
+        try env.set(name: "add_generation_prompt", value: false)
 
         let interpreter = Interpreter(env: env)
         let runMs = try measureMs {

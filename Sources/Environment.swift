@@ -11,34 +11,7 @@ import OrderedCollections
 class Environment {
     var parent: Environment?
 
-    var variables: [String: any RuntimeValue] = [
-        "namespace": FunctionValue(value: { args, _ in
-            if args.isEmpty {
-                return ObjectValue(value: [:])
-            }
-            guard args.count == 1, let objectArg = args[0] as? ObjectValue else {
-                throw JinjaError.runtime("`namespace` expects either zero arguments or a single object argument")
-            }
-            return objectArg
-        }),
-
-        // Add strftime_now function to handle date formatting in templates
-        "strftime_now": FunctionValue(value: { args, _ in
-            let now = Date()
-
-            if args.count > 0, let formatArg = args[0] as? StringValue {
-                let format = formatArg.value
-
-                let result = formatDate(now, withFormat: format)
-                return StringValue(value: result)
-            }
-
-            // Default format if no arguments
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM dd, yyyy"
-            return StringValue(value: formatter.string(from: now))
-        }),
-    ]
+    var variables: [String: any RuntimeValue] = [:]
 
     var filters: [String: ([any RuntimeValue], Environment) throws -> any RuntimeValue] { Environment.sharedFilters }
 
@@ -1546,10 +1519,43 @@ class Environment {
 
     static let sharedBase: Environment = {
         let env = Environment(parent: nil)
+
+        // Core functions available to all templates
+        env.variables["namespace"] = FunctionValue(value: { args, _ in
+            if args.isEmpty {
+                return ObjectValue(value: [:])
+            }
+            guard args.count == 1, let objectArg = args[0] as? ObjectValue else {
+                throw JinjaError.runtime("`namespace` expects either zero arguments or a single object argument")
+            }
+            return objectArg
+        })
+
+        env.variables["strftime_now"] = FunctionValue(value: { args, _ in
+            let now = Date()
+            if args.count > 0, let formatArg = args[0] as? StringValue {
+                let format = formatArg.value
+                let result = formatDate(now, withFormat: format)
+                return StringValue(value: result)
+            }
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMMM dd, yyyy"
+            return StringValue(value: formatter.string(from: now))
+        })
+
+        // Common builtins previously added per-render
+        _ = try? env.set(name: "false", value: false)
+        _ = try? env.set(name: "true", value: true)
+        _ = try? env.set(name: "none", value: NullValue())
+        _ = try? env.set(name: "raise_exception", value: { (args: String) throws in
+            throw JinjaError.runtime("\(args)")
+        })
+        _ = try? env.set(name: "range", value: range)
+
         return env
     }()
 
-    init(parent: Environment? = nil) {
+    init(parent: Environment? = Environment.sharedBase) {
         self.parent = parent
     }
 
