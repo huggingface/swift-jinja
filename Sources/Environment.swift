@@ -5,17 +5,24 @@
 //  Created by John Mai on 2024/3/23.
 //
 
-import Foundation
-import OrderedCollections
+#if swift(>=5.9)
+    @preconcurrency import Foundation
+    @preconcurrency import OrderedCollections
+#else
+    import Foundation
+    import OrderedCollections
+#endif
 
-class Environment {
+class Environment: @unchecked Sendable {
     var parent: Environment?
 
     var variables: [String: any RuntimeValue] = [:]
 
-    var filters: [String: ([any RuntimeValue], Environment) throws -> any RuntimeValue] { Environment.sharedFilters }
+    var filters: [String: @Sendable ([any RuntimeValue], Environment) throws -> any RuntimeValue] {
+        Environment.sharedFilters
+    }
 
-    static let sharedTests: [String: ([any RuntimeValue]) throws -> Bool] = [
+    static let sharedTests: [String: @Sendable ([any RuntimeValue]) throws -> Bool] = [
         "odd": { args in
             if let arg = args.first as? NumericValue, let intValue = arg.value as? Int {
                 return intValue % 2 != 0
@@ -213,9 +220,9 @@ class Environment {
         },
     ]
 
-    var tests: [String: ([any RuntimeValue]) throws -> Bool] { Environment.sharedTests }
+    var tests: [String: @Sendable ([any RuntimeValue]) throws -> Bool] { Environment.sharedTests }
 
-    static let sharedFilters: [String: ([any RuntimeValue], Environment) throws -> any RuntimeValue] = [
+    static let sharedFilters: [String: @Sendable ([any RuntimeValue], Environment) throws -> any RuntimeValue] = [
         "abs": { args, env in
             guard args.count == 1 else {
                 throw JinjaError.runtime("abs filter requires exactly one argument, but \(args.count) were provided")
