@@ -1547,9 +1547,12 @@ class Environment {
         _ = try? env.set(name: "false", value: false)
         _ = try? env.set(name: "true", value: true)
         _ = try? env.set(name: "none", value: NullValue())
-        _ = try? env.set(name: "raise_exception", value: { (args: String) throws in
-            throw JinjaError.runtime("\(args)")
-        })
+        _ = try? env.set(
+            name: "raise_exception",
+            value: { (args: String) throws in
+                throw JinjaError.runtime("\(args)")
+            }
+        )
         _ = try? env.set(name: "range", value: range)
 
         return env

@@ -13,10 +13,10 @@ final class PerformanceTests: XCTestCase {
     // Simple micro-benchmark helper
     private func measureMs(iterations: Int = 100, warmup: Int = 10, _ body: () throws -> Void) rethrows -> Double {
         // Warmup
-        for _ in 0..<warmup { try body() }
+        for _ in 0 ..< warmup { try body() }
 
         var total: Double = 0
-        for _ in 0..<iterations {
+        for _ in 0 ..< iterations {
             let start = DispatchTime.now().uptimeNanoseconds
             try body()
             let end = DispatchTime.now().uptimeNanoseconds
@@ -68,8 +68,8 @@ final class PerformanceTests: XCTestCase {
             _ = try interpreter.run(program: program)
         }
 
-        print("tokenize avg: \(String(format: "%.3f", tokenizeMs)) ms | parse avg: \(String(format: "%.3f", parseMs)) ms | run avg: \(String(format: "%.3f", runMs)) ms")
+        print(
+            "tokenize avg: \(String(format: "%.3f", tokenizeMs)) ms | parse avg: \(String(format: "%.3f", parseMs)) ms | run avg: \(String(format: "%.3f", runMs)) ms"
+        )
     }
 }
-
-
