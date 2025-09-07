@@ -42,7 +42,7 @@ final class TestTests: XCTestCase {
             }
 
             // Get the test function from the environment
-            guard let test = env.tests[testName] else {
+            guard let test = Environment.tests[testName] else {
                 XCTFail("Test not found: \(testName)", file: file, line: line)
                 return
             }

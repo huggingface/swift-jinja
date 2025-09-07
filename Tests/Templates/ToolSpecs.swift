@@ -8,7 +8,7 @@
 import OrderedCollections
 
 struct ToolSpec {
-    static let getCurrentWeather = OrderedDictionary(uniqueKeysWithValues: [
+    nonisolated(unsafe) static let getCurrentWeather = OrderedDictionary(uniqueKeysWithValues: [
         ("type", "function") as (String, Any),
         (
             "function",

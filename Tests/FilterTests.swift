@@ -52,7 +52,7 @@ final class FilterTests: XCTestCase {
             }
 
             // Get the filter function from the environment
-            guard let filter = env.filters[filterName] else {
+            guard let filter = Environment.filters[filterName] else {
                 XCTFail("Filter not found: \(filterName)", file: file, line: line)
                 return
             }

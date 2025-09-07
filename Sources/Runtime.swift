@@ -1034,7 +1034,7 @@ struct Interpreter {
     {
         let operand = try self.evaluate(statement: node.operand, environment: environment)
         let filterName = node.filter.value
-        guard let filter = environment.filters[filterName] else {
+        guard let filter = Environment.filters[filterName] else {
             throw JinjaError.runtime("No filter named '\(filterName)'")
         }
         // Evaluate positional arguments
@@ -1057,7 +1057,7 @@ struct Interpreter {
 
     func evaluateTestExpression(node: TestExpression, environment: Environment) throws -> any RuntimeValue {
         let operand = try self.evaluate(statement: node.operand, environment: environment)
-        guard let testFunction = environment.tests[node.test.value] else {
+        guard let testFunction = Environment.tests[node.test.value] else {
             throw JinjaError.runtime("Unknown test: \(node.test.value)")
         }
         let result = try testFunction([operand])
