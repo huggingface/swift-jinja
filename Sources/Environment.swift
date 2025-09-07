@@ -8,11 +8,11 @@
 import Foundation
 import OrderedCollections
 
-final class Environment: Sendable {
+final class Environment: @unchecked Sendable {
     let parent: Environment?
 
     private let lock = NSLock()
-    nonisolated(unsafe) private var _variables: [String: any RuntimeValue] = [:]
+    private var _variables: [String: any RuntimeValue] = [:]
 
     var variables: [String: any RuntimeValue] {
         get {
