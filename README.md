@@ -253,6 +253,34 @@ let result = try template.render(context)
 // "Welcome, Alice!\nYou have 3 new messages."
 ```
 
+> [!IMPORTANT]  
+> **Migrating to Jinja v2.0**:
+> Most code using Jinja v1 should work with v2 with minimal changes.
+> The biggest breaking changes is that the context parameter for rendering templates
+> has changed from `[String: Any]` to `[String: Value]`.
+>
+> Thanks to `Value` being expressible by literals,
+> existing code may work as-is.
+> You can also try the `Value(any:)` constructor
+> to automatically convert complex values:
+>
+> ```swift
+> // Create template and context
+> let template = try Template("Hello {{ user.name }}!")
+>
+> var context: [String: Value] = [
+>     // Use literals:
+>     "user": ["name": "Alice"],
+> ]
+>
+> // ...or convert from Any value:
+> let settings: [String: Any] = ["theme": "dark", "notifications": true]
+> context["settings"] = try Value(any: settings)
+>
+> let result = try template.render(context)
+> // "Hello Alice!"
+> ```
+
 ### Control Flow
 
 ```swift
@@ -507,15 +535,15 @@ let messages: [String: Value] = [
 let formatted = try chatTemplate.render(messages)
 ```
 
-## Contributing 
+## Contributing
 
-This is a community project and we welcome contributions. 
-Please check out 
+This is a community project and we welcome contributions.
+Please check out
 [Issues tagged with `good first issue`][good-first-issues]
 if you are looking for a place to start!
 
-Please ensure your code passes the build and test suite 
-before submitting a pull request. 
+Please ensure your code passes the build and test suite
+before submitting a pull request.
 You can run the tests with `swift test`.
 
 [good-first-issues]: https://github.com/huggingface/swift-jinja/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22
