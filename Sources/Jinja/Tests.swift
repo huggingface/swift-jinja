@@ -185,7 +185,11 @@ public enum Tests {
         case let (.int(a), .int(b)):
             return b != 0 && a % b == 0
         case let (.double(a), .double(b)):
-            return b != 0.0 && Int(a) % Int(b) == 0
+            return b != 0.0 && a.truncatingRemainder(dividingBy: b) == 0
+        case let (.int(a), .double(b)):
+            return b != 0.0 && Double(a).truncatingRemainder(dividingBy: b) == 0
+        case let (.double(a), .int(b)):
+            return b != 0 && a.truncatingRemainder(dividingBy: Double(b)) == 0
         default:
             return false
         }
