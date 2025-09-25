@@ -318,6 +318,24 @@ struct TestsTests {
         }
     }
 
+    @Test("divisibleby test with mixed types - int divisible by double")
+    func divisiblebyWithIntAndDouble() throws {
+        let result = try Tests.divisibleby([.int(10), .double(2.0)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("divisibleby test with mixed types - double divisible by int")
+    func divisiblebyWithDoubleAndInt() throws {
+        let result = try Tests.divisibleby([.double(10.0), .int(2)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("divisibleby test with mixed types - non-divisible")
+    func divisiblebyWithMixedTypesNonDivisible() throws {
+        let result = try Tests.divisibleby([.int(10), .double(3.0)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
     // MARK: - Comparison Tests
 
     @Test("equalto test with equal integers")

@@ -2020,6 +2020,28 @@ struct TemplateTests {
         #expect(rendered == "|true|false|false|true|")
     }
 
+    @Test("Is operator with divisibleby")
+    func isOperatorWithDivisibleby() throws {
+        let string =
+            #"|{{ 10 is divisibleby(2) }}|{{ 10 is divisibleby(3) }}|{{ 10 is divisibleby(2.0) }}|{{ 10.0 is divisibleby(2) }}|"#
+        let context: Context = [:]
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "|true|false|true|true|")
+    }
+
+    @Test("Is operator with divisibleby without parentheses")
+    func isOperatorWithDivisiblebyWithoutParens() throws {
+        let string =
+            #"|{{ 10 is divisibleby 2 }}|{{ 10 is divisibleby 3 }}|{{ 10.0 is divisibleby 2 }}|"#
+        let context: Context = [:]
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "|true|false|true|")
+    }
+
     @Test("Is operator with mapping")
     func isOperatorWithMapping() throws {
         let string =
