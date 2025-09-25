@@ -256,7 +256,7 @@ let result = try template.render(context)
 > [!IMPORTANT]  
 > **Migrating to Jinja v2.0**:
 > Most code using Jinja v1 should work with v2 with minimal changes.
-> The biggest breaking changes is that the context parameter for rendering templates
+> The biggest breaking change is that the context parameter for rendering templates
 > has changed from `[String: Any]` to `[String: Value]`.
 >
 > Thanks to `Value` being expressible by literals,
