@@ -406,6 +406,14 @@ public struct Parser: Sendable {
                 if match(.openParen) {
                     (args, _) = try parseArguments()
                     try consume(.closeParen, message: "Expected ')' after test arguments.")
+                } else {
+                    // Check if the next token can be parsed as an argument (for tests that expect one)
+                    let nextToken = peek()
+                    if nextToken.kind == .identifier || nextToken.kind == .null || nextToken.kind == .boolean
+                        || nextToken.kind == .number || nextToken.kind == .string
+                    {
+                        args = [try parseConcat()]
+                    }
                 }
                 expr = .test(expr, testName, args, negated: negated)
             } else {
