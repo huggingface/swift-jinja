@@ -2046,7 +2046,7 @@ struct TemplateTests {
     func isOperatorWithFractionalNumbersEven() throws {
         let string = #"|{{ 4.5 is even }}|{{ 3.7 is even }}|{{ 0.1 is even }}|{{ 2.0 is even }}|"#
         let context: Context = [:]
-        
+
         let rendered = try Template(string).render(context)
         #expect(rendered == "|false|false|false|true|")
     }
@@ -2055,7 +2055,7 @@ struct TemplateTests {
     func isOperatorWithFractionalNumbersOdd() throws {
         let string = #"|{{ 4.5 is odd }}|{{ 3.7 is odd }}|{{ 0.1 is odd }}|{{ 3.0 is odd }}|"#
         let context: Context = [:]
-        
+
         let rendered = try Template(string).render(context)
         #expect(rendered == "|false|false|false|true|")
     }

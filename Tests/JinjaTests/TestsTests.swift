@@ -218,7 +218,7 @@ struct TestsTests {
             try Tests.even([], kwargs: [:], env: env)
         }
     }
-    
+
     @Test("even test with fractional numbers")
     func evenWithFractionalNumbers() throws {
         let result1 = try Tests.even([.double(4.5)], kwargs: [:], env: env)
@@ -267,7 +267,7 @@ struct TestsTests {
             try Tests.odd([], kwargs: [:], env: env)
         }
     }
-    
+
     @Test("odd test with fractional numbers")
     func oddWithFractionalNumbers() throws {
         let result1 = try Tests.odd([.double(4.5)], kwargs: [:], env: env)
@@ -515,10 +515,6 @@ struct TestsTests {
         )
         #expect(divisibleResult == true)
     }
-
-    
-
-    
 
     // MARK: - New Tests
 
