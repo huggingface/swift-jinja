@@ -2042,6 +2042,24 @@ struct TemplateTests {
         #expect(rendered == "|true|false|true|")
     }
 
+    @Test("Is operator with fractional numbers even")
+    func isOperatorWithFractionalNumbersEven() throws {
+        let string = #"|{{ 4.5 is even }}|{{ 3.7 is even }}|{{ 0.1 is even }}|{{ 2.0 is even }}|"#
+        let context: Context = [:]
+        
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "|false|false|false|true|")
+    }
+
+    @Test("Is operator with fractional numbers odd")
+    func isOperatorWithFractionalNumbersOdd() throws {
+        let string = #"|{{ 4.5 is odd }}|{{ 3.7 is odd }}|{{ 0.1 is odd }}|{{ 3.0 is odd }}|"#
+        let context: Context = [:]
+        
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "|false|false|false|true|")
+    }
+
     @Test("Is operator with mapping")
     func isOperatorWithMapping() throws {
         let string =
