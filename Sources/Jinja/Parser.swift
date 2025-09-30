@@ -131,6 +131,9 @@ public struct Parser: Sendable {
         case .filter:
             advance()
             return try parseFilterStatement()
+        case .generation:
+            advance()
+            return try parseGenerationStatement()
         default:
             throw JinjaError.parser("Unknown statement: \(keywordToken.value)")
         }
@@ -287,6 +290,18 @@ public struct Parser: Sendable {
         try consume(.closeStatement, message: "Expected '%}' after endfilter.")
 
         return .filter(filterExpr: filterExpr, body: body)
+    }
+
+    private mutating func parseGenerationStatement() throws -> Statement {
+        try consume(.closeStatement, message: "Expected '%}' after generation statement.")
+
+        let body = try parseNodesUntil([.endgeneration])
+
+        try consume(.openStatement, message: "Expected '{%' for endgeneration.")
+        try consume(.endgeneration, message: "Expected 'endgeneration'.")
+        try consume(.closeStatement, message: "Expected '%}' after endgeneration.")
+
+        return .generation(body)
     }
 
     // MARK: - Expression Parsing

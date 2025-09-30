@@ -10,6 +10,7 @@ public enum Lexer: Sendable {
         "break": .`break`, "continue": .`continue`,
         "call": .call, "endcall": .endcall,
         "filter": .filter, "endfilter": .endfilter,
+        "generation": .generation, "endgeneration": .endgeneration,
 
         // Python-compatible keywords
         "True": .boolean, "False": .boolean, "None": .null,

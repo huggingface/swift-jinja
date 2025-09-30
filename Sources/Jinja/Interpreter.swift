@@ -507,6 +507,9 @@ public enum Interpreter {
                 throw JinjaError.runtime("Invalid filter expression in filter statement")
             }
 
+        case let .generation(body):
+            try interpret(body, env: env, into: &buffer)
+
         case .break:
             throw ControlFlow.break
         case .continue:
@@ -538,7 +541,7 @@ public enum Interpreter {
             )
 
         // These statements do not produce output directly or are handled elsewhere.
-        case .if, .for, .program, .break, .continue, .call, .filter:
+        case .if, .for, .program, .break, .continue, .call, .filter, .generation:
             break
         }
     }

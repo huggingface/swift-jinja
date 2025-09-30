@@ -184,4 +184,7 @@ public enum Statement: Hashable, Codable, Sendable {
 
     /// Applies a filter to a block of content.
     case filter(filterExpr: Expression, body: [Node])
+
+    /// Marks a generation block for training/inference purposes.
+    case generation([Node])
 }

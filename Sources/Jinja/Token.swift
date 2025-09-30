@@ -119,6 +119,10 @@ public struct Token: Hashable, Sendable {
         case filter
         /// End of filter block keyword `endfilter`.
         case endfilter
+        /// Generation block keyword `generation`.
+        case generation
+        /// End of generation block keyword `endgeneration`.
+        case endgeneration
         /// Comment content `{# ... #}`.
         case comment
         /// End of file marker.
