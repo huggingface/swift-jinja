@@ -119,9 +119,14 @@ public struct Token: Hashable, Sendable {
         case filter
         /// End of filter block keyword `endfilter`.
         case endfilter
-        /// Generation block keyword `generation`.
+        /// Generation block keyword `generation` (HuggingFace extension).
+        ///
+        /// This is a custom Jinja extension used by HuggingFace Transformers to mark
+        /// assistant-generated content in chat templates. It's primarily used for creating
+        /// token masks during training (e.g., for RL). During rendering, the content
+        /// within the block is output normally.
         case generation
-        /// End of generation block keyword `endgeneration`.
+        /// End of generation block keyword `endgeneration` (HuggingFace extension).
         case endgeneration
         /// Comment content `{# ... #}`.
         case comment
