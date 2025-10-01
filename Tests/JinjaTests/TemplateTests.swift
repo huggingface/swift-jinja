@@ -2356,4 +2356,25 @@ struct TemplateTests {
         let namespaceResult = try Template(namespaceTemplate).render([:])
         #expect(namespaceResult.trimmingCharacters(in: .whitespacesAndNewlines) == "true")
     }
+
+    @Test("Generation statements (HuggingFace extension)")
+    func generationStatements() throws {
+        // The {% generation %} tag is a HuggingFace extension for marking
+        // assistant-generated content. During rendering, it outputs its
+        // content normally, so templates with and without the tag should
+        // produce identical results.
+        let context: Context = [
+            "name": "Alice",
+            "role": "assistant",
+        ]
+
+        let withoutTag = "Hello, {{ name }}! I am an {{ role }}."
+        let withTag = "{% generation %}Hello, {{ name }}! I am an {{ role }}.{% endgeneration %}"
+
+        let renderedWithout = try Template(withoutTag).render(context)
+        let renderedWith = try Template(withTag).render(context)
+
+        #expect(renderedWithout == "Hello, Alice! I am an assistant.")
+        #expect(renderedWith == renderedWithout)
+    }
 }
