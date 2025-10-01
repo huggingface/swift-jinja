@@ -1,13 +1,10 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
-name: Swift
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build:
@@ -25,16 +22,18 @@ jobs:
           - swift: "6.1"
             xcode: "16.3"
             runs-on: macos-15
-    
+          - swift: "6.2"
+            xcode: "26.0"
+            runs-on: macos-26
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Lint
-      run: swift format lint --recursive . --strict
+      - name: Lint
+        run: swift format lint --recursive . --strict
 
-    - name: Build
-      run: swift build -v
+      - name: Build
+        run: swift build -v
 
-    - name: Run tests
-      run: swift test -v
+      - name: Run tests
+        run: swift test -v
