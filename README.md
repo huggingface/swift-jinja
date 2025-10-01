@@ -90,6 +90,9 @@ This package implements a subset of the functionality of the
   `{{ name | upper }}`
 - **Filter Blocks**:
   `{% filter upper %}...{% endfilter %}`
+- **Generation Blocks**:
+  `{% generation %}...{% endgeneration %}`
+  (Hugging Face extension for marking assistant-generated content)
 - **Tests**:
   `is` operator for type/value checks (e.g. `{% if value is number %}`)
 - **Global Functions**:
