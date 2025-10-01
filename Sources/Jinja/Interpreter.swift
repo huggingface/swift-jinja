@@ -510,6 +510,9 @@ public enum Interpreter {
         case let .generation(body):
             try interpret(body, env: env, into: &buffer)
 
+        case let .do(expr):
+            _ = try evaluateExpression(expr, env: env)
+
         case .break:
             throw ControlFlow.break
         case .continue:
@@ -539,6 +542,9 @@ public enum Interpreter {
                 body: body,
                 env: env
             )
+
+        case let .do(expr):
+            _ = try evaluateExpression(expr, env: env)
 
         // These statements do not produce output directly or are handled elsewhere.
         case .if, .for, .program, .break, .continue, .call, .filter, .generation:

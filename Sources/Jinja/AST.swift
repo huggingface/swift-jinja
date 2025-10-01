@@ -179,6 +179,9 @@ public enum Statement: Hashable, Codable, Sendable {
     /// Skips the current iteration of a loop.
     case `continue`
 
+    /// Expression statement that evaluates an expression without outputting it.
+    case `do`(Expression)
+
     /// Calls a macro with a body.
     case call(callable: Expression, callerArgs: [Expression]?, body: [Node])
 

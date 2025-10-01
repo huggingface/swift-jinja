@@ -86,6 +86,8 @@ This package implements a subset of the functionality of the
   `{% macro name() %}...{% endmacro %}`
 - **Macro Calls**:
   `{% call macro_name() %}`
+- **Do Statement**:
+  `{% do expression %}` (expression without output)
 - **Filter Statements**:
   `{{ name | upper }}`
 - **Filter Blocks**:
@@ -213,8 +215,6 @@ This package implements a subset of the functionality of the
   `{% trans %}`, `{% pluralize %}`, `i18n` extension
 - **Debug Statement**:
   `{% debug %}`
-- **Do Statement**:
-  `{% do expression %}` (expression without output)
 - **Autoescape**:
   `{% autoescape %}`
   blocks and automatic HTML escaping

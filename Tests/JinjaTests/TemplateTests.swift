@@ -806,6 +806,36 @@ struct TemplateTests {
         #expect(rendered == "|12|12|")
     }
 
+    @Test("Do expression with side effects")
+    func doExpressionSideEffects() throws {
+        let string = #"{% set x = namespace(count=0) %}{% do x.count + 1 %}{{ x.count }}"#
+        let context: Context = [:]
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "0")
+    }
+
+    @Test("Do expression produces no output")
+    func doExpressionNoOutput() throws {
+        let string = #"before{% do 1 + 1 %}after"#
+        let context: Context = [:]
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "beforeafter")
+    }
+
+    @Test("Do expression evaluates function call")
+    func doExpressionFunctionCall() throws {
+        let string = #"{% do range(5) %}success"#
+        let context: Context = [:]
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "success")
+    }
+
     @Test("Numbers and arithmetic")
     func numbers() throws {
         let string = #"|{{ 5 }}|{{ -5 }}|{{ add(3, -1) }}|{{ (3 - 1) + (a - 5) - (a + 5)}}|"#
