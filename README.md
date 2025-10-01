@@ -217,6 +217,10 @@ This package implements a subset of the functionality of the
   blocks and automatic HTML escaping
 - **Line Statements**:
   Alternative syntax with prefix characters (`# for item in seq` instead of `{% for item in seq %}`)
+- **Extensions**:
+  Custom extensions that add extra functionality at the parser level are not supported.
+  If you need features beyond custom tests, filters, or macros,
+  fork the package and implement changes directly.
 
 ## Usage
 
