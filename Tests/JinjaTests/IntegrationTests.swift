@@ -1506,7 +1506,7 @@ struct IntegrationTests {
             ## Metadata
 
             Knowledge Cutoff Date: June 2025
-            Today Date: 30 September 2025
+            Today Date: \(try Globals.strftimeNow([.string("%d %B %Y")], [:], .init()))
             Reasoning Mode: /think
 
             ## Custom Instructions
@@ -1635,7 +1635,7 @@ struct IntegrationTests {
             ## Metadata
 
             Knowledge Cutoff Date: June 2025
-            Today Date: 30 September 2025
+            Today Date: \(try Globals.strftimeNow([.string("%d %B %Y")], [:], .init()))
             Reasoning Mode: /think
 
             ## Custom Instructions
