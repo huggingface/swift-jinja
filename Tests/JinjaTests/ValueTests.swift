@@ -31,6 +31,28 @@ struct ValueTests {
         } else {
             Issue.record("Expected object value")
         }
+        
+        let orderedDict = ["0": "a", "1": "b"] as OrderedDictionary
+        let orderedDictValue = try Value(any: orderedDict)
+        if case let .object(dict) = orderedDictValue {
+            #expect(dict.index(forKey: "0") == 0)
+            #expect(dict["0"] == Value.string("a"))
+            #expect(dict.index(forKey: "1") == 1)
+            #expect(dict["1"] == Value.string("b"))
+        } else {
+            Issue.record("Expected object value")
+        }
+        
+        let orderedNestedDict = ["0": orderedDict, "1": orderedDict] as OrderedDictionary
+        let orderedNestedDictValue = try Value(any: orderedNestedDict)
+        if case let .object(dict) = orderedNestedDictValue {
+            #expect(dict.index(forKey: "0") == 0)
+            #expect(dict["0"] == .object(["0": .string("a"), "1": .string("b")]))
+            #expect(dict.index(forKey: "1") == 1)
+            #expect(dict["1"] == .object(["0": .string("a"), "1": .string("b")]))
+        } else {
+            Issue.record("Expected object value")
+        }
 
         #expect(throws: JinjaError.self) {
             _ = try Value(any: NSObject())

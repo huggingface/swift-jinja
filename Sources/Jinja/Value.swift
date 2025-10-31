@@ -57,6 +57,18 @@ public enum Value: Sendable {
                 orderedDict[key] = try Value(any: value)
             }
             self = .object(orderedDict)
+        case let orderedDict as OrderedDictionary<String, String>:
+            self = .object(orderedDict.mapValues(Value.init))
+        case let orderedDict as OrderedDictionary<String, Any>:
+            self = .object(try orderedDict.mapValues(Value.init))
+        case let orderedDict as OrderedDictionary<String, Any?>:
+            self = .object(try orderedDict.mapValues(Value.init))
+        case let orderedDict as OrderedDictionary<String, OrderedDictionary<String, String>>:
+            self = .object(try orderedDict.mapValues(Value.init))
+        case let orderedDict as OrderedDictionary<String, OrderedDictionary<String, Any>>:
+            self = .object(try orderedDict.mapValues(Value.init))
+        case let orderedDict as OrderedDictionary<String, OrderedDictionary<String, Any?>>:
+            self = .object(try orderedDict.mapValues(Value.init))
         case let macro as Macro:
             self = .macro(macro)
         default:
