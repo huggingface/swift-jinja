@@ -35,6 +35,15 @@ struct ValueTests {
         #expect(throws: JinjaError.self) {
             _ = try Value(any: NSObject())
         }
+
+        let orderedDictValue = try Value(any: Value.object(["key": "value", "num": 42]))
+        if case let .object(dict) = orderedDictValue {
+            #expect(dict["key"] == Value.string("value"))
+            #expect(dict["num"] == Value.int(42))
+            #expect(Array(dict.keys) == ["key", "num"])
+        } else {
+            Issue.record("Expected object value")
+        }
     }
 
     @Test("Literal conformances")

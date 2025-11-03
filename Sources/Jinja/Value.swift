@@ -36,6 +36,8 @@ public enum Value: Sendable {
     /// - Throws: `JinjaError.runtime` if the value type cannot be converted
     public init(any value: Any?) throws {
         switch value {
+        case let value as Value:
+            self = value
         case nil:
             self = .null
         case let str as String:
