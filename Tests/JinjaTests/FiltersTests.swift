@@ -32,6 +32,12 @@ struct FiltersTests {
         #expect(result == .int(3))
     }
 
+    @Test("length filter for undefined")
+    func lengthFilterUndefined() throws {
+        let result = try Filters.length([.undefined], kwargs: [:], env: env)
+        #expect(result == .int(0))
+    }
+
     @Test("join filter")
     func joinFilter() throws {
         let values = [Value.string("a"), .string("b"), .string("c")]
