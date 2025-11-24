@@ -1,7 +1,7 @@
 import Foundation
 
 /// Errors that can occur during Jinja template processing.
-public enum JinjaError: Error, Sendable, LocalizedError {
+public enum JinjaError: LocalizedError {
     /// Error during tokenization of template source.
     case lexer(String)
     /// Error during parsing of tokens into AST.
