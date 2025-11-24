@@ -68,6 +68,8 @@ public enum Filters {
             return .int(arr.count)
         case let .object(obj):
             return .int(obj.count)
+        case .undefined:
+            return .int(0)
         default:
             throw JinjaError.runtime("length filter requires string, array, or object")
         }
