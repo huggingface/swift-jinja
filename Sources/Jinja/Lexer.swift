@@ -111,10 +111,34 @@ public enum Lexer: Sendable {
         var result = template
 
         // Handle whitespace control
+
+        // Note: We must avoid merging a literal '{' with the delimiter.
+        // For example, "{<newline>{%-" should become "{ {%" not "{{%" (which would be parsed as "{{" + "%").
+        // Since Swift Regex doesn't support lookbehind
+        // (see https://github.com/swiftlang/swift-evolution/blob/main/proposals/0448-regex-lookbehind-assertions.md),
+        // we use a multi-step approach:
+
+        // 1. Handle closing delimiters (these don't have the merging issue)
         result = result.replacing(#/-%}\s*/#, with: "%}")
-        result = result.replacing(#/\s*{%-/#, with: "{%")
         result = result.replacing(#/-}}\s*/#, with: "}}")
-        result = result.replacing(#/\s*{{-/#, with: "{{")
+
+        // 2. For opening delimiters, we need to be careful about preceding '{'
+        // When preceded by '{', we keep a single space to prevent token merging.
+        // When preceded by other characters, we strip the whitespace entirely.
+
+        // Handle {%- : if preceded by '{', keep one space; otherwise strip whitespace
+        result = result.replacing(#/\{\s+\{%-/#, with: "{ {%")
+        result = result.replacing(#/([^\{])\s*\{%-/#) { match in
+            "\(match.1){%"
+        }
+        result = result.replacing(#/^\s*\{%-/#, with: "{%")
+
+        // Handle {{- : if preceded by '{', keep one space; otherwise strip whitespace
+        result = result.replacing(#/\{\s+\{\{-/#, with: "{ {{")
+        result = result.replacing(#/([^\{])\s*\{\{-/#) { match in
+            "\(match.1){{"
+        }
+        result = result.replacing(#/^\s*\{\{-/#, with: "{{")
 
         return result
     }
