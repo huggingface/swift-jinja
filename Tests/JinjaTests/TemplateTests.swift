@@ -2377,4 +2377,43 @@ struct TemplateTests {
         #expect(renderedWithout == "Hello, Alice! I am an assistant.")
         #expect(renderedWith == renderedWithout)
     }
+
+    @Test("Macro with pipe filter in dict access - Issue #42")
+    func macroWithPipeFilterInDictAccess() throws {
+        // This template from FunctionGemma was failing with:
+        // "Parser error: Unexpected token for primary expression: modulo"
+        // The issue is that the lexer sees `| upper -}}<escape>}` and somehow
+        // gets confused with the `%` from `-%}`.
+        let template = """
+            {% macro format_function_declaration(tool_data) -%}
+            declaration:{{- tool_data['function']['name'] -}}
+            {description:<escape>{{- tool_data['function']['description'] -}}<escape>
+            {%- set params = tool_data['function']['parameters'] -%}
+            {%- if params -%}
+                ,parameters:{
+                {%- if params['type'] -%}
+                    type:<escape>{{- params['type'] | upper -}}<escape>}
+                {%- endif -%}
+            {%- endif -%}
+            }
+            {%- endmacro -%}
+            {{ format_function_declaration(tool) }}
+            """
+
+        let context: Context = [
+            "tool": [
+                "function": [
+                    "name": "get_weather",
+                    "description": "Gets the weather",
+                    "parameters": [
+                        "type": "object"
+                    ],
+                ]
+            ]
+        ]
+
+        let rendered = try Template(template).render(context)
+        #expect(rendered.contains("declaration:get_weather"))
+        #expect(rendered.contains("type:<escape>OBJECT<escape>"))
+    }
 }
