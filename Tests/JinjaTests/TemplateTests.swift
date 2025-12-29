@@ -2380,10 +2380,13 @@ struct TemplateTests {
 
     @Test("Macro with pipe filter in dict access - Issue #42")
     func macroWithPipeFilterInDictAccess() throws {
-        // This template from FunctionGemma was failing with:
+        // The following template from FunctionGemma was failing with:
         // "Parser error: Unexpected token for primary expression: modulo"
-        // The issue is that the lexer sees `| upper -}}<escape>}` and somehow
-        // gets confused with the `%` from `-%}`.
+        // The bug was in whitespace-stripping:
+        // a literal `{` followed by whitespace and `{%-` (e.g., "}\n{%-")
+        // became `}{%-` after stripping,
+        // which the lexer tokenized as `}` `{{` `%`,
+        // where `%` (modulo) then caused the parser error.
         let template = """
             {% macro format_function_declaration(tool_data) -%}
             declaration:{{- tool_data['function']['name'] -}}
