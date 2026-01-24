@@ -227,4 +227,162 @@ struct FiltersTests {
             Issue.record("Expected string result")
         }
     }
+
+    // MARK: - tojson filter tests
+
+    @Test("tojson filter with ASCII string")
+    func tojsonFilterWithASCIIString() throws {
+        let result = try Filters.tojson([.string("hello")], kwargs: [:], env: env)
+        #expect(result == .string("\"hello\""))
+    }
+
+    @Test("tojson filter with integer")
+    func tojsonFilterWithInteger() throws {
+        let result = try Filters.tojson([.int(42)], kwargs: [:], env: env)
+        #expect(result == .string("42"))
+    }
+
+    @Test("tojson filter with boolean")
+    func tojsonFilterWithBoolean() throws {
+        let result = try Filters.tojson([.boolean(true)], kwargs: [:], env: env)
+        #expect(result == .string("true"))
+    }
+
+    @Test("tojson filter with null")
+    func tojsonFilterWithNull() throws {
+        let result = try Filters.tojson([.null], kwargs: [:], env: env)
+        #expect(result == .string("null"))
+    }
+
+    @Test("tojson filter with array")
+    func tojsonFilterWithArray() throws {
+        let result = try Filters.tojson([.array([.int(1), .int(2), .int(3)])], kwargs: [:], env: env)
+        #expect(result == .string("[1,2,3]"))
+    }
+
+    @Test("tojson filter escapes non-ASCII by default")
+    func tojsonFilterEscapesNonASCIIByDefault() throws {
+        // Chinese characters "你好" should be escaped as \uXXXX by default
+        let result = try Filters.tojson([.string("你好")], kwargs: [:], env: env)
+        if case .string(let str) = result {
+            #expect(str.contains("\\u4f60"))  // 你
+            #expect(str.contains("\\u597d"))  // 好
+            #expect(!str.contains("你"))
+            #expect(!str.contains("好"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("tojson filter with ensure_ascii=true")
+    func tojsonFilterWithEnsureASCIITrue() throws {
+        let result = try Filters.tojson(
+            [.string("你好")],
+            kwargs: ["ensure_ascii": .boolean(true)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("\\u4f60"))
+            #expect(str.contains("\\u597d"))
+            #expect(!str.contains("你"))
+            #expect(!str.contains("好"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("tojson filter with ensure_ascii=false preserves Unicode")
+    func tojsonFilterWithEnsureASCIIFalse() throws {
+        // When ensure_ascii=false, Unicode characters should be preserved
+        let result = try Filters.tojson(
+            [.string("你好")],
+            kwargs: ["ensure_ascii": .boolean(false)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("你"))
+            #expect(str.contains("好"))
+            #expect(!str.contains("\\u4f60"))
+            #expect(!str.contains("\\u597d"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("tojson filter with ensure_ascii=false in object")
+    func tojsonFilterWithEnsureASCIIFalseInObject() throws {
+        // Test object with Chinese characters and ensure_ascii=false
+        let obj = Value.object(["name": .string("测试"), "value": .int(123)])
+        let result = try Filters.tojson(
+            [obj],
+            kwargs: ["ensure_ascii": .boolean(false)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("测试"))
+            #expect(str.contains("123"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("tojson filter with indent and ensure_ascii=false")
+    func tojsonFilterWithIndentAndEnsureASCIIFalse() throws {
+        // Test combining indent and ensure_ascii parameters
+        let obj = Value.object(["name": .string("你好")])
+        let result = try Filters.tojson(
+            [obj],
+            kwargs: ["indent": .int(2), "ensure_ascii": .boolean(false)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("你好"))
+            #expect(str.contains("\n"))  // Pretty printed should have newlines
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("tojson filter with mixed ASCII and non-ASCII")
+    func tojsonFilterWithMixedContent() throws {
+        let result = try Filters.tojson(
+            [.string("Hello 世界!")],
+            kwargs: ["ensure_ascii": .boolean(true)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("Hello"))
+            #expect(str.contains("!"))
+            #expect(str.contains("\\u4e16"))  // 世
+            #expect(str.contains("\\u754c"))  // 界
+            #expect(!str.contains("世"))
+            #expect(!str.contains("界"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("tojson filter GLM template use case")
+    func tojsonFilterGLMTemplateUseCase() throws {
+        // Simulate the GLM model template use case with tool containing Chinese
+        let tool = Value.object([
+            "type": .string("function"),
+            "function": .object([
+                "name": .string("search"),
+                "description": .string("搜索信息"),
+            ]),
+        ])
+        let result = try Filters.tojson(
+            [tool],
+            kwargs: ["ensure_ascii": .boolean(false)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("搜索信息"))
+            #expect(str.contains("function"))
+            #expect(str.contains("search"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
 }

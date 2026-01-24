@@ -925,6 +925,11 @@ public enum Filters {
     }
 
     /// Converts value to JSON string.
+    ///
+    /// - Parameters:
+    ///   - indent: Number of spaces to use for indentation (optional).
+    ///   - ensure_ascii: If true (default), escape non-ASCII characters as `\uXXXX`.
+    ///                   If false, output Unicode characters directly.
     @Sendable public static func tojson(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -935,8 +940,8 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["indent"],
-            defaults: ["indent": .null]
+            parameters: ["indent", "ensure_ascii"],
+            defaults: ["indent": .null, "ensure_ascii": .boolean(true)]
         )
 
         let encoder = JSONEncoder()
@@ -947,13 +952,37 @@ public enum Filters {
             encoder.outputFormatting = .prettyPrinted
         }
 
+        let ensureASCII: Bool
+        if let ensureASCIIValue = arguments["ensure_ascii"] {
+            ensureASCII = ensureASCIIValue.isTruthy
+        } else {
+            ensureASCII = true
+        }
+
         if let jsonData = (try? encoder.encode(value)),
             let jsonString = String(data: jsonData, encoding: .utf8)
         {
+            if ensureASCII {
+                return .string(escapeNonASCII(jsonString))
+            }
             return .string(jsonString)
         } else {
             return .string("null")
         }
+    }
+
+    /// Escapes non-ASCII characters in a string as `\uXXXX` sequences.
+    private static func escapeNonASCII(_ string: String) -> String {
+        var result = ""
+        result.reserveCapacity(string.count)
+        for scalar in string.unicodeScalars {
+            if scalar.value > 127 {
+                result += String(format: "\\u%04x", scalar.value)
+            } else {
+                result.append(Character(scalar))
+            }
+        }
+        return result
     }
 
     /// Returns absolute value of a number.
