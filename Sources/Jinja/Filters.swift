@@ -929,23 +929,33 @@ public enum Filters {
             defaults: ["binary": .boolean(false)]
         )
 
-        guard case let .double(num) = value else {
+        let bytes: Double
+        switch value {
+        case let .double(num):
+            bytes = num
+        case let .int(num):
+            bytes = Double(num)
+        default:
             return .string("")
         }
 
         let binary = arguments["binary"]!.isTruthy
-        let bytes = num
         let unit: Double = binary ? 1024 : 1000
         if bytes < unit {
             return .string("\(Int(bytes)) Bytes")
         }
         let exp = Int(log(bytes) / log(unit))
         let pre = (binary ? "KMGTPEZY" : "kMGTPEZY")
-        let preIndex = pre.index(pre.startIndex, offsetBy: exp - 1)
+        let clampedExp = Swift.min(Swift.max(exp, 1), pre.count)
+        let preIndex = pre.index(pre.startIndex, offsetBy: clampedExp - 1)
         let preChar = pre[preIndex]
         let suffix = binary ? "iB" : "B"
         return .string(
-            String(format: "%.1f %s\(suffix)", bytes / pow(unit, Double(exp)), String(preChar))
+            String(
+                format: "%.1f %s\(suffix)",
+                bytes / pow(unit, Double(clampedExp)),
+                String(preChar)
+            )
         )
     }
 
@@ -968,6 +978,7 @@ public enum Filters {
 
         let autospace = arguments["autospace"]!.isTruthy
         var result = ""
+        var needsSpace = false
         for (key, value) in dict {
             if value == .null || value == .undefined { continue }
             // Validate key doesn't contain invalid characters
@@ -979,7 +990,9 @@ public enum Filters {
                 .replacingOccurrences(of: "<", with: "&lt;")
                 .replacingOccurrences(of: ">", with: "&gt;")
                 .replacingOccurrences(of: "\"", with: "&quot;")
+            if needsSpace { result += " " }
             result += "\(key)=\"\(escapedValue)\""
+            needsSpace = true
         }
         if autospace && !result.isEmpty {
             result = " " + result
@@ -1564,7 +1577,7 @@ public enum Filters {
         )
 
         if case let .string(s) = value {
-            return .string(s.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")
+            return .string(s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
         }
         if case .object(let dict) = value {
             var components = URLComponents()
@@ -1928,13 +1941,13 @@ public enum Filters {
             guard case let .array(values) = arguments["extra_schemes"] else { return [] }
             return Set(
                 values.compactMap { value in
-                    if case let .string(scheme) = value { return scheme }
+                    if case let .string(scheme) = value { return scheme.lowercased() }
                     return nil
                 }
             )
         }()
         let safeSchemes = Set(["http", "https", "mailto"])
-        let allowedSchemes = safeSchemes.union(extraSchemes.filter { safeSchemes.contains($0) })
+        let allowedSchemes = safeSchemes.union(extraSchemes)
 
         let leadingPunctuation = CharacterSet(charactersIn: "([")
         let trailingPunctuation = CharacterSet(charactersIn: ".,:;!?)\"]")
