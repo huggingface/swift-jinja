@@ -1070,14 +1070,21 @@ public enum Filters {
             return .string("")
         }
 
-        _ = try resolveCallArguments(
+        let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: [],
-            defaults: [:]
+            parameters: ["chars"],
+            defaults: ["chars": .null]
         )
 
-        return .string(str.trimmingCharacters(in: .whitespacesAndNewlines))
+        let characterSet: CharacterSet
+        if case let .string(chars) = arguments["chars"], !chars.isEmpty {
+            characterSet = CharacterSet(charactersIn: chars)
+        } else {
+            characterSet = .whitespacesAndNewlines
+        }
+
+        return .string(str.trimmingCharacters(in: characterSet))
     }
 
     /// Escapes HTML characters (alias for forceescape).
