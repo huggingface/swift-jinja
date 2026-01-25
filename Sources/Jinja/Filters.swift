@@ -2091,6 +2091,7 @@ public enum Filters {
         "count": length,  // alias for length
         "join": join,
         "default": `default`,
+        "d": `default`,  // alias for default
         "first": first,
         "last": last,
         "random": random,
