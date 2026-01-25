@@ -1645,9 +1645,6 @@ public enum Filters {
         return .string("")
     }
 
-        return .string(str.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
-    }
-
     /// Batches items into groups.
     @Sendable public static func batch(
         _ args: [Value],
@@ -1976,12 +1973,13 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["trim_url_limit", "nofollow", "target", "rel"],
+            parameters: ["trim_url_limit", "nofollow", "target", "rel", "extra_schemes"],
             defaults: [
                 "trim_url_limit": .null,
                 "nofollow": .boolean(false),
                 "target": .null,
                 "rel": .null,
+                "extra_schemes": .null,
             ]
         )
 
@@ -2016,26 +2014,66 @@ public enum Filters {
             return attributes
         }
 
-        // Use URLComponents to detect and validate URLs
+        let extraSchemes: Set<String> = {
+            guard case let .array(values) = arguments["extra_schemes"] else { return [] }
+            return Set(
+                values.compactMap { value in
+                    if case let .string(scheme) = value { return scheme }
+                    return nil
+                }
+            )
+        }()
+
+        let leadingPunctuation = CharacterSet(charactersIn: "([")
+        let trailingPunctuation = CharacterSet(charactersIn: ".,:;!?)\"]")
+
         var result = text
         let words = text.components(separatedBy: .whitespacesAndNewlines)
 
         for word in words {
-            // Check if the word looks like a URL
-            guard word.hasPrefix("http://") || word.hasPrefix("https://") else { continue }
+            var core = word
+            var prefix = ""
+            var suffix = ""
 
-            // Validate using URLComponents
-            guard let urlComponents = URLComponents(string: word),
-                let scheme = urlComponents.scheme,
-                scheme == "http" || scheme == "https",
-                urlComponents.host != nil
-            else { continue }
+            while let first = core.unicodeScalars.first, leadingPunctuation.contains(first) {
+                prefix.append(Character(first))
+                core.removeFirst()
+            }
+            while let last = core.unicodeScalars.last, trailingPunctuation.contains(last) {
+                suffix.insert(Character(last), at: suffix.startIndex)
+                core.removeLast()
+            }
 
-            let url = word
+            guard !core.isEmpty else { continue }
+
+            let lower = core.lowercased()
+            let hasScheme = core.contains(":")
+            let isMailto = lower.hasPrefix("mailto:")
+            let isHttp = lower.hasPrefix("http://") || lower.hasPrefix("https://")
+            let isWww = lower.hasPrefix("www.")
+            let isEmail = core.contains("@") && !isHttp && !isMailto
+
+            let schemeMatch: Bool = {
+                guard hasScheme else { return false }
+                let scheme = lower.split(separator: ":").first.map(String.init) ?? ""
+                return extraSchemes.contains(scheme)
+            }()
+
+            guard isHttp || isWww || isMailto || isEmail || schemeMatch else { continue }
+
+            let url: String
+            if isEmail && !isMailto {
+                url = "mailto:\(core)"
+            } else if isWww {
+                url = "https://\(core)"
+            } else {
+                url = core
+            }
+
             let displayUrl =
-                trimUrlLimit != nil && url.count > trimUrlLimit!
-                ? String(url.prefix(trimUrlLimit!)) + "..." : url
-            let replacement = "<a href=\"\(url)\"\(buildAttributes())>\(displayUrl)</a>"
+                trimUrlLimit != nil && core.count > trimUrlLimit!
+                ? String(core.prefix(trimUrlLimit!)) + "..." : core
+            let replacement = "\(prefix)<a href=\"\(url)\"\(buildAttributes())>\(displayUrl)</a>\(suffix)"
             result = result.replacingOccurrences(of: word, with: replacement)
         }
 
