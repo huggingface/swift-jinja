@@ -1794,18 +1794,55 @@ public enum Filters {
             return .array([])
         }
 
-        _ = try resolveCallArguments(
+        let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: [],
-            defaults: [:]
+            parameters: ["case_sensitive", "attribute"],
+            defaults: ["case_sensitive": .boolean(false), "attribute": .null]
         )
+
+        let caseSensitive = arguments["case_sensitive"]!.isTruthy
+
+        func normalizedKey(_ value: Value) -> Value {
+            if !caseSensitive, case let .string(str) = value {
+                return .string(str.lowercased())
+            }
+            return value
+        }
 
         var seen = Set<Value>()
         var result = [Value]()
+        func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
+            switch attribute {
+            case let .string(name):
+                return try PropertyMembers.evaluate(item, name)
+            case let .int(index):
+                switch item {
+                case let .array(values):
+                    if index >= 0, index < values.count {
+                        return values[index]
+                    }
+                    return .undefined
+                case let .object(values):
+                    return values[String(index)] ?? .undefined
+                default:
+                    return .undefined
+                }
+            default:
+                return .undefined
+            }
+        }
+
         for item in items {
-            if !seen.contains(item) {
-                seen.insert(item)
+            let key: Value
+            if let attribute = arguments["attribute"], attribute != .null {
+                key = try resolveAttributeValue(item, attribute: attribute)
+            } else {
+                key = item
+            }
+            let normalized = normalizedKey(key)
+            if !seen.contains(normalized) {
+                seen.insert(normalized)
                 result.append(item)
             }
         }
