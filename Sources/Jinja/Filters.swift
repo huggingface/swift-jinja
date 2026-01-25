@@ -1632,22 +1632,18 @@ public enum Filters {
             defaults: [:]
         )
 
-        let str: String
         if case let .string(s) = value {
-            str = s
-        } else if case .object(let dict) = value {
-            str = dict.map { key, value in
-                let encodedKey =
-                    key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                let encodedValue =
-                    value.description.addingPercentEncoding(
-                        withAllowedCharacters: .urlQueryAllowed
-                    ) ?? ""
-                return "\(encodedKey)=\(encodedValue)"
-            }.joined(separator: "&")
-        } else {
-            return .string("")
+            return .string(s.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? "")
         }
+        if case .object(let dict) = value {
+            var components = URLComponents()
+            components.queryItems = dict.map { key, value in
+                URLQueryItem(name: key, value: value.description)
+            }
+            return .string(components.percentEncodedQuery ?? "")
+        }
+        return .string("")
+    }
 
         return .string(str.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
     }
