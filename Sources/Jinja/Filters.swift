@@ -96,27 +96,6 @@ public enum Filters {
             throw JinjaError.runtime("join filter requires string separator")
         }
 
-        func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
-            switch attribute {
-            case let .string(name):
-                return try PropertyMembers.evaluate(item, name)
-            case let .int(index):
-                switch item {
-                case let .array(values):
-                    if index >= 0, index < values.count {
-                        return values[index]
-                    }
-                    return .undefined
-                case let .object(values):
-                    return values[String(index)] ?? .undefined
-                default:
-                    return .undefined
-                }
-            default:
-                return .undefined
-            }
-        }
-
         let strings: [String]
         if let attribute = arguments["attribute"], attribute != .null {
             strings = try array.map {
@@ -302,11 +281,7 @@ public enum Filters {
         let caseSensitive = arguments["case_sensitive"]!.isTruthy
 
         func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
-            if !caseSensitive, case let .string(aStr) = lhs, case let .string(bStr) = rhs {
-                if aStr.lowercased() == bStr.lowercased() { return 0 }
-                return aStr.lowercased() < bStr.lowercased() ? -1 : 1
-            }
-            return try lhs.compare(to: rhs)
+            try compareValues(lhs, rhs, caseSensitive: caseSensitive)
         }
 
         func stableSorted(_ values: [Value], by comparator: (Value, Value) throws -> Int) rethrows
@@ -376,20 +351,13 @@ public enum Filters {
         }
 
         func compare(_ lhs: Value, _ rhs: Value) -> Int {
-            if case let .string(aStr) = lhs, case let .string(bStr) = rhs {
-                let left = caseSensitive ? aStr : aStr.lowercased()
-                let right = caseSensitive ? bStr : bStr.lowercased()
-                if left == right { return 0 }
-                return left < right ? -1 : 1
-            }
-            do {
-                return try lhs.compare(to: rhs)
-            } catch {
-                let left = lhs.description
-                let right = rhs.description
-                if left == right { return 0 }
-                return left < right ? -1 : 1
-            }
+            (try? compareValues(
+                lhs,
+                rhs,
+                caseSensitive: caseSensitive,
+                useStringComparisonWhenCaseSensitive: true,
+                fallbackToDescription: true
+            )) ?? 0
         }
 
         let keyedItems: [(item: Value, displayKey: Value, normalized: Value)] = try items.map {
@@ -486,27 +454,6 @@ public enum Filters {
             )
         } else if let attribute = arguments["attribute"], attribute != .null {
             let defaultValue = arguments["default"] ?? .null
-
-            func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
-                switch attribute {
-                case let .string(name):
-                    return try PropertyMembers.evaluate(item, name)
-                case let .int(index):
-                    switch item {
-                    case let .array(values):
-                        if index >= 0, index < values.count {
-                            return values[index]
-                        }
-                        return .undefined
-                    case let .object(values):
-                        return values[String(index)] ?? .undefined
-                    default:
-                        return .undefined
-                    }
-                default:
-                    return .undefined
-                }
-            }
 
             return try .array(
                 items.map {
@@ -1320,7 +1267,7 @@ public enum Filters {
                 if let converted = Int(digits, radix: 16) { return .int(converted) }
                 return defaultValue
             }
-            if base != 10, (2...36).contains(base), let converted = Int(trimmed, radix: base) {
+            if base != 10, (2 ... 36).contains(base), let converted = Int(trimmed, radix: base) {
                 return .int(converted)
             }
             if let converted = Int(trimmed) {
@@ -1377,24 +1324,16 @@ public enum Filters {
 
         let caseSensitive = arguments["case_sensitive"]!.isTruthy
 
-        func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
-            if !caseSensitive, case let .string(aStr) = lhs, case let .string(bStr) = rhs {
-                if aStr.lowercased() == bStr.lowercased() { return 0 }
-                return aStr.lowercased() < bStr.lowercased() ? -1 : 1
-            }
-            return try lhs.compare(to: rhs)
-        }
-
         if case let .string(attribute) = arguments["attribute"] {
             return try items.max(by: { a, b in
                 let aValue = try PropertyMembers.evaluate(a, attribute)
                 let bValue = try PropertyMembers.evaluate(b, attribute)
-                return try compare(aValue, bValue) < 0
+                return try compareValues(aValue, bValue, caseSensitive: caseSensitive) < 0
             }) ?? .undefined
         } else {
             return items.max(by: { a, b in
                 do {
-                    return try compare(a, b) < 0
+                    return try compareValues(a, b, caseSensitive: caseSensitive) < 0
                 } catch {
                     return false
                 }
@@ -1419,24 +1358,16 @@ public enum Filters {
 
         let caseSensitive = arguments["case_sensitive"]!.isTruthy
 
-        func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
-            if !caseSensitive, case let .string(aStr) = lhs, case let .string(bStr) = rhs {
-                if aStr.lowercased() == bStr.lowercased() { return 0 }
-                return aStr.lowercased() < bStr.lowercased() ? -1 : 1
-            }
-            return try lhs.compare(to: rhs)
-        }
-
         if case let .string(attribute) = arguments["attribute"] {
             return try items.min(by: { a, b in
                 let aValue = try PropertyMembers.evaluate(a, attribute)
                 let bValue = try PropertyMembers.evaluate(b, attribute)
-                return try compare(aValue, bValue) < 0
+                return try compareValues(aValue, bValue, caseSensitive: caseSensitive) < 0
             }) ?? .undefined
         } else {
             return items.min(by: { a, b in
                 do {
-                    return try compare(a, b) < 0
+                    return try compareValues(a, b, caseSensitive: caseSensitive) < 0
                 } catch {
                     return false
                 }
@@ -1809,27 +1740,6 @@ public enum Filters {
 
         var seen = Set<Value>()
         var result = [Value]()
-        func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
-            switch attribute {
-            case let .string(name):
-                return try PropertyMembers.evaluate(item, name)
-            case let .int(index):
-                switch item {
-                case let .array(values):
-                    if index >= 0, index < values.count {
-                        return values[index]
-                    }
-                    return .undefined
-                case let .object(values):
-                    return values[String(index)] ?? .undefined
-                default:
-                    return .undefined
-                }
-            default:
-                return .undefined
-            }
-        }
-
         for item in items {
             let key: Value
             if let attribute = arguments["attribute"], attribute != .null {
@@ -2009,8 +1919,8 @@ public enum Filters {
         func buildAttributes() -> String {
             var attributes = ""
             if nofollow { attributes += " rel=\"nofollow\"" }
-            if let target = target { attributes += " target=\"\(target)\"" }
-            if let rel = rel { attributes += " rel=\"\(rel)\"" }
+            if let target = target { attributes += " target=\"\(htmlEscape(target))\"" }
+            if let rel = rel { attributes += " rel=\"\(htmlEscape(rel))\"" }
             return attributes
         }
 
@@ -2023,14 +1933,24 @@ public enum Filters {
                 }
             )
         }()
+        let safeSchemes = Set(["http", "https", "mailto"])
+        let allowedSchemes = safeSchemes.union(extraSchemes.filter { safeSchemes.contains($0) })
 
         let leadingPunctuation = CharacterSet(charactersIn: "([")
         let trailingPunctuation = CharacterSet(charactersIn: ".,:;!?)\"]")
 
-        var result = text
-        let words = text.components(separatedBy: .whitespacesAndNewlines)
+        let nsText = text as NSString
+        let regex = try NSRegularExpression(pattern: "\\S+")
+        var result = ""
+        var lastIndex = 0
+        let matches = regex.matches(in: text, range: NSRange(location: 0, length: nsText.length))
 
-        for word in words {
+        for match in matches {
+            let range = match.range
+            if range.location > lastIndex {
+                result += nsText.substring(with: NSRange(location: lastIndex, length: range.location - lastIndex))
+            }
+            let word = nsText.substring(with: range)
             var core = word
             var prefix = ""
             var suffix = ""
@@ -2044,37 +1964,47 @@ public enum Filters {
                 core.removeLast()
             }
 
-            guard !core.isEmpty else { continue }
+            var replacement = word
+            if !core.isEmpty {
+                let lower = core.lowercased()
+                let hasScheme = core.contains(":")
+                let isMailto = lower.hasPrefix("mailto:")
+                let isHttp = lower.hasPrefix("http://") || lower.hasPrefix("https://")
+                let isWww = lower.hasPrefix("www.")
+                let isEmail = core.contains("@") && !isHttp && !isMailto
 
-            let lower = core.lowercased()
-            let hasScheme = core.contains(":")
-            let isMailto = lower.hasPrefix("mailto:")
-            let isHttp = lower.hasPrefix("http://") || lower.hasPrefix("https://")
-            let isWww = lower.hasPrefix("www.")
-            let isEmail = core.contains("@") && !isHttp && !isMailto
+                let schemeMatch: Bool = {
+                    guard hasScheme else { return false }
+                    let scheme = lower.split(separator: ":").first.map(String.init) ?? ""
+                    return allowedSchemes.contains(scheme)
+                }()
 
-            let schemeMatch: Bool = {
-                guard hasScheme else { return false }
-                let scheme = lower.split(separator: ":").first.map(String.init) ?? ""
-                return extraSchemes.contains(scheme)
-            }()
+                if isHttp || isWww || isMailto || isEmail || schemeMatch {
+                    let url: String
+                    if isEmail && !isMailto {
+                        url = "mailto:\(core)"
+                    } else if isWww {
+                        url = "https://\(core)"
+                    } else {
+                        url = core
+                    }
 
-            guard isHttp || isWww || isMailto || isEmail || schemeMatch else { continue }
-
-            let url: String
-            if isEmail && !isMailto {
-                url = "mailto:\(core)"
-            } else if isWww {
-                url = "https://\(core)"
-            } else {
-                url = core
+                    let displayUrl =
+                        trimUrlLimit != nil && core.count > trimUrlLimit!
+                        ? String(core.prefix(trimUrlLimit!)) + "..." : core
+                    let escapedUrl = htmlEscape(url)
+                    let escapedDisplayUrl = htmlEscape(displayUrl)
+                    replacement =
+                        "\(prefix)<a href=\"\(escapedUrl)\"\(buildAttributes())>\(escapedDisplayUrl)</a>\(suffix)"
+                }
             }
 
-            let displayUrl =
-                trimUrlLimit != nil && core.count > trimUrlLimit!
-                ? String(core.prefix(trimUrlLimit!)) + "..." : core
-            let replacement = "\(prefix)<a href=\"\(url)\"\(buildAttributes())>\(displayUrl)</a>\(suffix)"
-            result = result.replacingOccurrences(of: word, with: replacement)
+            result += replacement
+            lastIndex = range.location + range.length
+        }
+
+        if lastIndex < nsText.length {
+            result += nsText.substring(from: lastIndex)
         }
 
         return .string(result)
@@ -2140,4 +2070,65 @@ public enum Filters {
         "pprint": pprint,
         "urlize": urlize,
     ]
+}
+
+// MARK: -
+
+private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
+    switch attribute {
+    case let .string(name):
+        return try PropertyMembers.evaluate(item, name)
+    case let .int(index):
+        switch item {
+        case let .array(values):
+            if index >= 0, index < values.count {
+                return values[index]
+            }
+            return .undefined
+        case let .object(values):
+            return values[String(index)] ?? .undefined
+        default:
+            return .undefined
+        }
+    default:
+        return .undefined
+    }
+}
+
+private func compareValues(
+    _ lhs: Value,
+    _ rhs: Value,
+    caseSensitive: Bool,
+    useStringComparisonWhenCaseSensitive: Bool = false,
+    fallbackToDescription: Bool = false
+) throws -> Int {
+    if case let .string(aStr) = lhs, case let .string(bStr) = rhs {
+        if !caseSensitive || useStringComparisonWhenCaseSensitive {
+            let left = caseSensitive ? aStr : aStr.lowercased()
+            let right = caseSensitive ? bStr : bStr.lowercased()
+            if left == right { return 0 }
+            return left < right ? -1 : 1
+        }
+    }
+
+    do {
+        return try lhs.compare(to: rhs)
+    } catch {
+        if fallbackToDescription {
+            let left = lhs.description
+            let right = rhs.description
+            if left == right { return 0 }
+            return left < right ? -1 : 1
+        }
+        throw error
+    }
+}
+
+private func htmlEscape(_ string: String) -> String {
+    string
+        .replacingOccurrences(of: "&", with: "&amp;")
+        .replacingOccurrences(of: "<", with: "&lt;")
+        .replacingOccurrences(of: ">", with: "&gt;")
+        .replacingOccurrences(of: "\"", with: "&#34;")
+        .replacingOccurrences(of: "'", with: "&#39;")
 }
