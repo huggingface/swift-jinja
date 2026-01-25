@@ -371,18 +371,8 @@ struct PropertyMembersTests {
         }
 
         let keysResult = try fn([], [:], Environment())
-        if case .array(let arr) = keysResult {
-            let keys = arr.compactMap { value -> String? in
-                if case .string(let s) = value { return s }
-                return nil
-            }
-            #expect(keys.contains("a"))
-            #expect(keys.contains("b"))
-            #expect(keys.contains("c"))
-            #expect(keys.count == 3)
-        } else {
-            Issue.record("Expected array result")
-        }
+        let expected = Value.array([.string("a"), .string("b"), .string("c")])
+        #expect(keysResult == expected)
     }
 
     @Test("Object values method")
@@ -397,14 +387,8 @@ struct PropertyMembersTests {
         }
 
         let valuesResult = try fn([], [:], Environment())
-        if case .array(let arr) = valuesResult {
-            #expect(arr.contains(.int(1)))
-            #expect(arr.contains(.int(2)))
-            #expect(arr.contains(.int(3)))
-            #expect(arr.count == 3)
-        } else {
-            Issue.record("Expected array result")
-        }
+        let expected = Value.array([.int(1), .int(2), .int(3)])
+        #expect(valuesResult == expected)
     }
 
     @Test("Object direct property access")
