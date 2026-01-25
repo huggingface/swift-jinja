@@ -45,6 +45,44 @@ struct FiltersTests {
         #expect(result == .string("a, b, c"))
     }
 
+    @Test("join filter with attribute")
+    func joinFilterWithAttribute() throws {
+        let values: [Value] = [
+            .object(["name": .string("a")]),
+            .object(["name": .string("b")]),
+        ]
+        let result = try Filters.join(
+            [.array(values), .string(", "), .string("name")],
+            kwargs: [:],
+            env: env
+        )
+        #expect(result == .string("a, b"))
+    }
+
+    @Test("join filter with integer attribute")
+    func joinFilterWithIntegerAttribute() throws {
+        let values: [Value] = [
+            .array([.string("a"), .string("b")]),
+            .array([.string("c"), .string("d")]),
+        ]
+        let result = try Filters.join(
+            [.array(values), .string(", "), .int(1)],
+            kwargs: [:],
+            env: env
+        )
+        #expect(result == .string("b, d"))
+    }
+
+    @Test("default filter alias d")
+    func defaultFilterAlias() throws {
+        guard let fn = Filters.builtIn["d"] else {
+            Issue.record("Expected default alias 'd' to be registered")
+            return
+        }
+        let result = try fn([.undefined, .string("fallback")], [:], env)
+        #expect(result == .string("fallback"))
+    }
+
     @Test("default filter with undefined")
     func defaultFilterWithUndefined() throws {
         let result = try Filters.default(
@@ -111,6 +149,12 @@ struct FiltersTests {
         #expect(result == .string("hello world"))
     }
 
+    @Test("trim filter with chars")
+    func trimFilterWithChars() throws {
+        let result = try Filters.trim([.string("--hello--"), .string("-")], kwargs: [:], env: env)
+        #expect(result == .string("hello"))
+    }
+
     @Test("float filter")
     func floatFilter() throws {
         let result = try Filters.float([.int(42)], kwargs: [:], env: env)
@@ -123,12 +167,170 @@ struct FiltersTests {
         #expect(result == .int(3))
     }
 
+    @Test("int filter with base and prefix")
+    func intFilterWithBaseAndPrefix() throws {
+        let prefixed = try Filters.int([.string("0x10")], kwargs: [:], env: env)
+        #expect(prefixed == .int(16))
+
+        let baseResult = try Filters.int(
+            [.string("ff"), .int(0), .int(16)],
+            kwargs: [:],
+            env: env
+        )
+        #expect(baseResult == .int(255))
+    }
+
     @Test("unique filter")
     func uniqueFilter() throws {
         let values = [Value.int(1), .int(2), .int(1), .int(3), .int(2)]
         let result = try Filters.unique([.array(values)], kwargs: [:], env: env)
         let expected = Value.array([.int(1), .int(2), .int(3)])
         #expect(result == expected)
+    }
+
+    @Test("unique filter with case sensitivity and attribute")
+    func uniqueFilterWithCaseSensitiveAndAttribute() throws {
+        let values = [Value.string("A"), .string("a")]
+        let result = try Filters.unique([.array(values)], kwargs: [:], env: env)
+        #expect(result == .array([.string("A")]))
+
+        let objects: [Value] = [
+            .object(["id": .int(1)]),
+            .object(["id": .int(1)]),
+            .object(["id": .int(2)]),
+        ]
+        let attributeResult = try Filters.unique(
+            [.array(objects)],
+            kwargs: ["attribute": .string("id")],
+            env: env
+        )
+        #expect(attributeResult == .array([objects[0], objects[2]]))
+
+        let listItems: [Value] = [
+            .array([.int(1), .int(10)]),
+            .array([.int(1), .int(20)]),
+            .array([.int(2), .int(30)]),
+        ]
+        let indexResult = try Filters.unique(
+            [.array(listItems)],
+            kwargs: ["attribute": .int(0)],
+            env: env
+        )
+        #expect(indexResult == .array([listItems[0], listItems[2]]))
+    }
+
+    @Test("groupby filter with default and case-insensitive")
+    func groupbyFilterWithDefaultAndCaseInsensitive() throws {
+        let items: [Value] = [
+            .object(["city": .string("NY")]),
+            .object(["city": .string("CA")]),
+            .object(["city": .string("ca")]),
+        ]
+        let result = try Filters.groupby([.array(items), .string("city")], kwargs: [:], env: env)
+        guard case let .array(groups) = result else {
+            Issue.record("Expected array result")
+            return
+        }
+        #expect(groups.count == 2)
+
+        if case let .object(group) = groups.first {
+            #expect(group["list"] == .array([items[1], items[2]]))
+        } else {
+            Issue.record("Expected object group result")
+        }
+
+        let defaultResult = try Filters.groupby(
+            [.array([.object(["name": .string("a")])]), .string("city")],
+            kwargs: ["default": .string("Unknown")],
+            env: env
+        )
+        if case let .array(defaultGroups) = defaultResult,
+            case let .object(group) = defaultGroups.first
+        {
+            #expect(group["grouper"] == .string("Unknown"))
+        } else {
+            Issue.record("Expected default group result")
+        }
+    }
+
+    @Test("map filter with default")
+    func mapFilterWithDefault() throws {
+        let items: [Value] = [
+            .object(["name": .string("a")]),
+            .object(["other": .string("b")]),
+        ]
+        let result = try Filters.map(
+            [.array(items)],
+            kwargs: ["attribute": .string("name"), "default": .string("n/a")],
+            env: env
+        )
+        #expect(result == .array([.string("a"), .string("n/a")]))
+    }
+
+    @Test("map filter with integer attribute")
+    func mapFilterWithIntegerAttribute() throws {
+        let items: [Value] = [
+            .array([.string("a"), .string("b")]),
+            .array([.string("c"), .string("d")]),
+        ]
+        let result = try Filters.map(
+            [.array(items)],
+            kwargs: ["attribute": .int(0)],
+            env: env
+        )
+        #expect(result == .array([.string("a"), .string("c")]))
+    }
+
+    @Test("max/min filter with case sensitivity")
+    func maxMinFilterWithCaseSensitivity() throws {
+        let values = [Value.string("a"), .string("B")]
+        let maxValue = try Filters.max([.array(values), .boolean(false)], kwargs: [:], env: env)
+        let minValue = try Filters.min([.array(values), .boolean(false)], kwargs: [:], env: env)
+        #expect(maxValue == .string("B"))
+        #expect(minValue == .string("a"))
+    }
+
+    @Test("sort filter with attribute list")
+    func sortFilterWithAttributeList() throws {
+        let items: [Value] = [
+            .object(["age": .int(2), "name": .string("b")]),
+            .object(["age": .int(1), "name": .string("c")]),
+            .object(["age": .int(1), "name": .string("a")]),
+        ]
+        let result = try Filters.sort(
+            [.array(items), .boolean(false), .boolean(false), .string("age,name")],
+            kwargs: [:],
+            env: env
+        )
+        guard case let .array(sorted) = result else {
+            Issue.record("Expected array result")
+            return
+        }
+        let names = try sorted.map { value in
+            let name = try PropertyMembers.evaluate(value, "name")
+            return name
+        }
+        #expect(names == [.string("a"), .string("c"), .string("b")])
+    }
+
+    @Test("truncate filter with leeway")
+    func truncateFilterWithLeeway() throws {
+        let result = try Filters.truncate(
+            [.string("abcdefghij"), .int(8), .boolean(false), .string("..."), .int(3)],
+            kwargs: [:],
+            env: env
+        )
+        #expect(result == .string("abcdefghij"))
+    }
+
+    @Test("wordwrap filter with wrapstring")
+    func wordwrapFilterWithWrapstring() throws {
+        let result = try Filters.wordwrap(
+            [.string("one two three"), .int(5), .boolean(true), .string("|"), .boolean(true)],
+            kwargs: [:],
+            env: env
+        )
+        #expect(result == .string("one|two|three"))
     }
 
     @Test("dictsort filter")
@@ -183,6 +385,32 @@ struct FiltersTests {
         } else {
             Issue.record("Expected string result")
         }
+    }
+
+    @Test("urlize filter with extra schemes and emails")
+    func urlizeFilterWithExtraSchemesAndEmails() throws {
+        let text = "Use ftp://example.com or contact me@example.com"
+        let result = try Filters.urlize(
+            [.string(text)],
+            kwargs: ["extra_schemes": .array([.string("ftp")])],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("<a href=\"ftp://example.com\">"))
+            #expect(str.contains("<a href=\"mailto:me@example.com\">"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
+    @Test("urlencode filter for string and mapping")
+    func urlencodeFilterForStringAndMapping() throws {
+        let stringResult = try Filters.urlencode([.string("/path with space")], kwargs: [:], env: env)
+        #expect(stringResult == .string("/path%20with%20space"))
+
+        let dict = Value.object(["a": .string("b c")])
+        let dictResult = try Filters.urlencode([dict], kwargs: [:], env: env)
+        #expect(dictResult == .string("a=b%20c"))
     }
 
     @Test("sum filter with attribute")
