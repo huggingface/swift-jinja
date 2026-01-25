@@ -1371,20 +1371,30 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["attribute"],
-            defaults: ["attribute": .null]
+            parameters: ["case_sensitive", "attribute"],
+            defaults: ["case_sensitive": .boolean(false), "attribute": .null]
         )
+
+        let caseSensitive = arguments["case_sensitive"]!.isTruthy
+
+        func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
+            if !caseSensitive, case let .string(aStr) = lhs, case let .string(bStr) = rhs {
+                if aStr.lowercased() == bStr.lowercased() { return 0 }
+                return aStr.lowercased() < bStr.lowercased() ? -1 : 1
+            }
+            return try lhs.compare(to: rhs)
+        }
 
         if case let .string(attribute) = arguments["attribute"] {
             return try items.max(by: { a, b in
                 let aValue = try PropertyMembers.evaluate(a, attribute)
                 let bValue = try PropertyMembers.evaluate(b, attribute)
-                return try aValue.compare(to: bValue) < 0
+                return try compare(aValue, bValue) < 0
             }) ?? .undefined
         } else {
             return items.max(by: { a, b in
                 do {
-                    return try a.compare(to: b) < 0
+                    return try compare(a, b) < 0
                 } catch {
                     return false
                 }
@@ -1403,20 +1413,30 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["attribute"],
-            defaults: ["attribute": .null]
+            parameters: ["case_sensitive", "attribute"],
+            defaults: ["case_sensitive": .boolean(false), "attribute": .null]
         )
+
+        let caseSensitive = arguments["case_sensitive"]!.isTruthy
+
+        func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
+            if !caseSensitive, case let .string(aStr) = lhs, case let .string(bStr) = rhs {
+                if aStr.lowercased() == bStr.lowercased() { return 0 }
+                return aStr.lowercased() < bStr.lowercased() ? -1 : 1
+            }
+            return try lhs.compare(to: rhs)
+        }
 
         if case let .string(attribute) = arguments["attribute"] {
             return try items.min(by: { a, b in
                 let aValue = try PropertyMembers.evaluate(a, attribute)
                 let bValue = try PropertyMembers.evaluate(b, attribute)
-                return try aValue.compare(to: bValue) < 0
+                return try compare(aValue, bValue) < 0
             }) ?? .undefined
         } else {
             return items.min(by: { a, b in
                 do {
-                    return try a.compare(to: b) < 0
+                    return try compare(a, b) < 0
                 } catch {
                     return false
                 }
