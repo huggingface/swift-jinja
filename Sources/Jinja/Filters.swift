@@ -1736,8 +1736,13 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["length", "killwords", "end"],
-            defaults: ["length": .int(255), "killwords": .boolean(false), "end": .string("...")]
+            parameters: ["length", "killwords", "end", "leeway"],
+            defaults: [
+                "length": .int(255),
+                "killwords": .boolean(false),
+                "end": .string("..."),
+                "leeway": .int(5),
+            ]
         )
 
         let length: Int
@@ -1749,6 +1754,13 @@ public enum Filters {
 
         let killwords = arguments["killwords"]!.isTruthy
 
+        let leeway: Int
+        if case let .int(value) = arguments["leeway"]! {
+            leeway = Swift.max(0, value)
+        } else {
+            leeway = 5
+        }
+
         let end: String
         if case let .string(e) = arguments["end"]! {
             end = e
@@ -1756,7 +1768,7 @@ public enum Filters {
             end = "..."
         }
 
-        if str.count <= length {
+        if str.count <= length + leeway {
             return .string(str)
         }
 
