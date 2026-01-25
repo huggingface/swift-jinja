@@ -291,6 +291,22 @@ struct FiltersTests {
         }
     }
 
+    @Test("tojson filter with ensure_ascii=true escapes emoji")
+    func tojsonFilterWithEnsureASCIITrueEscapesEmoji() throws {
+        let result = try Filters.tojson(
+            [.string("Hello 😀")],
+            kwargs: ["ensure_ascii": .boolean(true)],
+            env: env
+        )
+        if case .string(let str) = result {
+            #expect(str.contains("Hello"))
+            #expect(str.contains("\\ud83d\\ude00"))
+            #expect(!str.contains("😀"))
+        } else {
+            Issue.record("Expected string result")
+        }
+    }
+
     @Test("tojson filter with ensure_ascii=false preserves Unicode")
     func tojsonFilterWithEnsureASCIIFalse() throws {
         // When ensure_ascii=false, Unicode characters should be preserved
