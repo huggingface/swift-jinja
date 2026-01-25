@@ -88,15 +88,44 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["separator"],
-            defaults: ["separator": .string("")]
+            parameters: ["separator", "attribute"],
+            defaults: ["separator": .string(""), "attribute": .null]
         )
 
         guard case let .string(separator) = arguments["separator"] else {
             throw JinjaError.runtime("join filter requires string separator")
         }
 
-        let strings = array.map { $0.description }
+        func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
+            switch attribute {
+            case let .string(name):
+                return try PropertyMembers.evaluate(item, name)
+            case let .int(index):
+                switch item {
+                case let .array(values):
+                    if index >= 0, index < values.count {
+                        return values[index]
+                    }
+                    return .undefined
+                case let .object(values):
+                    return values[String(index)] ?? .undefined
+                default:
+                    return .undefined
+                }
+            default:
+                return .undefined
+            }
+        }
+
+        let strings: [String]
+        if let attribute = arguments["attribute"], attribute != .null {
+            strings = try array.map {
+                let value = try resolveAttributeValue($0, attribute: attribute)
+                return value.description
+            }
+        } else {
+            strings = array.map { $0.description }
+        }
         return .string(strings.joined(separator: separator))
     }
 
