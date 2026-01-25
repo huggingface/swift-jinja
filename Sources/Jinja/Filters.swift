@@ -1320,7 +1320,7 @@ public enum Filters {
                 if let converted = Int(digits, radix: 16) { return .int(converted) }
                 return defaultValue
             }
-            if base != 10, let converted = Int(trimmed, radix: base) {
+            if base != 10, (2...36).contains(base), let converted = Int(trimmed, radix: base) {
                 return .int(converted)
             }
             if let converted = Int(trimmed) {
