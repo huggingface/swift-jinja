@@ -785,10 +785,12 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["width", "break_long_words"],
+            parameters: ["width", "break_long_words", "wrapstring", "break_on_hyphens"],
             defaults: [
                 "width": .int(79),
                 "break_long_words": .boolean(true),
+                "wrapstring": .null,
+                "break_on_hyphens": .boolean(true),
             ]
         )
 
@@ -798,28 +800,84 @@ public enum Filters {
         } else {
             width = 79
         }
-        _ = arguments["break_long_words"]!.isTruthy
+        let breakLongWords = arguments["break_long_words"]!.isTruthy
+        let breakOnHyphens = arguments["break_on_hyphens"]!.isTruthy
+
+        let wrapstring: String
+        if case let .string(value) = arguments["wrapstring"] {
+            wrapstring = value
+        } else {
+            wrapstring = "\n"
+        }
 
         var lines = [String]()
         let paragraphs = str.components(separatedBy: .newlines)
         for paragraph in paragraphs {
             var line = ""
-            let words = paragraph.components(separatedBy: .whitespaces)
-            for word in words {
-                if line.isEmpty {
-                    line = word
-                } else if line.count + word.count + 1 <= width {
-                    line += " \(word)"
-                } else {
+            let words = paragraph.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+
+            func flushLine() {
+                if !line.isEmpty {
                     lines.append(line)
-                    line = word
+                    line = ""
                 }
             }
-            if !line.isEmpty {
-                lines.append(line)
+
+            func splitToken(_ token: String) -> [String] {
+                if !breakLongWords || token.count <= width {
+                    return [token]
+                }
+
+                var parts = [String]()
+                let segments: [String]
+                if breakOnHyphens, token.contains("-") {
+                    let raw = token.split(separator: "-", omittingEmptySubsequences: false)
+                    segments = raw.enumerated().map { index, segment in
+                        if index < raw.count - 1 {
+                            return "\(segment)-"
+                        }
+                        return String(segment)
+                    }
+                } else {
+                    segments = [token]
+                }
+
+                for segment in segments {
+                    if segment.count <= width {
+                        parts.append(segment)
+                    } else {
+                        var startIndex = segment.startIndex
+                        while startIndex < segment.endIndex {
+                            let endIndex =
+                                segment.index(
+                                    startIndex,
+                                    offsetBy: width,
+                                    limitedBy: segment.endIndex
+                                ) ?? segment.endIndex
+                            parts.append(String(segment[startIndex ..< endIndex]))
+                            startIndex = endIndex
+                        }
+                    }
+                }
+                return parts
             }
+
+            for word in words {
+                for token in splitToken(word) {
+                    if line.isEmpty {
+                        line = token
+                    } else if line.count + token.count + 1 <= width {
+                        line += " \(token)"
+                    } else {
+                        flushLine()
+                        line = token
+                    }
+                }
+            }
+
+            flushLine()
         }
-        return .string(lines.joined(separator: "\n"))
+        return .string(lines.joined(separator: wrapstring))
     }
 
     /// Formats file size in human readable format.
