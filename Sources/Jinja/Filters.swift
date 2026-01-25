@@ -339,23 +339,66 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["attribute"],
-            defaults: [:]
+            parameters: ["attribute", "default", "case_sensitive"],
+            defaults: ["default": .null, "case_sensitive": .boolean(false)]
         )
 
         guard case let .string(attribute) = arguments["attribute"] else {
             throw JinjaError.runtime("groupby filter requires attribute parameter")
         }
 
-        var groups = OrderedDictionary<Value, [Value]>()
-        for item in items {
-            let key = try PropertyMembers.evaluate(item, attribute)
-            groups[key, default: []].append(item)
+        let defaultValue = arguments["default"] ?? .null
+        let caseSensitive = arguments["case_sensitive"]!.isTruthy
+
+        func normalizedKey(_ key: Value) -> Value {
+            if !caseSensitive, case let .string(str) = key {
+                return .string(str.lowercased())
+            }
+            return key
         }
-        let result = groups.map { key, value in
+
+        func compare(_ lhs: Value, _ rhs: Value) -> Int {
+            if case let .string(aStr) = lhs, case let .string(bStr) = rhs {
+                let left = caseSensitive ? aStr : aStr.lowercased()
+                let right = caseSensitive ? bStr : bStr.lowercased()
+                if left == right { return 0 }
+                return left < right ? -1 : 1
+            }
+            do {
+                return try lhs.compare(to: rhs)
+            } catch {
+                let left = lhs.description
+                let right = rhs.description
+                if left == right { return 0 }
+                return left < right ? -1 : 1
+            }
+        }
+
+        let keyedItems: [(item: Value, displayKey: Value, normalized: Value)] = try items.map {
+            let rawKey = try PropertyMembers.evaluate($0, attribute)
+            let displayKey = rawKey == .undefined ? defaultValue : rawKey
+            return (item: $0, displayKey: displayKey, normalized: normalizedKey(displayKey))
+        }
+
+        let sortedKeyedItems = keyedItems.enumerated().sorted { lhs, rhs in
+            let comparison = compare(lhs.element.normalized, rhs.element.normalized)
+            if comparison == 0 { return lhs.offset < rhs.offset }
+            return comparison < 0
+        }.map(\.element)
+
+        var grouped: [(displayKey: Value, normalized: Value, items: [Value])] = []
+        for item in sortedKeyedItems {
+            if let last = grouped.last, last.normalized.isEquivalent(to: item.normalized) {
+                grouped[grouped.count - 1].items.append(item.item)
+            } else {
+                grouped.append((displayKey: item.displayKey, normalized: item.normalized, items: [item.item]))
+            }
+        }
+
+        let result = grouped.map { group in
             Value.object([
-                "grouper": key,
-                "list": .array(value),
+                "grouper": group.displayKey,
+                "list": .array(group.items),
             ])
         }
         return .array(result)
