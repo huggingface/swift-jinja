@@ -359,6 +359,54 @@ struct PropertyMembersTests {
         #expect(getResult == .string("answer"))
     }
 
+    @Test("Object keys method")
+    func objectKeys() throws {
+        let dict: OrderedDictionary<String, Value> = ["a": .int(1), "b": .int(2), "c": .int(3)]
+        let value = Value.object(dict)
+        let result = try PropertyMembers.evaluate(value, "keys")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        let keysResult = try fn([], [:], Environment())
+        if case .array(let arr) = keysResult {
+            let keys = arr.compactMap { value -> String? in
+                if case .string(let s) = value { return s }
+                return nil
+            }
+            #expect(keys.contains("a"))
+            #expect(keys.contains("b"))
+            #expect(keys.contains("c"))
+            #expect(keys.count == 3)
+        } else {
+            Issue.record("Expected array result")
+        }
+    }
+
+    @Test("Object values method")
+    func objectValues() throws {
+        let dict: OrderedDictionary<String, Value> = ["a": .int(1), "b": .int(2), "c": .int(3)]
+        let value = Value.object(dict)
+        let result = try PropertyMembers.evaluate(value, "values")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        let valuesResult = try fn([], [:], Environment())
+        if case .array(let arr) = valuesResult {
+            #expect(arr.contains(.int(1)))
+            #expect(arr.contains(.int(2)))
+            #expect(arr.contains(.int(3)))
+            #expect(arr.count == 3)
+        } else {
+            Issue.record("Expected array result")
+        }
+    }
+
     @Test("Object direct property access")
     func objectDirectProperty() throws {
         let dict: OrderedDictionary<String, Value> = ["foo": .string("bar")]

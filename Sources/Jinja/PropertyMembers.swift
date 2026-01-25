@@ -195,6 +195,31 @@ public enum PropertyMembers {
             return .function(fn)
         }
 
+        // Support Python-like dict.keys() method
+        if propertyName == "keys" {
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = {
+                args,
+                kwargs,
+                _ in
+                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
+                let keys = obj.keys.map { Value.string($0) }
+                return .array(keys)
+            }
+            return .function(fn)
+        }
+
+        // Support Python-like dict.values() method
+        if propertyName == "values" {
+            let fn: @Sendable ([Value], [String: Value], Environment) throws -> Value = {
+                args,
+                kwargs,
+                _ in
+                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
+                return .array(Array(obj.values))
+            }
+            return .function(fn)
+        }
+
         return obj[propertyName] ?? .undefined
     }
 }
