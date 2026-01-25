@@ -293,7 +293,7 @@ public enum Filters {
             parameters: ["reverse", "case_sensitive", "attribute"],
             defaults: [
                 "reverse": .boolean(false),
-                "case_sensitive": .boolean(true),
+                "case_sensitive": .boolean(false),
                 "attribute": .null,
             ]
         )
@@ -301,29 +301,47 @@ public enum Filters {
         let reverse = arguments["reverse"]!.isTruthy
         let caseSensitive = arguments["case_sensitive"]!.isTruthy
 
-        let sortedItems: [Value]
-        if case let .string(attribute) = arguments["attribute"] {
-            sortedItems = try items.sorted { a, b in
-                let aValue = try PropertyMembers.evaluate(a, attribute)
-                let bValue = try PropertyMembers.evaluate(b, attribute)
-                let comparison = try aValue.compare(to: bValue)
-                return reverse ? comparison > 0 : comparison < 0
+        func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
+            if !caseSensitive, case let .string(aStr) = lhs, case let .string(bStr) = rhs {
+                if aStr.lowercased() == bStr.lowercased() { return 0 }
+                return aStr.lowercased() < bStr.lowercased() ? -1 : 1
             }
-        } else {
-            sortedItems = try items.sorted { a, b in
-                let comparison: Int
-                if !caseSensitive, case let .string(aStr) = a, case let .string(bStr) = b {
-                    comparison =
-                        aStr.lowercased() < bStr.lowercased()
-                        ? -1 : aStr.lowercased() > bStr.lowercased() ? 1 : 0
-                } else {
-                    comparison = try a.compare(to: b)
-                }
-                return reverse ? comparison > 0 : comparison < 0
-            }
+            return try lhs.compare(to: rhs)
         }
 
-        return .array(sortedItems)
+        func stableSorted(_ values: [Value], by comparator: (Value, Value) throws -> Int) rethrows
+            -> [Value]
+        {
+            return try values.enumerated().sorted { a, b in
+                let comparison = try comparator(a.element, b.element)
+                if comparison == 0 { return a.offset < b.offset }
+                return comparison < 0
+            }.map(\.element)
+        }
+
+        let sortedItems: [Value]
+        if case let .string(attribute) = arguments["attribute"] {
+            let attributes = attribute.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            if attributes.isEmpty {
+                sortedItems = try stableSorted(items, by: compare)
+            } else {
+                var sorted = items
+                for attr in attributes.reversed() {
+                    sorted = try stableSorted(sorted) { a, b in
+                        let aValue = try PropertyMembers.evaluate(a, String(attr))
+                        let bValue = try PropertyMembers.evaluate(b, String(attr))
+                        return try compare(aValue, bValue)
+                    }
+                }
+                sortedItems = sorted
+            }
+        } else {
+            sortedItems = try stableSorted(items, by: compare)
+        }
+
+        return .array(reverse ? Array(sortedItems.reversed()) : sortedItems)
     }
 
     /// Groups items by a given attribute.
