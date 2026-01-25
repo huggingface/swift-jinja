@@ -1286,11 +1286,17 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["default"],
-            defaults: ["default": .int(0)]
+            parameters: ["default", "base"],
+            defaults: ["default": .int(0), "base": .int(10)]
         )
 
         let defaultValue = arguments["default"]!
+        let base: Int
+        if case let .int(value) = arguments["base"] {
+            base = value
+        } else {
+            base = 10
+        }
 
         switch value {
         case let .int(i):
@@ -1298,11 +1304,29 @@ public enum Filters {
         case let .double(n):
             return .int(Int(n))
         case let .string(s):
-            if let converted = Int(s) {
-                return .int(converted)
-            } else {
+            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("0b") || trimmed.hasPrefix("0B") {
+                let digits = String(trimmed.dropFirst(2))
+                if let converted = Int(digits, radix: 2) { return .int(converted) }
                 return defaultValue
             }
+            if trimmed.hasPrefix("0o") || trimmed.hasPrefix("0O") {
+                let digits = String(trimmed.dropFirst(2))
+                if let converted = Int(digits, radix: 8) { return .int(converted) }
+                return defaultValue
+            }
+            if trimmed.hasPrefix("0x") || trimmed.hasPrefix("0X") {
+                let digits = String(trimmed.dropFirst(2))
+                if let converted = Int(digits, radix: 16) { return .int(converted) }
+                return defaultValue
+            }
+            if base != 10, let converted = Int(trimmed, radix: base) {
+                return .int(converted)
+            }
+            if let converted = Int(trimmed) {
+                return .int(converted)
+            }
+            return defaultValue
         default:
             return defaultValue
         }
