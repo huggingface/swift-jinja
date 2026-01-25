@@ -974,11 +974,12 @@ public enum Filters {
     /// Escapes non-ASCII characters in a string as `\uXXXX` sequences.
     private static func escapeNonASCII(_ string: String) -> String {
         var result = ""
-        result.reserveCapacity(string.count)
-        for scalar in string.unicodeScalars {
-            if scalar.value > 127 {
-                result += String(format: "\\u%04x", scalar.value)
-            } else {
+        result.reserveCapacity(string.utf16.count)
+        // Iterate UTF-16 code units so non-BMP scalars emit surrogate pairs.
+        for codeUnit in string.utf16 {
+            if codeUnit > 127 {
+                result += String(format: "\\u%04x", codeUnit)
+            } else if let scalar = UnicodeScalar(codeUnit) {
                 result.append(Character(scalar))
             }
         }
