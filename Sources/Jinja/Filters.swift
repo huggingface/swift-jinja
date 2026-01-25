@@ -474,8 +474,8 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["filterName", "attribute"],
-            defaults: ["filterName": .null, "attribute": .null]
+            parameters: ["filterName", "attribute", "default"],
+            defaults: ["filterName": .null, "attribute": .null, "default": .null]
         )
 
         if case let .string(filterName) = arguments["filterName"] {
@@ -484,10 +484,34 @@ public enum Filters {
                     try Interpreter.evaluateFilter(filterName, [$0], kwargs: [:], env: env)
                 }
             )
-        } else if case let .string(attribute) = arguments["attribute"] {
+        } else if let attribute = arguments["attribute"], attribute != .null {
+            let defaultValue = arguments["default"] ?? .null
+
+            func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
+                switch attribute {
+                case let .string(name):
+                    return try PropertyMembers.evaluate(item, name)
+                case let .int(index):
+                    switch item {
+                    case let .array(values):
+                        if index >= 0, index < values.count {
+                            return values[index]
+                        }
+                        return .undefined
+                    case let .object(values):
+                        return values[String(index)] ?? .undefined
+                    default:
+                        return .undefined
+                    }
+                default:
+                    return .undefined
+                }
+            }
+
             return try .array(
                 items.map {
-                    try PropertyMembers.evaluate($0, attribute)
+                    let value = try resolveAttributeValue($0, attribute: attribute)
+                    return value == .undefined ? defaultValue : value
                 }
             )
         }
