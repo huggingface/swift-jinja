@@ -53,7 +53,9 @@ struct InterpreterTests {
         @Test("In binary op")
         func inBinaryOp() throws {
             let result = try Interpreter.evaluateBinaryValues(
-                .in, .int(2), .array([.int(1), .int(2), .int(3)])
+                .in,
+                .int(2),
+                .array([.int(1), .int(2), .int(3)])
             )
             #expect(result == .boolean(true))
         }
@@ -61,7 +63,9 @@ struct InterpreterTests {
         @Test("NotIn binary op")
         func notInBinaryOp() throws {
             let result = try Interpreter.evaluateBinaryValues(
-                .notIn, .int(4), .array([.int(1), .int(2), .int(3)])
+                .notIn,
+                .int(4),
+                .array([.int(1), .int(2), .int(3)])
             )
             #expect(result == .boolean(true))
         }
@@ -258,7 +262,8 @@ struct InterpreterTests {
     @Test("Array negative index")
     func arrayNegativeIndex() throws {
         let result = try Interpreter.evaluateComputedMember(
-            .array([.int(1), .int(2), .int(3)]), .int(-1)
+            .array([.int(1), .int(2), .int(3)]),
+            .int(-1)
         )
         #expect(result == .int(3))
     }
@@ -418,7 +423,9 @@ struct InterpreterTests {
 
     @Test("For loop with continue")
     func forLoopContinue() throws {
-        let template = try Template("{% for i in range(5) %}{% if i == 2 %}{% continue %}{% endif %}{{ i }}{% endfor %}")
+        let template = try Template(
+            "{% for i in range(5) %}{% if i == 2 %}{% continue %}{% endif %}{{ i }}{% endfor %}"
+        )
         let result = try template.render([:])
         #expect(result == "0134")
     }
@@ -440,16 +447,20 @@ struct InterpreterTests {
 
     @Test("For loop variables")
     func forLoopVariables() throws {
-        let template = try Template("{% for i in [10, 20, 30] %}{{ loop.index }}-{{ loop.index0 }}-{{ loop.first }}-{{ loop.last }}-{{ loop.length }}-{{ loop.revindex }}-{{ loop.revindex0 }} {% endfor %}")
+        let template = try Template(
+            "{% for i in [10, 20, 30] %}{{ loop.index }}-{{ loop.index0 }}-{{ loop.first }}-{{ loop.last }}-{{ loop.length }}-{{ loop.revindex }}-{{ loop.revindex0 }} {% endfor %}"
+        )
         let result = try template.render([:])
         #expect(result == "1-0-true-false-3-3-2 2-1-false-false-3-2-1 3-2-false-true-3-1-0 ")
     }
 
     @Test("Call block with macro")
     func callBlockWithMacro() throws {
-        let template = try Template("""
-        {% macro render_dialog(title) %}<dialog>{{ title }}:{{ caller() }}</dialog>{% endmacro %}{% call render_dialog('Hello') %}World{% endcall %}
-        """)
+        let template = try Template(
+            """
+            {% macro render_dialog(title) %}<dialog>{{ title }}:{{ caller() }}</dialog>{% endmacro %}{% call render_dialog('Hello') %}World{% endcall %}
+            """
+        )
         let result = try template.render([:])
         #expect(result == "<dialog>Hello:World</dialog>")
     }
@@ -485,7 +496,9 @@ struct InterpreterTests {
 
     @Test("Macro with keyword arguments")
     func macroWithKwargs() throws {
-        let template = try Template("{% macro greet(name, greeting='Hi') %}{{ greeting }} {{ name }}{% endmacro %}{{ greet('Bob', greeting='Hey') }}")
+        let template = try Template(
+            "{% macro greet(name, greeting='Hi') %}{{ greeting }} {{ name }}{% endmacro %}{{ greet('Bob', greeting='Hey') }}"
+        )
         let result = try template.render([:])
         #expect(result == "Hey Bob")
     }
@@ -499,7 +512,9 @@ struct InterpreterTests {
 
     @Test("Nested for loops")
     func nestedForLoops() throws {
-        let template = try Template("{% for i in [1, 2] %}{% for j in ['a', 'b'] %}{{ i }}{{ j }}{% endfor %}{% endfor %}")
+        let template = try Template(
+            "{% for i in [1, 2] %}{% for j in ['a', 'b'] %}{{ i }}{{ j }}{% endfor %}{% endfor %}"
+        )
         let result = try template.render([:])
         #expect(result == "1a1b2a2b")
     }

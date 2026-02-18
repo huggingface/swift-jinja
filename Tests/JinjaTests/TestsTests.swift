@@ -684,7 +684,9 @@ struct TestsTests {
     @Test("mapping test with object")
     func mappingWithObject() throws {
         let result = try Tests.mapping(
-            [.object(["key": .string("value")])], kwargs: [:], env: env
+            [.object(["key": .string("value")])],
+            kwargs: [:],
+            env: env
         )
         #expect(result == true)
     }
@@ -824,7 +826,9 @@ struct TestsTests {
     @Test("in test with non-string key in object returns false")
     func inNonStringKeyInObject() throws {
         let result = try Tests.`in`(
-            [.int(1), .object(["key": .string("value")])], kwargs: [:], env: env
+            [.int(1), .object(["key": .string("value")])],
+            kwargs: [:],
+            env: env
         )
         #expect(result == false)
     }

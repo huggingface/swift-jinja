@@ -338,7 +338,7 @@ struct GlobalsTests {
         }
 
         guard case let .function(nextFn) = obj["next"],
-              case let .function(resetFn) = obj["reset"]
+            case let .function(resetFn) = obj["reset"]
         else {
             #expect(Bool(false), "Expected next and reset functions")
             return
