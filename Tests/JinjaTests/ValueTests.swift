@@ -439,4 +439,240 @@ struct ValueTests {
         let nullValue = try decoder.decode(Value.self, from: nullData)
         #expect(nullValue == Value.null)
     }
+
+    // MARK: - Type Check Properties
+
+    @Test("Type check properties")
+    func typeCheckProperties() {
+        #expect(Value.null.isNull)
+        #expect(!Value.undefined.isNull)
+
+        #expect(Value.undefined.isUndefined)
+        #expect(!Value.null.isUndefined)
+
+        #expect(Value.boolean(true).isBoolean)
+        #expect(!Value.int(1).isBoolean)
+
+        #expect(Value.int(42).isInt)
+        #expect(!Value.double(42.0).isInt)
+
+        #expect(Value.double(3.14).isDouble)
+        #expect(!Value.int(3).isDouble)
+
+        #expect(Value.string("hi").isString)
+        #expect(!Value.int(0).isString)
+
+        #expect(Value.array([]).isArray)
+        #expect(!Value.string("[]").isArray)
+
+        #expect(Value.object([:]).isObject)
+        #expect(!Value.array([]).isObject)
+
+        let fn = Value.function { _, _, _ in .null }
+        #expect(fn.isFunction)
+        #expect(!Value.null.isFunction)
+
+        let macro = Value.macro(Macro(name: "m", parameters: [], defaults: [:], body: []))
+        #expect(macro.isMacro)
+        #expect(!fn.isMacro)
+
+        #expect(Value.array([]).isIterable)
+        #expect(Value.object([:]).isIterable)
+        #expect(Value.string("abc").isIterable)
+        #expect(!Value.int(1).isIterable)
+        #expect(!Value.null.isIterable)
+    }
+
+    // MARK: - Arithmetic Operations
+
+    @Test("Add operation")
+    func addOperation() throws {
+        #expect(try Value.int(2).add(with: .int(3)) == .int(5))
+        #expect(try Value.double(1.5).add(with: .double(2.5)) == .double(4.0))
+        #expect(try Value.int(1).add(with: .double(2.5)) == .double(3.5))
+        #expect(try Value.string("hello").add(with: .string(" world")) == .string("hello world"))
+        #expect(try Value.string("val:").add(with: .int(1)) == .string("val:1"))
+        #expect(try Value.int(1).add(with: .string(":val")) == .string("1:val"))
+        #expect(try Value.array([.int(1)]).add(with: .array([.int(2)])) == .array([.int(1), .int(2)]))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.boolean(true).add(with: .int(1))
+        }
+    }
+
+    @Test("Subtract operation")
+    func subtractOperation() throws {
+        #expect(try Value.int(5).subtract(by: .int(3)) == .int(2))
+        #expect(try Value.double(5.5).subtract(by: .double(2.5)) == .double(3.0))
+        #expect(try Value.int(5).subtract(by: .double(1.5)) == .double(3.5))
+        #expect(try Value.double(5.5).subtract(by: .int(2)) == .double(3.5))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.string("a").subtract(by: .string("b"))
+        }
+    }
+
+    @Test("Multiply operation")
+    func multiplyOperation() throws {
+        #expect(try Value.int(3).multiply(by: .int(4)) == .int(12))
+        #expect(try Value.double(2.5).multiply(by: .double(2.0)) == .double(5.0))
+        #expect(try Value.string("ab").multiply(by: .int(3)) == .string("ababab"))
+        #expect(try Value.int(2).multiply(by: .string("xy")) == .string("xyxy"))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.string("a").multiply(by: .string("b"))
+        }
+    }
+
+    @Test("Divide operation")
+    func divideOperation() throws {
+        #expect(try Value.int(10).divide(by: .int(4)) == .double(2.5))
+        #expect(try Value.double(7.5).divide(by: .double(2.5)) == .double(3.0))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(1).divide(by: .int(0))
+        }
+        #expect(throws: JinjaError.self) {
+            _ = try Value.string("a").divide(by: .int(1))
+        }
+    }
+
+    @Test("Modulo operation")
+    func moduloOperation() throws {
+        #expect(try Value.int(10).modulo(by: .int(3)) == .int(1))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(10).modulo(by: .int(0))
+        }
+        #expect(throws: JinjaError.self) {
+            _ = try Value.double(10.0).modulo(by: .double(3.0))
+        }
+    }
+
+    @Test("Floor divide operation")
+    func floorDivideOperation() throws {
+        #expect(try Value.int(7).floorDivide(by: .int(2)) == .int(3))
+        #expect(try Value.double(7.5).floorDivide(by: .double(2.0)) == .int(3))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(1).floorDivide(by: .int(0))
+        }
+        #expect(throws: JinjaError.self) {
+            _ = try Value.string("a").floorDivide(by: .int(1))
+        }
+    }
+
+    @Test("Power operation")
+    func powerOperation() throws {
+        #expect(try Value.int(2).power(by: .int(3)) == .int(8))
+        #expect(try Value.int(2).power(by: .int(-1)) == .double(0.5))
+        #expect(try Value.double(2.0).power(by: .double(3.0)) == .double(8.0))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.string("a").power(by: .int(2))
+        }
+    }
+
+    // MARK: - Compare
+
+    @Test("Compare operation")
+    func compareOperation() throws {
+        #expect(try Value.int(1).compare(to: .int(2)) == -1)
+        #expect(try Value.int(2).compare(to: .int(2)) == 0)
+        #expect(try Value.int(3).compare(to: .int(2)) == 1)
+        #expect(try Value.string("a").compare(to: .string("b")) == -1)
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(1).compare(to: .string("a"))
+        }
+    }
+
+    // MARK: - Containment
+
+    @Test("isContained operation")
+    func isContainedOperation() throws {
+        #expect(try Value.int(2).isContained(in: .array([.int(1), .int(2), .int(3)])))
+        #expect(try !Value.int(4).isContained(in: .array([.int(1), .int(2), .int(3)])))
+        #expect(try Value.string("bc").isContained(in: .string("abcd")))
+        #expect(try !Value.string("xy").isContained(in: .string("abcd")))
+        #expect(try Value.string("key").isContained(in: .object(["key": .int(1)])))
+        #expect(try !Value.string("missing").isContained(in: .object(["key": .int(1)])))
+        #expect(try !Value.int(1).isContained(in: .undefined))
+        #expect(try !Value.int(1).isContained(in: .null))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(1).isContained(in: .int(42))
+        }
+    }
+
+    // MARK: - Equivalence
+
+    @Test("isEquivalent operation")
+    func isEquivalentOperation() {
+        #expect(Value.int(3).isEquivalent(to: .double(3.0)))
+        #expect(!Value.int(3).isEquivalent(to: .double(3.1)))
+        #expect(Value.array([.int(1), .int(2)]).isEquivalent(to: .array([.int(1), .int(2)])))
+        #expect(!Value.array([.int(1)]).isEquivalent(to: .array([.int(2)])))
+        #expect(Value.object(["a": .int(1)]).isEquivalent(to: .object(["a": .int(1)])))
+        #expect(!Value.object(["a": .int(1)]).isEquivalent(to: .object(["b": .int(1)])))
+
+        let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
+        #expect(Value.macro(m).isEquivalent(to: .macro(m)))
+
+        let fn = Value.function { _, _, _ in .null }
+        #expect(!fn.isEquivalent(to: fn))
+    }
+
+    // MARK: - Concatenate
+
+    @Test("Concatenate operation")
+    func concatenateOperation() throws {
+        #expect(try Value.string("a").concatenate(with: .string("b")) == .string("ab"))
+        #expect(try Value.string("x").concatenate(with: .int(1)) == .string("x1"))
+        #expect(try Value.int(1).concatenate(with: .string("x")) == .string("1x"))
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(1).concatenate(with: .int(2))
+        }
+    }
+
+    // MARK: - Description for Function and Macro
+
+    @Test("Function and macro description")
+    func functionMacroDescription() {
+        let fn = Value.function { _, _, _ in .null }
+        #expect(fn.description == "[Function]")
+
+        let m = Macro(name: "greet", parameters: [], defaults: [:], body: [])
+        #expect(Value.macro(m).description.contains("greet"))
+    }
+
+    // MARK: - isTruthy for Function and Macro
+
+    @Test("isTruthy for function and macro")
+    func isTruthyFunctionMacro() {
+        let fn = Value.function { _, _, _ in .null }
+        #expect(fn.isTruthy)
+
+        let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
+        #expect(Value.macro(m).isTruthy)
+    }
+
+    // MARK: - Hashable
+
+    @Test("Hashable conformance")
+    func hashableConformance() {
+        let set: Set<Value> = [.int(1), .string("a"), .boolean(true), .null]
+        #expect(set.contains(.int(1)))
+        #expect(set.contains(.string("a")))
+        #expect(set.contains(.boolean(true)))
+        #expect(set.contains(.null))
+        #expect(!set.contains(.int(2)))
+
+        var hasher1 = Hasher()
+        Value.int(42).hash(into: &hasher1)
+        var hasher2 = Hasher()
+        Value.int(42).hash(into: &hasher2)
+        #expect(hasher1.finalize() == hasher2.finalize())
+    }
+
+    // MARK: - Init from Macro
+
+    @Test("Init from Macro via any")
+    func initFromMacro() throws {
+        let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
+        let value = try Value(any: m)
+        #expect(value == .macro(m))
+        #expect(value.isMacro)
+    }
 }
