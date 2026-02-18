@@ -1026,6 +1026,45 @@ struct IntegrationTests {
         #expect(result.contains("What's the weather in Paris"))
     }
 
+    @Test("GLM-style tool args tojson ensure_ascii false")
+    func glmStyleToolArgsTojsonEnsureASCIIFalse() throws {
+        let template = try Template(
+            """
+            {% for tc in tool_calls %}
+            <tool_call>
+            {% set _args = tc.arguments %}
+            {% for k, v in _args.items() %}
+            <arg_key>{{ k }}</arg_key><arg_value>{{ v | tojson(ensure_ascii=False) if v is not string else v }}</arg_value>
+            {% endfor %}
+            </tool_call>
+            {% endfor %}
+            """,
+            with: options
+        )
+
+        let context: [String: Value] = [
+            "tool_calls": .array([
+                .object([
+                    "arguments": .object([
+                        "payload": .object([
+                            "name": .string("搜索"),
+                            "query": .string("天气"),
+                            "count": .int(1),
+                        ])
+                    ])
+                ])
+            ])
+        ]
+
+        let result = try template.render(context)
+
+        #expect(result.contains("<arg_key>payload</arg_key>"))
+        #expect(result.contains("搜索"))
+        #expect(result.contains("天气"))
+        #expect(!result.contains("\\u641c"))
+        #expect(!result.contains("\\u5929"))
+    }
+
     // MARK: - Advanced Template Features
 
     @Test("Template with loop variables")
