@@ -652,4 +652,204 @@ struct TestsTests {
         let eqResult = try Tests.eq([.int(5), .int(5)], kwargs: [:], env: env)
         #expect(eqResult == true)
     }
+
+    // MARK: - Comparison with incomparable types
+
+    @Test("gt with incomparable types returns false")
+    func gtIncomparable() throws {
+        let result = try Tests.gt([.int(5), .string("a")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("ge with incomparable types returns false")
+    func geIncomparable() throws {
+        let result = try Tests.ge([.int(5), .string("a")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("lt with incomparable types returns false")
+    func ltIncomparable() throws {
+        let result = try Tests.lt([.int(5), .string("a")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("le with incomparable types returns false")
+    func leIncomparable() throws {
+        let result = try Tests.le([.int(5), .string("a")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - mapping test
+
+    @Test("mapping test with object")
+    func mappingWithObject() throws {
+        let result = try Tests.mapping(
+            [.object(["key": .string("value")])], kwargs: [:], env: env
+        )
+        #expect(result == true)
+    }
+
+    @Test("mapping test with non-object")
+    func mappingWithNonObject() throws {
+        let result = try Tests.mapping([.array([.int(1)])], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - callable test
+
+    @Test("callable with function")
+    func callableWithFunction() throws {
+        let fn = Value.function { _, _, _ in .null }
+        let result = try Tests.callable([fn], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("callable with macro")
+    func callableWithMacro() throws {
+        let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
+        let result = try Tests.callable([.macro(m)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("callable with non-callable")
+    func callableWithNonCallable() throws {
+        let result = try Tests.callable([.int(42)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - integer test
+
+    @Test("integer test with int")
+    func integerWithInt() throws {
+        let result = try Tests.integer([.int(42)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("integer test with non-int")
+    func integerWithNonInt() throws {
+        let result = try Tests.integer([.double(3.14)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - lower test
+
+    @Test("lower test with lowercase string")
+    func lowerWithLowercase() throws {
+        let result = try Tests.lower([.string("hello")], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("lower test with mixed case")
+    func lowerWithMixedCase() throws {
+        let result = try Tests.lower([.string("Hello")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("lower test with non-string")
+    func lowerWithNonString() throws {
+        let result = try Tests.lower([.int(42)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - upper test
+
+    @Test("upper test with uppercase string")
+    func upperWithUppercase() throws {
+        let result = try Tests.upper([.string("HELLO")], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("upper test with mixed case")
+    func upperWithMixedCase() throws {
+        let result = try Tests.upper([.string("Hello")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("upper test with non-string")
+    func upperWithNonString() throws {
+        let result = try Tests.upper([.int(42)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - true/false tests
+
+    @Test("true test with true")
+    func trueWithTrue() throws {
+        let result = try Tests.`true`([.boolean(true)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("true test with false")
+    func trueWithFalse() throws {
+        let result = try Tests.`true`([.boolean(false)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("false test with false")
+    func falseWithFalse() throws {
+        let result = try Tests.`false`([.boolean(false)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("false test with true")
+    func falseWithTrue() throws {
+        let result = try Tests.`false`([.boolean(true)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - filter test with non-string
+
+    @Test("filter test with non-string returns false")
+    func filterWithNonString() throws {
+        let result = try Tests.filter([.int(42)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - test test with non-string
+
+    @Test("test test with non-string returns false")
+    func testWithNonString() throws {
+        let result = try Tests.test([.int(42)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - in test edge cases
+
+    @Test("in test with non-string in string returns false")
+    func inNonStringInString() throws {
+        let result = try Tests.`in`([.int(1), .string("hello")], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    @Test("in test with non-string key in object returns false")
+    func inNonStringKeyInObject() throws {
+        let result = try Tests.`in`(
+            [.int(1), .object(["key": .string("value")])], kwargs: [:], env: env
+        )
+        #expect(result == false)
+    }
+
+    @Test("in test with unsupported container returns false")
+    func inUnsupportedContainer() throws {
+        let result = try Tests.`in`([.string("a"), .int(42)], kwargs: [:], env: env)
+        #expect(result == false)
+    }
+
+    // MARK: - sameas with incomparable
+
+    @Test("sameas with incomparable types")
+    func sameasIncomparable() throws {
+        #expect(throws: Error.self) {
+            try Tests.sameas([.int(1), .string("a")], kwargs: [:], env: env)
+        }
+    }
+
+    // MARK: - ne with insufficient args
+
+    @Test("ne with insufficient args throws")
+    func neInsufficientArgs() throws {
+        #expect(throws: JinjaError.self) {
+            try Tests.ne([.int(1)], kwargs: [:], env: env)
+        }
+    }
 }
