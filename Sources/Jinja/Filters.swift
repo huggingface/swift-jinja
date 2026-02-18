@@ -783,9 +783,9 @@ public enum Filters {
         while formatIdx < formatString.endIndex {
             let char = formatString[formatIdx]
             if char == "%", argIdx < formatArgs.count {
-                formatIdx = formatString.index(after: formatIdx)
-                if formatIdx < formatString.endIndex {
-                    let specifier = formatString[formatIdx]
+                let nextIdx = formatString.index(after: formatIdx)
+                if nextIdx < formatString.endIndex {
+                    let specifier = formatString[nextIdx]
                     if specifier == "s" {
                         result += formatArgs[argIdx].description
                         argIdx += 1
@@ -793,13 +793,15 @@ public enum Filters {
                         result.append("%")
                         result.append(specifier)
                     }
+                    formatIdx = formatString.index(after: nextIdx)
                 } else {
                     result.append("%")
+                    formatIdx = nextIdx
                 }
             } else {
                 result.append(char)
+                formatIdx = formatString.index(after: formatIdx)
             }
-            formatIdx = formatString.index(after: formatIdx)
         }
         return .string(result)
     }
