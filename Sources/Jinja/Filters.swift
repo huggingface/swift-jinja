@@ -954,7 +954,7 @@ public enum Filters {
         let suffix = binary ? "iB" : "B"
         return .string(
             String(
-                format: "%.1f %s\(suffix)",
+                format: "%.1f %@\(suffix)",
                 bytes / pow(unit, Double(clampedExp)),
                 String(preChar)
             )
