@@ -279,4 +279,80 @@ struct GlobalsTests {
         #expect(text.hasSuffix("</p>"))
         #expect(!text.contains("\n"), "Single paragraph should have no newlines")
     }
+
+    // MARK: - range error paths
+
+    @Test("range with non-integer 2-arg throws")
+    func rangeNonInteger2Arg() throws {
+        #expect(throws: JinjaError.self) {
+            try Globals.range([.string("x"), .int(5)], [:], env)
+        }
+    }
+
+    @Test("range with non-integer 3-arg throws")
+    func rangeNonInteger3Arg() throws {
+        #expect(throws: JinjaError.self) {
+            try Globals.range([.int(0), .string("x"), .int(1)], [:], env)
+        }
+    }
+
+    // MARK: - lipsum error paths
+
+    @Test("lipsum with invalid args throws")
+    func lipsumInvalidArgs() throws {
+        #expect(throws: JinjaError.self) {
+            try Globals.lipsum([], ["n": .string("x"), "html": .boolean(true)], env)
+        }
+    }
+
+    // MARK: - strftime_now edge cases
+
+    @Test("strftime_now with unknown format code")
+    func strftimeNowUnknownFormatCode() throws {
+        let result = try Globals.strftimeNow([.string("%Q")], [:], env)
+        guard case let .string(str) = result else {
+            #expect(Bool(false), "Expected string result")
+            return
+        }
+        #expect(str == "%Q")
+    }
+
+    @Test("strftime_now with trailing percent")
+    func strftimeNowTrailingPercent() throws {
+        let result = try Globals.strftimeNow([.string("hello%")], [:], env)
+        guard case let .string(str) = result else {
+            #expect(Bool(false), "Expected string result")
+            return
+        }
+        #expect(str == "hello%")
+    }
+
+    // MARK: - cycler reset
+
+    @Test("cycler reset")
+    func cyclerReset() throws {
+        let result = try Globals.cycler([.string("a"), .string("b"), .string("c")], [:], env)
+        guard case let .object(obj) = result else {
+            #expect(Bool(false), "Expected object result")
+            return
+        }
+
+        guard case let .function(nextFn) = obj["next"],
+              case let .function(resetFn) = obj["reset"]
+        else {
+            #expect(Bool(false), "Expected next and reset functions")
+            return
+        }
+
+        let first = try nextFn([], [:], env)
+        #expect(first == .string("a"))
+
+        let second = try nextFn([], [:], env)
+        #expect(second == .string("b"))
+
+        _ = try resetFn([], [:], env)
+
+        let afterReset = try nextFn([], [:], env)
+        #expect(afterReset == .string("a"))
+    }
 }
