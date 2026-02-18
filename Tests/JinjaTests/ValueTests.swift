@@ -675,4 +675,175 @@ struct ValueTests {
         #expect(value == .macro(m))
         #expect(value.isMacro)
     }
+
+    // MARK: - Mixed Numeric Arithmetic
+
+    @Test("Double + Int addition")
+    func doubleAddInt() throws {
+        #expect(try Value.double(1.5).add(with: .int(2)) == .double(3.5))
+    }
+
+    @Test("Int * Double multiplication")
+    func intMultiplyDouble() throws {
+        #expect(try Value.int(3).multiply(by: .double(2.5)) == .double(7.5))
+    }
+
+    @Test("Double * Int multiplication")
+    func doubleMultiplyInt() throws {
+        #expect(try Value.double(2.5).multiply(by: .int(3)) == .double(7.5))
+    }
+
+    @Test("Int / Double division")
+    func intDivideDouble() throws {
+        #expect(try Value.int(5).divide(by: .double(2.0)) == .double(2.5))
+    }
+
+    @Test("Double / Int division")
+    func doubleDivideInt() throws {
+        #expect(try Value.double(7.5).divide(by: .int(3)) == .double(2.5))
+    }
+
+    @Test("Double / Double division by zero throws")
+    func doubleDivideDoubleByZero() throws {
+        #expect(throws: JinjaError.self) {
+            _ = try Value.double(1.0).divide(by: .double(0.0))
+        }
+    }
+
+    @Test("Int / Double division by zero throws")
+    func intDivideDoubleByZero() throws {
+        #expect(throws: JinjaError.self) {
+            _ = try Value.int(1).divide(by: .double(0.0))
+        }
+    }
+
+    @Test("Double / Int division by zero throws")
+    func doubleDivideIntByZero() throws {
+        #expect(throws: JinjaError.self) {
+            _ = try Value.double(1.0).divide(by: .int(0))
+        }
+    }
+
+    // MARK: - Floor Division Mixed Types
+
+    @Test("Double floor divide double")
+    func doubleFloorDivideDouble() throws {
+        #expect(try Value.double(7.5).floorDivide(by: .double(2.0)) == .int(3))
+    }
+
+    @Test("Int floor divide double")
+    func intFloorDivideDouble() throws {
+        #expect(try Value.int(7).floorDivide(by: .double(2.0)) == .int(3))
+    }
+
+    // MARK: - Compare Mixed Types
+
+    @Test("Double compare Int")
+    func doubleCompareInt() throws {
+        #expect(try Value.double(3.5).compare(to: .int(3)) == 1)
+        #expect(try Value.double(3.0).compare(to: .int(3)) == 0)
+        #expect(try Value.double(2.5).compare(to: .int(3)) == -1)
+    }
+
+    @Test("Int compare Double")
+    func intCompareDouble() throws {
+        #expect(try Value.int(4).compare(to: .double(3.5)) == 1)
+        #expect(try Value.int(3).compare(to: .double(3.0)) == 0)
+        #expect(try Value.int(2).compare(to: .double(3.5)) == -1)
+    }
+
+    // MARK: - isEquivalent edge cases
+
+    @Test("isEquivalent double/int")
+    func isEquivalentDoubleInt() {
+        #expect(Value.double(3.0).isEquivalent(to: .int(3)))
+        #expect(!Value.double(3.1).isEquivalent(to: .int(3)))
+    }
+
+    @Test("isEquivalent arrays different length")
+    func isEquivalentArraysDifferentLength() {
+        #expect(!Value.array([.int(1), .int(2)]).isEquivalent(to: .array([.int(1)])))
+    }
+
+    @Test("isEquivalent objects different keys")
+    func isEquivalentObjectsDifferentKeys() {
+        #expect(!Value.object(["a": .int(1)]).isEquivalent(to: .object(["b": .int(1)])))
+    }
+
+    @Test("isEquivalent objects different values")
+    func isEquivalentObjectsDifferentValues() {
+        #expect(!Value.object(["a": .int(1)]).isEquivalent(to: .object(["a": .int(2)])))
+    }
+
+    // MARK: - Encodable macro
+
+    @Test("Encodable macro")
+    func encodableMacro() throws {
+        let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(Value.macro(m))
+        let json = String(data: data, encoding: .utf8)!
+        #expect(json.contains("test"))
+    }
+
+    // MARK: - Description for array with strings
+
+    @Test("Array with strings uses single quotes")
+    func arrayWithStringsDescription() {
+        let value = Value.array([.string("hello"), .string("world")])
+        #expect(value.description == "['hello', 'world']")
+    }
+
+    @Test("Array with mixed types description")
+    func arrayMixedDescription() {
+        let value = Value.array([.string("a"), .int(1), .boolean(true)])
+        #expect(value.description == "['a', 1, true]")
+    }
+
+    // MARK: - Hash for various types
+
+    @Test("Hash for double")
+    func hashDouble() {
+        var hasher1 = Hasher()
+        Value.double(3.14).hash(into: &hasher1)
+        var hasher2 = Hasher()
+        Value.double(3.14).hash(into: &hasher2)
+        #expect(hasher1.finalize() == hasher2.finalize())
+    }
+
+    @Test("Hash for array")
+    func hashArray() {
+        var hasher = Hasher()
+        Value.array([.int(1), .int(2)]).hash(into: &hasher)
+        _ = hasher.finalize()
+    }
+
+    @Test("Hash for object")
+    func hashObject() {
+        var hasher = Hasher()
+        Value.object(["a": .int(1)]).hash(into: &hasher)
+        _ = hasher.finalize()
+    }
+
+    @Test("Hash for function")
+    func hashFunction() {
+        var hasher = Hasher()
+        Value.function { _, _, _ in .null }.hash(into: &hasher)
+        _ = hasher.finalize()
+    }
+
+    @Test("Hash for undefined")
+    func hashUndefined() {
+        var hasher = Hasher()
+        Value.undefined.hash(into: &hasher)
+        _ = hasher.finalize()
+    }
+
+    @Test("Hash for macro")
+    func hashMacro() {
+        let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
+        var hasher = Hasher()
+        Value.macro(m).hash(into: &hasher)
+        _ = hasher.finalize()
+    }
 }
