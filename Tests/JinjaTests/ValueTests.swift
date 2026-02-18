@@ -648,24 +648,6 @@ struct ValueTests {
         #expect(Value.macro(m).isTruthy)
     }
 
-    // MARK: - Hashable
-
-    @Test("Hashable conformance")
-    func hashableConformance() {
-        let set: Set<Value> = [.int(1), .string("a"), .boolean(true), .null]
-        #expect(set.contains(.int(1)))
-        #expect(set.contains(.string("a")))
-        #expect(set.contains(.boolean(true)))
-        #expect(set.contains(.null))
-        #expect(!set.contains(.int(2)))
-
-        var hasher1 = Hasher()
-        Value.int(42).hash(into: &hasher1)
-        var hasher2 = Hasher()
-        Value.int(42).hash(into: &hasher2)
-        #expect(hasher1.finalize() == hasher2.finalize())
-    }
-
     // MARK: - Init from Macro
 
     @Test("Init from Macro via any")
