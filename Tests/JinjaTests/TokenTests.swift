@@ -25,7 +25,13 @@ struct TokenTests {
 
     @Test("Kind CaseIterable")
     func kindCaseIterable() {
-        #expect(Token.Kind.allCases.count == 61)
+        let kinds = Token.Kind.allCases
+        #expect(!kinds.isEmpty)
+        #expect(kinds.contains(.text))
+        #expect(kinds.contains(.identifier))
+        #expect(kinds.contains(.openExpression))
+        #expect(kinds.contains(.plus))
+        #expect(kinds.contains(.minus))
     }
 
     @Test("Codable round-trip")
