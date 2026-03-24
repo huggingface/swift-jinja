@@ -500,30 +500,52 @@ extension Value: Hashable {
 // MARK: - Encodable
 
 extension Value: Encodable {
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
+    private struct DynamicCodingKey: CodingKey {
+        var stringValue: String
+        var intValue: Int? { nil }
 
+        init?(stringValue: String) {
+            self.stringValue = stringValue
+        }
+
+        init?(intValue: Int) {
+            return nil
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
         switch self {
+        case let .object(value):
+            var keyedContainer = encoder.container(keyedBy: DynamicCodingKey.self)
+            for key in value.keys.sorted() {
+                guard let codingKey = DynamicCodingKey(stringValue: key),
+                    let encodedValue = value[key]
+                else {
+                    continue
+                }
+                try keyedContainer.encode(encodedValue, forKey: codingKey)
+            }
         case let .string(value):
+            var container = encoder.singleValueContainer()
             try container.encode(value)
         case let .double(value):
+            var container = encoder.singleValueContainer()
             try container.encode(value)
         case let .int(value):
+            var container = encoder.singleValueContainer()
             try container.encode(value)
         case let .boolean(value):
+            var container = encoder.singleValueContainer()
             try container.encode(value)
         case .null:
+            var container = encoder.singleValueContainer()
             try container.encodeNil()
         case .undefined:
+            var container = encoder.singleValueContainer()
             try container.encodeNil()
         case let .array(value):
+            var container = encoder.singleValueContainer()
             try container.encode(value)
-        case let .object(value):
-            var dictionary: [String: Value] = [:]
-            for (key, value) in value {
-                dictionary[key] = value
-            }
-            try container.encode(dictionary)
         case .function:
             throw EncodingError.invalidValue(
                 self,
@@ -533,6 +555,7 @@ extension Value: Encodable {
                 )
             )
         case .macro(let m):
+            var container = encoder.singleValueContainer()
             try container.encode(m)
         }
     }
