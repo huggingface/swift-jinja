@@ -488,6 +488,39 @@ struct FiltersTests {
         #expect(result == .string("[1,2,3]"))
     }
 
+    @Test("tojson filter sorts object keys deterministically")
+    func tojsonFilterSortsObjectKeysDeterministically() throws {
+        let tool = Value.object([
+            "type": .string("function"),
+            "function": .object([
+                "parameters": .object([
+                    "type": .string("object"),
+                    "required": .array([.string("state")]),
+                    "properties": .object([
+                        "state": .object([
+                            "type": .string("string"),
+                            "description": .string(
+                                "The 2 digit code for the USA state. Example: \"CA\" for California."
+                            ),
+                        ])
+                    ]),
+                ]),
+                "name": .string("state_weather"),
+                "description": .string(
+                    "Returns the current temperature in degrees Fahrenheit for the provided USA state"
+                ),
+            ]),
+        ])
+
+        let result = try Filters.tojson([tool], kwargs: [:], env: env)
+        #expect(
+            result
+                == .string(
+                    "{\"function\":{\"description\":\"Returns the current temperature in degrees Fahrenheit for the provided USA state\",\"name\":\"state_weather\",\"parameters\":{\"properties\":{\"state\":{\"description\":\"The 2 digit code for the USA state. Example: \\\"CA\\\" for California.\",\"type\":\"string\"}},\"required\":[\"state\"],\"type\":\"object\"}},\"type\":\"function\"}"
+                )
+        )
+    }
+
     @Test("tojson filter escapes non-ASCII by default")
     func tojsonFilterEscapesNonASCIIByDefault() throws {
         // Chinese characters "你好" should be escaped as \uXXXX by default

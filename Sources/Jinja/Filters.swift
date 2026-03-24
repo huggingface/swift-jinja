@@ -1086,11 +1086,12 @@ public enum Filters {
         )
 
         let encoder = JSONEncoder()
+        encoder.outputFormatting.insert(.sortedKeys)
         if let indent = arguments["indent"],
             case .int(let count) = indent,
             count > 0
         {
-            encoder.outputFormatting = .prettyPrinted
+            encoder.outputFormatting.insert(.prettyPrinted)
         }
 
         let ensureASCII: Bool
