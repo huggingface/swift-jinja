@@ -1068,7 +1068,8 @@ public enum Filters {
     /// Converts value to JSON string.
     ///
     /// - Parameters:
-    ///   - indent: Number of spaces to use for indentation (optional).
+    ///   - indent: If greater than 0, enables pretty-printed output using
+    ///             Foundation's default indentation (optional).
     ///   - ensure_ascii: If true (default), escape non-ASCII characters as `\uXXXX`.
     ///                   If false, output Unicode characters directly.
     @Sendable public static func tojson(
