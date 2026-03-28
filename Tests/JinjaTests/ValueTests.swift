@@ -82,6 +82,22 @@ struct ValueTests {
         #expect(nilValue == Value.null)
     }
 
+    @Test("Dictionary conversion via any is key-sorted")
+    func initFromAnyDictionarySortsKeys() throws {
+        let source: [String: Any?] = [
+            "text": "hello",
+            "priority": 1,
+            "is_urgent": true,
+        ]
+
+        let value = try Value(any: source)
+        if case let .object(dict) = value {
+            #expect(Array(dict.keys) == ["is_urgent", "priority", "text"])
+        } else {
+            Issue.record("Expected object value")
+        }
+    }
+
     @Test("CustomStringConvertible conformance")
     func description() {
         #expect(Value.string("test").description == "test")

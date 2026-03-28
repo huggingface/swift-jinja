@@ -55,8 +55,8 @@ public enum Value: Sendable {
             self = .array(values)
         case let dict as [String: Any?]:
             var orderedDict = OrderedDictionary<String, Value>()
-            for (key, value) in dict {
-                orderedDict[key] = try Value(any: value)
+            for key in dict.keys.sorted() {
+                orderedDict[key] = try Value(any: dict[key] ?? nil)
             }
             self = .object(orderedDict)
         case let macro as Macro:
