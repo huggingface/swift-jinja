@@ -391,6 +391,24 @@ struct InterpreterTests {
         #expect(result == "42")
     }
 
+    @Test("Namespace mutation in macro loop")
+    func namespaceMutationInMacroLoop() throws {
+        let template = try Template(
+            """
+            {%- macro fmt(items) -%}
+              {%- set ns = namespace(found_first=false) -%}
+              {%- for k in items -%}
+                {%- if ns.found_first %},{% endif -%}
+                {%- set ns.found_first = true -%}{{ k }}
+              {%- endfor -%}
+            {%- endmacro -%}
+            {{ fmt(['a', 'b', 'c']) }}
+            """
+        )
+        let result = try template.render([:])
+        #expect(result.trimmingCharacters(in: .whitespacesAndNewlines) == "a,b,c")
+    }
+
     @Test("Invalid assignment target throws")
     func invalidAssignmentTarget() throws {
         #expect(throws: JinjaError.self) {
