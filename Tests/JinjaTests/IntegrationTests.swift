@@ -727,6 +727,45 @@ struct IntegrationTests {
         #expect(result == expected)
     }
 
+    @Test("Google Gemma-4 namespace comma joiner")
+    func googleGemma4NamespaceCommaJoiner() throws {
+        let string = #"""
+            {%- macro format_argument(argument, escape_keys=True) -%}
+                {%- if argument is mapping -%}
+                    {{- '{' -}}
+                    {%- set ns = namespace(found_first=false) -%}
+                    {%- for key, value in argument | dictsort -%}
+                        {%- if ns.found_first %},{% endif -%}
+                        {%- set ns.found_first = true -%}
+                        {%- if escape_keys -%}
+                            {{- '<|"|>' + key + '<|"|>' -}}
+                        {%- else -%}
+                            {{- key -}}
+                        {%- endif -%}
+                        :{{- value -}}
+                    {%- endfor -%}
+                    {{- '}' -}}
+                {%- else -%}
+                    {{- argument -}}
+                {%- endif -%}
+            {%- endmacro -%}
+            {{- format_argument(payload) -}}
+            """#
+
+        let template = try Template(string, with: options)
+        let context: [String: Value] = [
+            "payload": .object([
+                "z": .int(3),
+                "a": .int(1),
+                "m": .int(2),
+            ])
+        ]
+
+        let result = try template.render(context)
+        let expected = #"{<|"|>a<|"|>:1,<|"|>m<|"|>:2,<|"|>z<|"|>:3}"#
+        #expect(result == expected)
+    }
+
     @Test("Qwen Qwen2.5-0.5B-Instruct")
     func qwenQwen2_5_0_5BInstruct() throws {
         let string =
