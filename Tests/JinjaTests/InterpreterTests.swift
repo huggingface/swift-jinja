@@ -236,16 +236,21 @@ struct InterpreterTests {
 
     @Test("loop.previtem on dict with tuple unpacking returns [key, value]")
     func loopPrevitemDictTuple() throws {
+        // For tuple-unpacking iteration, `loop.previtem` should be a 2-tuple
+        // `(key, value)` — matches Python jinja2's `LoopContext.previtem`
+        // semantics. Skip iter 0 (where `previtem` is undefined by design)
+        // and verify the structural form at iter ≥ 1.
         let template = try Template(
-            "{% for k, v in obj.items() %}{{ loop.previtem }}|{% endfor %}"
+            "{% for k, v in obj.items() %}"
+                + "{% if not loop.first %}<{{ loop.previtem[0] }}={{ loop.previtem[1] }}>{% endif %}"
+                + "{% endfor %}"
         )
         let result = try template.render([
-            "obj": .object(["a": .int(1), "b": .int(2)])
+            "obj": .object(["a": .int(1), "b": .int(2), "c": .int(3)])
         ])
-        // First iteration: undefined → empty. Second: previtem = ["a", 1].
-        // The default `Value` printer renders arrays as Python-style strings.
-        #expect(result.contains("|"))
-        #expect(result.hasPrefix("|"))  // first iteration's previtem is empty
+        // OrderedDictionary preserves insertion order, so iter 1's previtem
+        // is ("a", 1), iter 2's is ("b", 2).
+        #expect(result == "<a=1><b=2>")
     }
 
     @Test("loop.previtem on dict with single-var iteration returns key")
