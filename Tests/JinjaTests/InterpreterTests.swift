@@ -187,6 +187,89 @@ struct InterpreterTests {
         #expect(result == "empty")
     }
 
+    // MARK: - For loop loop.previtem / loop.nextitem
+
+    @Test("loop.previtem on array")
+    func loopPrevitemArray() throws {
+        let template = try Template(
+            "{% for x in items %}[{{ loop.previtem }}|{{ x }}]{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(1), .int(2), .int(3)])
+        ])
+        // First iteration: previtem is undefined → renders empty.
+        #expect(result == "[|1][1|2][2|3]")
+    }
+
+    @Test("loop.nextitem on array")
+    func loopNextitemArray() throws {
+        let template = try Template(
+            "{% for x in items %}[{{ x }}|{{ loop.nextitem }}]{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(1), .int(2), .int(3)])
+        ])
+        // Last iteration: nextitem is undefined → renders empty.
+        #expect(result == "[1|2][2|3][3|]")
+    }
+
+    @Test("loop.previtem available at first index renders empty")
+    func loopPrevitemFirstIndexUndefined() throws {
+        // `loop.previtem` at the first iteration must be the Jinja undefined
+        // sentinel — otherwise templates that guard with `if loop.previtem`
+        // (e.g. `if loop.previtem['role'] == 'assistant'`) would break.
+        let template = try Template(
+            "{% for x in items %}{% if loop.previtem %}HAS{% else %}NONE{% endif %}{% endfor %}"
+        )
+        let result = try template.render(["items": .array([.int(1), .int(2)])])
+        #expect(result == "NONEHAS")
+    }
+
+    @Test("loop.nextitem at last index renders empty")
+    func loopNextitemLastIndexUndefined() throws {
+        let template = try Template(
+            "{% for x in items %}{% if loop.nextitem %}HAS{% else %}NONE{% endif %}{% endfor %}"
+        )
+        let result = try template.render(["items": .array([.int(1), .int(2)])])
+        #expect(result == "HASNONE")
+    }
+
+    @Test("loop.previtem on dict with tuple unpacking returns [key, value]")
+    func loopPrevitemDictTuple() throws {
+        let template = try Template(
+            "{% for k, v in obj.items() %}{{ loop.previtem }}|{% endfor %}"
+        )
+        let result = try template.render([
+            "obj": .object(["a": .int(1), "b": .int(2)])
+        ])
+        // First iteration: undefined → empty. Second: previtem = ["a", 1].
+        // The default `Value` printer renders arrays as Python-style strings.
+        #expect(result.contains("|"))
+        #expect(result.hasPrefix("|"))  // first iteration's previtem is empty
+    }
+
+    @Test("loop.previtem on dict with single-var iteration returns key")
+    func loopPrevitemDictSingle() throws {
+        let template = try Template(
+            "{% for k in obj %}[{{ loop.previtem }}|{{ k }}]{% endfor %}"
+        )
+        let result = try template.render([
+            "obj": .object(["a": .int(1), "b": .int(2), "c": .int(3)])
+        ])
+        // OrderedDictionary preserves insertion order in swift-jinja, so
+        // previtem of "b" is "a", and of "c" is "b".
+        #expect(result == "[|a][a|b][b|c]")
+    }
+
+    @Test("loop.previtem and loop.nextitem on string iteration")
+    func loopPrevitemNextitemString() throws {
+        let template = try Template(
+            "{% for c in s %}[{{ loop.previtem }}{{ c }}{{ loop.nextitem }}]{% endfor %}"
+        )
+        let result = try template.render(["s": .string("abc")])
+        #expect(result == "[ab][abc][bc]")
+    }
+
     // MARK: - For loop with test
 
     @Test("Filtered for loop")

@@ -1052,8 +1052,12 @@ struct IntegrationTests {
         context["eos_token"] = .string("<|endoftext|>")
 
         let result = try template.render(context)
+        // With `loop.previtem` returning the previous message dict, the
+        // template's `previtem['role'] != 'assistant'` guard correctly
+        // suppresses the space before a message that follows an assistant
+        // turn. Matches Python jinja2 output for this template + corpus.
         let target =
-            "[INST] Hello, how are you? [RESP] I'm doing great. How can I help you today?<|endoftext|> [INST] I'd like to show off how chat templating works!"
+            "[INST] Hello, how are you? [RESP] I'm doing great. How can I help you today?<|endoftext|>[INST] I'd like to show off how chat templating works!"
 
         #expect(result == target)
     }
