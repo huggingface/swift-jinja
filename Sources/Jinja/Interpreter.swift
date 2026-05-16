@@ -331,12 +331,7 @@ public enum Interpreter {
                             }
                         }
 
-                        childEnv["loop"] = makeLoopObject(
-                            index: index,
-                            totalCount: items.count,
-                            previtem: index > 0 ? items[index - 1] : .undefined,
-                            nextitem: index + 1 < items.count ? items[index + 1] : .undefined
-                        )
+                        childEnv["loop"] = makeLoopObject(items: items, index: index)
                         if let test = test {
                             let testValue = try evaluateExpression(test, env: childEnv)
                             if !testValue.isTruthy { continue }
@@ -363,18 +358,18 @@ public enum Interpreter {
                 } else {
                     let childEnv = Environment(parent: env)
                     let entries = Array(dict)
-                    // A dict iteration's "item" for `loop.previtem` /
-                    // `loop.nextitem` is the key alone when `for k in d`,
-                    // or a `(key, value)` tuple when `for k, v in d.items()`
-                    // — matches Python jinja2's LoopContext semantics.
-                    func itemAt(_ i: Int) -> Value {
-                        let entry = entries[i]
-                        switch loopVar {
-                        case .single:
-                            return .string(entry.key)
-                        case .tuple:
-                            return .array([.string(entry.key), entry.value])
-                        }
+                    // Materialize loop items once.
+                    // Given `for k in d`,
+                    // items are the keys as `Value.string`.
+                    // Given `for k, v in d.items()`,
+                    // items are `(key, value)` 2-tuples (`Value.array`),
+                    // which matches Python jinja2's LoopContext semantics for `previtem`/`nextitem`.
+                    let items: [Value]
+                    switch loopVar {
+                    case .single:
+                        items = entries.map { .string($0.key) }
+                    case .tuple:
+                        items = entries.map { .array([.string($0.key), $0.value]) }
                     }
                     for (index, (key, value)) in entries.enumerated() {
                         switch loopVar {
@@ -394,12 +389,7 @@ public enum Interpreter {
                                 childEnv[varNames[i]] = .undefined
                             }
                         }
-                        childEnv["loop"] = makeLoopObject(
-                            index: index,
-                            totalCount: entries.count,
-                            previtem: index > 0 ? itemAt(index - 1) : .undefined,
-                            nextitem: index + 1 < entries.count ? itemAt(index + 1) : .undefined
-                        )
+                        childEnv["loop"] = makeLoopObject(items: items, index: index)
                         if let test = test {
                             let testValue = try evaluateExpression(test, env: childEnv)
                             if !testValue.isTruthy { continue }
@@ -422,12 +412,7 @@ public enum Interpreter {
                                 childEnv[varName] = i == 0 ? item : .undefined
                             }
                         }
-                        childEnv["loop"] = makeLoopObject(
-                            index: index,
-                            totalCount: chars.count,
-                            previtem: index > 0 ? chars[index - 1] : .undefined,
-                            nextitem: index + 1 < chars.count ? chars[index + 1] : .undefined
-                        )
+                        childEnv["loop"] = makeLoopObject(items: chars, index: index)
                         if let test = test {
                             let testValue = try evaluateExpression(test, env: childEnv)
                             if !testValue.isTruthy { continue }
@@ -815,21 +800,20 @@ public enum Interpreter {
     }
 
     private static func makeLoopObject(
-        index: Int,
-        totalCount: Int,
-        previtem: Value,
-        nextitem: Value
+        items: [Value],
+        index: Int
     ) -> Value {
+        let count = items.count
         var loopContext: OrderedDictionary<String, Value> = [
             "index": .int(index + 1),
             "index0": .int(index),
             "first": .boolean(index == 0),
-            "last": .boolean(index == totalCount - 1),
-            "length": .int(totalCount),
-            "revindex": .int(totalCount - index),
-            "revindex0": .int(totalCount - index - 1),
-            "previtem": previtem,
-            "nextitem": nextitem,
+            "last": .boolean(index == count - 1),
+            "length": .int(count),
+            "revindex": .int(count - index),
+            "revindex0": .int(count - index - 1),
+            "previtem": index > 0 ? items[index - 1] : .undefined,
+            "nextitem": index + 1 < count ? items[index + 1] : .undefined,
         ]
 
         loopContext["cycle"] = .function { args, _, _ in
