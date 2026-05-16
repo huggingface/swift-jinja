@@ -358,12 +358,9 @@ public enum Interpreter {
                 } else {
                     let childEnv = Environment(parent: env)
                     let entries = Array(dict)
-                    // Materialize loop items once.
-                    // Given `for k in d`,
-                    // items are the keys as `Value.string`.
-                    // Given `for k, v in d.items()`,
-                    // items are `(key, value)` 2-tuples (`Value.array`),
-                    // which matches Python jinja2's LoopContext semantics for `previtem`/`nextitem`.
+                    // `loop.previtem`/`loop.nextitem` items, per Python jinja2 `LoopContext`:
+                    // keys alone for `for k in d`,
+                    // `(key, value)` 2-tuples for `for k, v in d.items()`.
                     let items: [Value]
                     switch loopVar {
                     case .single:

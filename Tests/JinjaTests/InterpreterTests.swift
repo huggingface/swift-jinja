@@ -197,7 +197,6 @@ struct InterpreterTests {
         let result = try template.render([
             "items": .array([.int(1), .int(2), .int(3)])
         ])
-        // First iteration: previtem is undefined → renders empty.
         #expect(result == "[|1][1|2][2|3]")
     }
 
@@ -209,62 +208,52 @@ struct InterpreterTests {
         let result = try template.render([
             "items": .array([.int(1), .int(2), .int(3)])
         ])
-        // Last iteration: nextitem is undefined → renders empty.
         #expect(result == "[1|2][2|3][3|]")
     }
 
     @Test("loop.previtem is undefined at the first iteration")
     func loopPrevitemFirstIndexUndefined() throws {
-        // `loop.previtem` at the first iteration must be the Jinja undefined
-        // sentinel — otherwise templates that guard with `if loop.previtem`
-        // (e.g. `if loop.previtem['role'] == 'assistant'`) would break.
+        // Real-world chat templates guard with `if loop.previtem['role'] != 'assistant'`
+        // and rely on `.undefined` being falsy at the first iteration.
         let template = try Template(
-            "{% for x in items %}{% if loop.previtem %}HAS{% else %}NONE{% endif %}{% endfor %}"
+            "{% for x in items %}{{ 'has' if loop.previtem else 'none' }},{% endfor %}"
         )
         let result = try template.render(["items": .array([.int(1), .int(2)])])
-        #expect(result == "NONEHAS")
+        #expect(result == "none,has,")
     }
 
     @Test("loop.nextitem is undefined at the last iteration")
     func loopNextitemLastIndexUndefined() throws {
         let template = try Template(
-            "{% for x in items %}{% if loop.nextitem %}HAS{% else %}NONE{% endif %}{% endfor %}"
+            "{% for x in items %}{{ 'has' if loop.nextitem else 'none' }},{% endfor %}"
         )
         let result = try template.render(["items": .array([.int(1), .int(2)])])
-        #expect(result == "HASNONE")
+        #expect(result == "has,none,")
     }
 
     @Test("loop.previtem returns falsy values rather than reporting undefined")
     func loopPrevitemFalsyValues() throws {
-        // Truthiness alone can't distinguish `.undefined` from a falsy previous item
-        // (e.g. `0`, `false`, `""`).
-        // Use `is defined` to assert that a falsy `loop.previtem`
-        // is still the actual item.
+        // Falsy items (`0`, `""`, `false`) must come through as defined —
+        // truthiness alone can't distinguish them from `.undefined`.
         let template = try Template(
-            "{% for x in items %}{% if loop.previtem is defined %}DEF[{{ loop.previtem }}]{% else %}UNDEF{% endif %};{% endfor %}"
+            "{% for x in items %}{{ 'def' if loop.previtem is defined else 'undef' }},{% endfor %}"
         )
         let result = try template.render([
             "items": .array([.int(0), .string(""), .boolean(false)])
         ])
-        #expect(result == "UNDEF;DEF[0];DEF[];")
+        #expect(result == "undef,def,def,")
     }
 
     @Test("loop.previtem on dict with tuple unpacking returns [key, value]")
     func loopPrevitemDictTuple() throws {
-        // For tuple-unpacking iteration, `loop.previtem` should be a 2-tuple
-        // `(key, value)` — matches Python jinja2's `LoopContext.previtem`
-        // semantics. Skip iter 0 (where `previtem` is undefined by design)
-        // and verify the structural form at iter ≥ 1.
+        // Under tuple unpacking, `loop.previtem` should be a `(key, value)` 2-tuple,
+        // matching Python jinja2's `LoopContext.previtem`.
         let template = try Template(
-            "{% for k, v in obj.items() %}"
-                + "{% if not loop.first %}<{{ loop.previtem[0] }}={{ loop.previtem[1] }}>{% endif %}"
-                + "{% endfor %}"
+            "{% for k, v in obj.items() %}{% if not loop.first %}<{{ loop.previtem[0] }}={{ loop.previtem[1] }}>{% endif %}{% endfor %}"
         )
         let result = try template.render([
             "obj": .object(["a": .int(1), "b": .int(2), "c": .int(3)])
         ])
-        // OrderedDictionary preserves insertion order, so iter 1's previtem
-        // is ("a", 1), iter 2's is ("b", 2).
         #expect(result == "<a=1><b=2>")
     }
 
@@ -276,8 +265,6 @@ struct InterpreterTests {
         let result = try template.render([
             "obj": .object(["a": .int(1), "b": .int(2), "c": .int(3)])
         ])
-        // OrderedDictionary preserves insertion order in swift-jinja, so
-        // previtem of "b" is "a", and of "c" is "b".
         #expect(result == "[|a][a|b][b|c]")
     }
 

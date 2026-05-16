@@ -1048,11 +1048,10 @@ struct IntegrationTests {
             "{% for message in messages %}{% if loop.index > 1 and loop.previtem['role'] != 'assistant' %}{{ ' ' }}{% endif %}{% if message['role'] == 'system' %}{{ '[SYS] ' + message['content'].strip() }}{% elif message['role'] == 'user' %}{{ '[INST] ' + message['content'].strip() }}{% elif message['role'] == 'assistant' %}{{ '[RESP] '  + message['content'] + eos_token }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ ' [RESP] ' }}{% endif %}"
         let template = try Template(string, with: options)
 
-        // Use the system-prompt corpus to exercise the template's `[SYS]` branch
-        // plus all three `loop.previtem`-driven transitions:
+        // The system-prompt corpus exercises the template's `[SYS]` branch
+        // and all three `loop.previtem`-driven transitions:
         // system→user (space), user→assistant (space),
         // and assistant→user (no space, because `previtem['role']` is `'assistant'`).
-        // Target verified against Python jinja2 for the same template and corpus.
         var context = Self.messagesWithSystemPrompt
         context["eos_token"] = .string("<|endoftext|>")
 
