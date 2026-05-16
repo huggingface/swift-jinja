@@ -187,6 +187,96 @@ struct InterpreterTests {
         #expect(result == "empty")
     }
 
+    // MARK: - For loop loop.previtem / loop.nextitem
+
+    @Test("loop.previtem on array")
+    func loopPrevitemArray() throws {
+        let template = try Template(
+            "{% for x in items %}[{{ loop.previtem }}|{{ x }}]{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(1), .int(2), .int(3)])
+        ])
+        #expect(result == "[|1][1|2][2|3]")
+    }
+
+    @Test("loop.nextitem on array")
+    func loopNextitemArray() throws {
+        let template = try Template(
+            "{% for x in items %}[{{ x }}|{{ loop.nextitem }}]{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(1), .int(2), .int(3)])
+        ])
+        #expect(result == "[1|2][2|3][3|]")
+    }
+
+    @Test("loop.previtem is undefined at the first iteration")
+    func loopPrevitemFirstIndexUndefined() throws {
+        // Real-world chat templates guard with `if loop.previtem['role'] != 'assistant'`
+        // and rely on `.undefined` being falsy at the first iteration.
+        let template = try Template(
+            "{% for x in items %}{{ 'has' if loop.previtem else 'none' }},{% endfor %}"
+        )
+        let result = try template.render(["items": .array([.int(1), .int(2)])])
+        #expect(result == "none,has,")
+    }
+
+    @Test("loop.nextitem is undefined at the last iteration")
+    func loopNextitemLastIndexUndefined() throws {
+        let template = try Template(
+            "{% for x in items %}{{ 'has' if loop.nextitem else 'none' }},{% endfor %}"
+        )
+        let result = try template.render(["items": .array([.int(1), .int(2)])])
+        #expect(result == "has,none,")
+    }
+
+    @Test("loop.previtem returns falsy values rather than reporting undefined")
+    func loopPrevitemFalsyValues() throws {
+        // Falsy items (`0`, `""`, `false`) must come through as defined —
+        // truthiness alone can't distinguish them from `.undefined`.
+        let template = try Template(
+            "{% for x in items %}{{ 'def' if loop.previtem is defined else 'undef' }},{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(0), .string(""), .boolean(false)])
+        ])
+        #expect(result == "undef,def,def,")
+    }
+
+    @Test("loop.previtem on dict with tuple unpacking returns [key, value]")
+    func loopPrevitemDictTuple() throws {
+        // Under tuple unpacking, `loop.previtem` should be a `(key, value)` 2-tuple,
+        // matching Python jinja2's `LoopContext.previtem`.
+        let template = try Template(
+            "{% for k, v in obj.items() %}{% if not loop.first %}<{{ loop.previtem[0] }}={{ loop.previtem[1] }}>{% endif %}{% endfor %}"
+        )
+        let result = try template.render([
+            "obj": .object(["a": .int(1), "b": .int(2), "c": .int(3)])
+        ])
+        #expect(result == "<a=1><b=2>")
+    }
+
+    @Test("loop.previtem on dict with single-var iteration returns key")
+    func loopPrevitemDictSingle() throws {
+        let template = try Template(
+            "{% for k in obj %}[{{ loop.previtem }}|{{ k }}]{% endfor %}"
+        )
+        let result = try template.render([
+            "obj": .object(["a": .int(1), "b": .int(2), "c": .int(3)])
+        ])
+        #expect(result == "[|a][a|b][b|c]")
+    }
+
+    @Test("loop.previtem and loop.nextitem on string iteration")
+    func loopPrevitemNextitemString() throws {
+        let template = try Template(
+            "{% for c in s %}[{{ loop.previtem }}{{ c }}{{ loop.nextitem }}]{% endfor %}"
+        )
+        let result = try template.render(["s": .string("abc")])
+        #expect(result == "[ab][abc][bc]")
+    }
+
     // MARK: - For loop with test
 
     @Test("Filtered for loop")

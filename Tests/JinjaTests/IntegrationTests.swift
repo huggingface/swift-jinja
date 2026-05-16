@@ -1048,12 +1048,16 @@ struct IntegrationTests {
             "{% for message in messages %}{% if loop.index > 1 and loop.previtem['role'] != 'assistant' %}{{ ' ' }}{% endif %}{% if message['role'] == 'system' %}{{ '[SYS] ' + message['content'].strip() }}{% elif message['role'] == 'user' %}{{ '[INST] ' + message['content'].strip() }}{% elif message['role'] == 'assistant' %}{{ '[RESP] '  + message['content'] + eos_token }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ ' [RESP] ' }}{% endif %}"
         let template = try Template(string, with: options)
 
-        var context = Self.messages
+        // The system-prompt corpus exercises the template's `[SYS]` branch
+        // and all three `loop.previtem`-driven transitions:
+        // system→user (space), user→assistant (space),
+        // and assistant→user (no space, because `previtem['role']` is `'assistant'`).
+        var context = Self.messagesWithSystemPrompt
         context["eos_token"] = .string("<|endoftext|>")
 
         let result = try template.render(context)
         let target =
-            "[INST] Hello, how are you? [RESP] I'm doing great. How can I help you today?<|endoftext|> [INST] I'd like to show off how chat templating works!"
+            "[SYS] You are a friendly chatbot who always responds in the style of a pirate [INST] Hello, how are you? [RESP] I'm doing great. How can I help you today?<|endoftext|>[INST] I'd like to show off how chat templating works!"
 
         #expect(result == target)
     }
