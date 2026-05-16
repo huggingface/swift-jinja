@@ -213,7 +213,7 @@ struct InterpreterTests {
         #expect(result == "[1|2][2|3][3|]")
     }
 
-    @Test("loop.previtem available at first index renders empty")
+    @Test("loop.previtem is undefined at the first iteration")
     func loopPrevitemFirstIndexUndefined() throws {
         // `loop.previtem` at the first iteration must be the Jinja undefined
         // sentinel — otherwise templates that guard with `if loop.previtem`
@@ -225,7 +225,7 @@ struct InterpreterTests {
         #expect(result == "NONEHAS")
     }
 
-    @Test("loop.nextitem at last index renders empty")
+    @Test("loop.nextitem is undefined at the last iteration")
     func loopNextitemLastIndexUndefined() throws {
         let template = try Template(
             "{% for x in items %}{% if loop.nextitem %}HAS{% else %}NONE{% endif %}{% endfor %}"

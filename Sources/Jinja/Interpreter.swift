@@ -331,7 +331,12 @@ public enum Interpreter {
                             }
                         }
 
-                        childEnv["loop"] = makeLoopObject(index: index, items: items)
+                        childEnv["loop"] = makeLoopObject(
+                            index: index,
+                            totalCount: items.count,
+                            previtem: index > 0 ? items[index - 1] : .undefined,
+                            nextitem: index + 1 < items.count ? items[index + 1] : .undefined
+                        )
                         if let test = test {
                             let testValue = try evaluateExpression(test, env: childEnv)
                             if !testValue.isTruthy { continue }
@@ -358,11 +363,12 @@ public enum Interpreter {
                 } else {
                     let childEnv = Environment(parent: env)
                     let entries = Array(dict)
-                    // Construct `loop.previtem` / `loop.nextitem` material once: a
-                    // dict iteration's "item" is the key alone when `for k in d`,
-                    // or a `(key, value)` tuple when `for k, v in d.items()` — match
-                    // Python jinja2 LoopContext semantics.
-                    let items: [Value] = entries.map { entry in
+                    // A dict iteration's "item" for `loop.previtem` /
+                    // `loop.nextitem` is the key alone when `for k in d`,
+                    // or a `(key, value)` tuple when `for k, v in d.items()`
+                    // — matches Python jinja2's LoopContext semantics.
+                    func itemAt(_ i: Int) -> Value {
+                        let entry = entries[i]
                         switch loopVar {
                         case .single:
                             return .string(entry.key)
@@ -388,7 +394,12 @@ public enum Interpreter {
                                 childEnv[varNames[i]] = .undefined
                             }
                         }
-                        childEnv["loop"] = makeLoopObject(index: index, items: items)
+                        childEnv["loop"] = makeLoopObject(
+                            index: index,
+                            totalCount: entries.count,
+                            previtem: index > 0 ? itemAt(index - 1) : .undefined,
+                            nextitem: index + 1 < entries.count ? itemAt(index + 1) : .undefined
+                        )
                         if let test = test {
                             let testValue = try evaluateExpression(test, env: childEnv)
                             if !testValue.isTruthy { continue }
@@ -411,7 +422,12 @@ public enum Interpreter {
                                 childEnv[varName] = i == 0 ? item : .undefined
                             }
                         }
-                        childEnv["loop"] = makeLoopObject(index: index, items: chars)
+                        childEnv["loop"] = makeLoopObject(
+                            index: index,
+                            totalCount: chars.count,
+                            previtem: index > 0 ? chars[index - 1] : .undefined,
+                            nextitem: index + 1 < chars.count ? chars[index + 1] : .undefined
+                        )
                         if let test = test {
                             let testValue = try evaluateExpression(test, env: childEnv)
                             if !testValue.isTruthy { continue }
@@ -798,8 +814,12 @@ public enum Interpreter {
         throw JinjaError.runtime("Unknown filter: \(filterName)")
     }
 
-    private static func makeLoopObject(index: Int, items: [Value]) -> Value {
-        let totalCount = items.count
+    private static func makeLoopObject(
+        index: Int,
+        totalCount: Int,
+        previtem: Value,
+        nextitem: Value
+    ) -> Value {
         var loopContext: OrderedDictionary<String, Value> = [
             "index": .int(index + 1),
             "index0": .int(index),
@@ -808,8 +828,8 @@ public enum Interpreter {
             "length": .int(totalCount),
             "revindex": .int(totalCount - index),
             "revindex0": .int(totalCount - index - 1),
-            "previtem": index > 0 ? items[index - 1] : .undefined,
-            "nextitem": index + 1 < totalCount ? items[index + 1] : .undefined,
+            "previtem": previtem,
+            "nextitem": nextitem,
         ]
 
         loopContext["cycle"] = .function { args, _, _ in
