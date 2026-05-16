@@ -183,7 +183,7 @@ public struct Parser: Sendable {
 
         try consume(.in, message: "Expected 'in' in for loop.")
 
-        let iterableExpr = try parseFilter()
+        let iterableExpr = try parseOr()
         var testExpr: Expression?
 
         if match(.if) {

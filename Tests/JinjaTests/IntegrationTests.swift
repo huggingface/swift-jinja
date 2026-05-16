@@ -830,6 +830,21 @@ struct IntegrationTests {
 
     // MARK: - Mistral and Related Tests
 
+    @Test("Mistral 3 native template loop_messages plus sentinel parses")
+    func mistral3RealNativeTemplateParses() throws {
+        let string = """
+            {%- set loop_messages = messages -%}
+            {%- for message in loop_messages + [{'role': '__sentinel__'}] -%}
+              {%- if message.role != '__sentinel__' -%}
+                {{- '[INST]' -}}{{- message.content -}}{{- '[/INST]' -}}
+              {%- endif -%}
+            {%- endfor -%}
+            """
+        let template = try Template(string, with: options)
+        let result = try template.render(["messages": [["role": "user", "content": "Hi"]]])
+        #expect(result == "[INST]Hi[/INST]")
+    }
+
     @Test("HuggingFace H4 Zephyr-7B-Gemma-V0.1")
     func huggingFaceH4Zephyr7bGemmaV0_1() throws {
         let string =

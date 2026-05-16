@@ -709,6 +709,15 @@ struct TemplateTests {
         #expect(rendered == "34")
     }
 
+    @Test("For loop accepts arbitrary expressions")
+    func forLoopIterableAcceptsBinaryPlus() throws {
+        let string =
+            #"{%- set base = ["a", "b"] -%}{%- for x in base + ["c"] -%}{{- x -}}{%- endfor -%}"#
+        let context: Context = [:]
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "abc")
+    }
+
     @Test("For loop with selectattr")
     func forLoopWithSelectAttr() throws {
         let string =
