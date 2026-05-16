@@ -234,6 +234,21 @@ struct InterpreterTests {
         #expect(result == "HASNONE")
     }
 
+    @Test("loop.previtem returns falsy values rather than reporting undefined")
+    func loopPrevitemFalsyValues() throws {
+        // Truthiness alone can't distinguish `.undefined` from a falsy previous item
+        // (e.g. `0`, `false`, `""`).
+        // Use `is defined` to assert that a falsy `loop.previtem`
+        // is still the actual item.
+        let template = try Template(
+            "{% for x in items %}{% if loop.previtem is defined %}DEF[{{ loop.previtem }}]{% else %}UNDEF{% endif %};{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(0), .string(""), .boolean(false)])
+        ])
+        #expect(result == "UNDEF;DEF[0];DEF[];")
+    }
+
     @Test("loop.previtem on dict with tuple unpacking returns [key, value]")
     func loopPrevitemDictTuple() throws {
         // For tuple-unpacking iteration, `loop.previtem` should be a 2-tuple
