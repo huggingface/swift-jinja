@@ -46,6 +46,28 @@ struct ValueTests {
         }
     }
 
+    @Test("Initialization from non-Int integer widths")
+    func initFromIntegerWidths() throws {
+        // JSON schema integers can arrive boxed as Int64/Int32/UInt; all must bridge.
+        #expect(try Value(any: Int64(0)) == Value.int(0))
+        #expect(try Value(any: Int64(-7)) == Value.int(-7))
+        #expect(try Value(any: Int32(42)) == Value.int(42))
+        #expect(try Value(any: UInt(5)) == Value.int(5))
+        #expect(try Value(any: UInt8(255)) == Value.int(255))
+        // Out-of-Int-range falls back to a double rather than trapping.
+        #expect(try Value(any: UInt64.max) == Value.double(Double(UInt64.max)))
+    }
+
+    @Test("Nested Optionals degrade to null instead of throwing")
+    func initFromNestedOptional() throws {
+        // A missing template member arrives as Optional<Any>.some(nil); it must
+        // become Jinja null, not a runtime throw.
+        let nestedNone: Any? = .some(Optional<Any>.none as Any)
+        #expect(try Value(any: nestedNone) == Value.null)
+        let doublyNested: Any? = .some(Optional<Any>.some(Optional<Any>.none as Any) as Any)
+        #expect(try Value(any: doublyNested) == Value.null)
+    }
+
     @Test("Literal conformances")
     func literals() {
         let stringValue: Value = "test"

@@ -44,6 +44,11 @@ public enum Value: Sendable {
             self = .string(str)
         case let int as Int:
             self = .int(int)
+        case let int as any BinaryInteger:
+            // Bridge non-`Int` integer widths,
+            // for example `Int64` from a JSON round-trip, `Int32`, or `UInt…`.
+            // Fall back to `.double` when the value doesn't fit in `Int`.
+            self = Int(exactly: int).map(Value.int) ?? .double(Double(int))
         case let double as Double:
             self = .double(double)
         case let float as Float:
@@ -62,9 +67,18 @@ public enum Value: Sendable {
         case let macro as Macro:
             self = .macro(macro)
         default:
-            throw JinjaError.runtime(
-                "Cannot convert value of type \(type(of: value)) to Jinja Value"
-            )
+            // `value` is guaranteed to be non-nil here because `case nil` is handled above.
+            // If it's a non-nil `Optional` erased into `Any` —
+            // for example, a missing template member that arrives as `Optional<Any>.some(.none)` —
+            // unwrap it and retry so that it degrades to null.
+            let unwrapped = value!
+            let mirror = Mirror(reflecting: unwrapped)
+            guard mirror.displayStyle == .optional else {
+                throw JinjaError.runtime(
+                    "Cannot convert value of type \(type(of: unwrapped)) to Jinja Value"
+                )
+            }
+            self = try Value(any: mirror.children.first?.value)
         }
     }
 
