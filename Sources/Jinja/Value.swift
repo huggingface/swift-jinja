@@ -734,7 +734,12 @@ extension ObjectKey: Comparable {
 
 extension ObjectKey: CustomStringConvertible {
     public var description: String {
-        stringValue
+        switch self {
+        case let .string(string):
+            return "'\(string)'"
+        case let .int(int):
+            return String(int)
+        }
     }
 }
 

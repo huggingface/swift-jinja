@@ -108,7 +108,12 @@ struct ValueTests {
         #expect(Value.null.description == "")
         #expect(Value.undefined.description == "")
         #expect(Value.array([Value.int(1), Value.int(2)]).description == "[1, 2]")
-        #expect(Value.object(["a": Value.int(1)]).description == "{a: 1}")
+        #expect(Value.object(["a": Value.int(1)]).description == "{'a': 1}")
+
+        var collidingKeys = OrderedDictionary<ObjectKey, Value>()
+        collidingKeys[.int(512)] = .string("int")
+        collidingKeys[.string("512")] = .string("str")
+        #expect(Value.object(collidingKeys).description == "{512: int, '512': str}")
     }
 
     @Test("isTruthy behavior")
