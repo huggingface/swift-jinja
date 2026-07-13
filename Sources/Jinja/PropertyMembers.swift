@@ -53,12 +53,15 @@ public enum PropertyMembers {
                     parameters: ["chars"],
                     defaults: ["chars": .null]
                 )
-                let characterSet: CharacterSet =
-                    if case let .string(chars) = arguments["chars"] {
-                        CharacterSet(charactersIn: chars)
-                    } else {
-                        .whitespacesAndNewlines
-                    }
+                let characterSet: CharacterSet
+                switch arguments["chars"] {
+                case let .string(chars):
+                    characterSet = CharacterSet(charactersIn: chars)
+                case .null, .none:
+                    characterSet = .whitespacesAndNewlines
+                default:
+                    throw JinjaError.runtime("chars argument must be a string or null")
+                }
                 return .string(str.trimmingCharacters(in: characterSet))
             }
         case "lstrip":
@@ -69,12 +72,15 @@ public enum PropertyMembers {
                     parameters: ["chars"],
                     defaults: ["chars": .null]
                 )
-                let characterSet: CharacterSet =
-                    if case let .string(chars) = arguments["chars"] {
-                        CharacterSet(charactersIn: chars)
-                    } else {
-                        .whitespacesAndNewlines
-                    }
+                let characterSet: CharacterSet
+                switch arguments["chars"] {
+                case let .string(chars):
+                    characterSet = CharacterSet(charactersIn: chars)
+                case .null, .none:
+                    characterSet = .whitespacesAndNewlines
+                default:
+                    throw JinjaError.runtime("chars argument must be a string or null")
+                }
                 return .string(
                     String(
                         String.UnicodeScalarView(
@@ -91,12 +97,15 @@ public enum PropertyMembers {
                     parameters: ["chars"],
                     defaults: ["chars": .null]
                 )
-                let characterSet: CharacterSet =
-                    if case let .string(chars) = arguments["chars"] {
-                        CharacterSet(charactersIn: chars)
-                    } else {
-                        .whitespacesAndNewlines
-                    }
+                let characterSet: CharacterSet
+                switch arguments["chars"] {
+                case let .string(chars):
+                    characterSet = CharacterSet(charactersIn: chars)
+                case .null, .none:
+                    characterSet = .whitespacesAndNewlines
+                default:
+                    throw JinjaError.runtime("chars argument must be a string or null")
+                }
                 return .string(
                     String(
                         String.UnicodeScalarView(

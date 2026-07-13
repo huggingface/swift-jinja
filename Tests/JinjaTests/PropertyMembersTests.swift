@@ -134,6 +134,51 @@ struct PropertyMembersTests {
         #expect(rstripResult == .string("hello"))
     }
 
+    @Test("String strip with non-string chars throws")
+    func stringStripNonStringChars() throws {
+        let value = Value.string("  hello  ")
+        let result = try PropertyMembers.evaluate(value, "strip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        #expect(throws: JinjaError.self) {
+            _ = try fn([.int(42)], [:], Environment())
+        }
+    }
+
+    @Test("String lstrip with non-string chars throws")
+    func stringLstripNonStringChars() throws {
+        let value = Value.string("  hello  ")
+        let result = try PropertyMembers.evaluate(value, "lstrip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        #expect(throws: JinjaError.self) {
+            _ = try fn([.boolean(true)], [:], Environment())
+        }
+    }
+
+    @Test("String rstrip with non-string chars throws")
+    func stringRstripNonStringChars() throws {
+        let value = Value.string("  hello  ")
+        let result = try PropertyMembers.evaluate(value, "rstrip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        #expect(throws: JinjaError.self) {
+            _ = try fn([.int(0)], [:], Environment())
+        }
+    }
+
     @Test("String split without separator")
     func stringSplitDefault() throws {
         let value = Value.string("hello world test")
