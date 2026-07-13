@@ -558,7 +558,7 @@ public enum Tests {
             }
             return false
         case let .object(dict):
-            if case let .string(key) = input {
+            if let key = ObjectKey(input) {
                 return dict[key] != nil
             }
             return false

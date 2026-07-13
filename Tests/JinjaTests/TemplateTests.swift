@@ -1597,6 +1597,45 @@ struct TemplateTests {
         #expect(rendered == "value")
     }
 
+    @Test("Object literals with integer keys")
+    func objectLiteralsWithIntegerKeys() throws {
+        let string = #"{% set d = {0: "a", 512: "b"} %}{{ d[512] }}"#
+        let rendered = try Template(string).render([:])
+        #expect(rendered == "b")
+    }
+
+    @Test("Object literals with integer keys sort numerically")
+    func objectLiteralsIntegerKeysDictsort() throws {
+        let string = #"""
+            {%- set budget_reflections = {
+                 0:      0,
+                 512:    128,
+                 1024:   256,
+                 2048:   512,
+                 4096:   512,
+                 8192:   1024,
+                 16384:  1024
+            } -%}
+            {%- set thinking_budget = 1000 -%}
+            {%- set ns = namespace(chosen=none) -%}
+            {%- for budget, reflection in budget_reflections|dictsort -%}
+              {%- if thinking_budget >= budget -%}
+                {%- set ns.chosen = reflection -%}
+              {%- endif -%}
+            {%- endfor -%}
+            {{ ns.chosen }}
+            """#
+        let rendered = try Template(string).render([:])
+        #expect(rendered == "128")
+    }
+
+    @Test("Integer object keys remain distinct from string keys")
+    func integerObjectKeysDistinctFromStrings() throws {
+        let string = #"{% set d = {512: "int"} %}{{ d[512] }}|{{ d['512'] is undefined }}"#
+        let rendered = try Template(string).render([:])
+        #expect(rendered == "int|true")
+    }
+
     @Test("Object literals nested")
     func objectLiteralsNested() throws {
         // Test simple object with minimal spacing

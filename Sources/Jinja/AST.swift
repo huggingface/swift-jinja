@@ -40,7 +40,7 @@ public indirect enum Expression: Hashable, Codable, Sendable {
     case tuple([Expression])
 
     /// Object literal with key-value pairs.
-    case object(OrderedDictionary<String, Expression>)
+    case object(OrderedDictionary<ObjectKey, Expression>)
 
     /// Variable or function identifier reference.
     case identifier(String)

@@ -108,7 +108,12 @@ struct ValueTests {
         #expect(Value.null.description == "")
         #expect(Value.undefined.description == "")
         #expect(Value.array([Value.int(1), Value.int(2)]).description == "[1, 2]")
-        #expect(Value.object(["a": Value.int(1)]).description == "{a: 1}")
+        #expect(Value.object(["a": Value.int(1)]).description == "{'a': 1}")
+
+        var collidingKeys = OrderedDictionary<ObjectKey, Value>()
+        collidingKeys[.int(512)] = .string("int")
+        collidingKeys[.string("512")] = .string("str")
+        #expect(Value.object(collidingKeys).description == "{512: int, '512': str}")
     }
 
     @Test("isTruthy behavior")
@@ -165,7 +170,7 @@ struct ValueTests {
         #expect(arrayJSON == "[1,\"test\",false]")
 
         // Test object encoding
-        var objectDict = OrderedDictionary<String, Value>()
+        var objectDict = OrderedDictionary<ObjectKey, Value>()
         objectDict["name"] = Value.string("John")
         objectDict["age"] = Value.int(30)
         objectDict["active"] = Value.boolean(true)
@@ -193,6 +198,14 @@ struct ValueTests {
         let functionValue = Value.function { _, _, _ in Value.null }
         #expect(throws: EncodingError.self) {
             _ = try encoder.encode(functionValue)
+        }
+
+        // Integer and string keys that share a stringValue must not silently collide
+        var collidingKeys = OrderedDictionary<ObjectKey, Value>()
+        collidingKeys[.int(512)] = Value.string("int")
+        collidingKeys[.string("512")] = Value.string("str")
+        #expect(throws: EncodingError.self) {
+            _ = try encoder.encode(Value.object(collidingKeys))
         }
     }
 
@@ -298,7 +311,7 @@ struct ValueTests {
         let decoder = JSONDecoder()
 
         // Create a complex nested structure
-        var complexDict = OrderedDictionary<String, Value>()
+        var complexDict = OrderedDictionary<ObjectKey, Value>()
         complexDict["users"] = Value.array([
             Value.object([
                 "id": Value.int(1),
@@ -392,7 +405,7 @@ struct ValueTests {
         #expect(decodedMixedArray == mixedArray)
 
         // Test objects with various key types (all should be strings in JSON)
-        var objectWithVariousKeys = OrderedDictionary<String, Value>()
+        var objectWithVariousKeys = OrderedDictionary<ObjectKey, Value>()
         objectWithVariousKeys["stringKey"] = Value.string("stringValue")
         objectWithVariousKeys["numberKey"] = Value.double(123.45)
         objectWithVariousKeys["booleanKey"] = Value.boolean(false)

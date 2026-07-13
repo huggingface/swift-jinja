@@ -223,7 +223,7 @@ public enum Filters {
             if dict.isEmpty { return .undefined }
             let randomIndex = dict.keys.indices.randomElement()!
             let randomKey = dict.keys[randomIndex]
-            return .string(randomKey)
+            return Value(randomKey)
         default:
             return .undefined
         }
@@ -666,7 +666,7 @@ public enum Filters {
         }
         let reverse = arguments["reverse"]!.isTruthy
 
-        let sortedPairs: [(key: String, value: Value)]
+        let sortedPairs: [(key: ObjectKey, value: Value)]
         if by == "value" {
             sortedPairs = dict.sorted { a, b in
                 let comparison =
@@ -677,16 +677,13 @@ public enum Filters {
             }
         } else {
             sortedPairs = dict.sorted { a, b in
-                let comparison =
-                    caseSensitive
-                    ? a.key.compare(b.key)
-                    : a.key.localizedCaseInsensitiveCompare(b.key)
+                let comparison = a.key.compare(b.key, options: caseSensitive ? [] : [.caseInsensitive])
                 return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
             }
         }
 
         let resultArray = sortedPairs.map { key, value in
-            Value.array([.string(key), value])
+            Value.array([Value(key), value])
         }
         return .array(resultArray)
     }
@@ -983,9 +980,12 @@ public enum Filters {
         var needsSpace = false
         for (key, value) in dict {
             if value == .null || value == .undefined { continue }
+            let keyString = key.stringValue
             // Validate key doesn't contain invalid characters
-            if key.contains(" ") || key.contains("/") || key.contains(">") || key.contains("=") {
-                throw JinjaError.runtime("Invalid character in XML attribute key: '\(key)'")
+            if keyString.contains(" ") || keyString.contains("/") || keyString.contains(">")
+                || keyString.contains("=")
+            {
+                throw JinjaError.runtime("Invalid character in XML attribute key: '\(keyString)'")
             }
             let escapedValue = value.description
                 .replacingOccurrences(of: "&", with: "&amp;")
@@ -993,7 +993,7 @@ public enum Filters {
                 .replacingOccurrences(of: ">", with: "&gt;")
                 .replacingOccurrences(of: "\"", with: "&quot;")
             if needsSpace { result += " " }
-            result += "\(key)=\"\(escapedValue)\""
+            result += "\(keyString)=\"\(escapedValue)\""
             needsSpace = true
         }
         if autospace && !result.isEmpty {
@@ -1586,7 +1586,7 @@ public enum Filters {
         if case .object(let dict) = value {
             var components = URLComponents()
             components.queryItems = dict.map { key, value in
-                URLQueryItem(name: key, value: value.description)
+                URLQueryItem(name: key.stringValue, value: value.description)
             }
             return .string(components.percentEncodedQuery ?? "")
         }
@@ -1840,7 +1840,7 @@ public enum Filters {
 
         if case let .object(obj) = value {
             let pairs = obj.map { key, value in
-                Value.array([.string(key), value])
+                Value.array([Value(key), value])
             }
             return .array(pairs)
         }
@@ -1874,7 +1874,7 @@ public enum Filters {
             case let .object(dict):
                 if dict.isEmpty { return "{}" }
                 let items = dict.map { key, value in
-                    "\(indentString)  \"\(key)\": \(prettyPrint(value, indent: indent + 1))"
+                    "\(indentString)  \"\(key.stringValue)\": \(prettyPrint(value, indent: indent + 1))"
                 }
                 return "{\n" + items.joined(separator: ",\n") + "\n\(indentString)}"
             case let .string(str):
@@ -2103,7 +2103,7 @@ private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Va
             }
             return .undefined
         case let .object(values):
-            return values[String(index)] ?? .undefined
+            return values[.int(index)] ?? values[.string(String(index))] ?? .undefined
         default:
             return .undefined
         }

@@ -414,7 +414,7 @@ struct PropertyMembersTests {
 
     @Test("Object items method")
     func objectItems() throws {
-        let dict: OrderedDictionary<String, Value> = ["a": .int(1), "b": .int(2)]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["a": .int(1), "b": .int(2)]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "items")
 
@@ -433,7 +433,7 @@ struct PropertyMembersTests {
 
     @Test("Object get method with existing key")
     func objectGetExisting() throws {
-        let dict: OrderedDictionary<String, Value> = ["name": .string("John"), "age": .int(30)]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["name": .string("John"), "age": .int(30)]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "get")
 
@@ -448,7 +448,7 @@ struct PropertyMembersTests {
 
     @Test("Object get method with missing key")
     func objectGetMissing() throws {
-        let dict: OrderedDictionary<String, Value> = ["name": .string("John")]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["name": .string("John")]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "get")
 
@@ -463,7 +463,7 @@ struct PropertyMembersTests {
 
     @Test("Object get method with default value")
     func objectGetWithDefault() throws {
-        let dict: OrderedDictionary<String, Value> = ["name": .string("John")]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["name": .string("John")]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "get")
 
@@ -476,9 +476,9 @@ struct PropertyMembersTests {
         #expect(getResult == .string("default"))
     }
 
-    @Test("Object get method with non-string key")
-    func objectGetNonStringKey() throws {
-        let dict: OrderedDictionary<String, Value> = ["42": .string("answer")]
+    @Test("Object get method with integer key")
+    func objectGetIntegerKey() throws {
+        let dict: OrderedDictionary<ObjectKey, Value> = [42: .string("answer")]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "get")
 
@@ -489,11 +489,15 @@ struct PropertyMembersTests {
 
         let getResult = try fn([.int(42)], [:], Environment())
         #expect(getResult == .string("answer"))
+
+        // Integer keys are distinct from their string representations.
+        let missing = try fn([.string("42")], [:], Environment())
+        #expect(missing == .null)
     }
 
     @Test("Object keys method")
     func objectKeys() throws {
-        let dict: OrderedDictionary<String, Value> = ["a": .int(1), "b": .int(2), "c": .int(3)]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["a": .int(1), "b": .int(2), "c": .int(3)]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "keys")
 
@@ -509,7 +513,7 @@ struct PropertyMembersTests {
 
     @Test("Object values method")
     func objectValues() throws {
-        let dict: OrderedDictionary<String, Value> = ["a": .int(1), "b": .int(2), "c": .int(3)]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["a": .int(1), "b": .int(2), "c": .int(3)]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "values")
 
@@ -525,7 +529,7 @@ struct PropertyMembersTests {
 
     @Test("Object direct property access")
     func objectDirectProperty() throws {
-        let dict: OrderedDictionary<String, Value> = ["foo": .string("bar")]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["foo": .string("bar")]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "foo")
         #expect(result == .string("bar"))
@@ -533,7 +537,7 @@ struct PropertyMembersTests {
 
     @Test("Object undefined property")
     func objectUndefinedProperty() throws {
-        let dict: OrderedDictionary<String, Value> = ["foo": .string("bar")]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["foo": .string("bar")]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "nonexistent")
         #expect(result == .undefined)
@@ -566,7 +570,7 @@ struct PropertyMembersTests {
 
     @Test("Object get with no key argument throws")
     func objectGetNoKey() throws {
-        let dict: OrderedDictionary<String, Value> = ["a": .int(1)]
+        let dict: OrderedDictionary<ObjectKey, Value> = ["a": .int(1)]
         let value = Value.object(dict)
         let result = try PropertyMembers.evaluate(value, "get")
 
