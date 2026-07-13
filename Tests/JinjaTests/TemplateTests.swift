@@ -71,6 +71,27 @@ struct TemplateTests {
         #expect(try rendered == Template(nodes: nodes).render(context))
     }
 
+    @Test("Literal closing braces in text are not close-expression delimiters")
+    func literalClosingBracesInText() throws {
+        // https://github.com/huggingface/swift-jinja/issues/63
+        let string = #"{"parameters": {}}"#
+        let context: Context = [:]
+
+        let tokens = try Lexer.tokenize(string)
+        #expect(
+            tokens == [
+                Token(kind: .text, value: #"{"parameters": {}}"#, position: 0),
+                Token(kind: .eof, value: "", position: 18),
+            ]
+        )
+
+        let nodes = try Parser.parse(tokens)
+        #expect(nodes == [.text(#"{"parameters": {}}"#)])
+
+        let rendered = try Template(string).render(context)
+        #expect(rendered == #"{"parameters": {}}"#)
+    }
+
     @Test("Text nodes")
     func textNodes() throws {
         let string = #"0{{ 'A' }}1{{ 'B' }}{{ 'C' }}2{{ 'D' }}3"#

@@ -186,35 +186,37 @@ public enum Lexer: Sendable {
             }
         }
 
-        // Check for closing delimiters
-        if char == "}" {
-            let nextIndex = source.index(after: position)
-            if nextIndex < source.endIndex && source[nextIndex] == "}" && curlyBracketDepth == 0 {
-                let endIndex = source.index(after: nextIndex)
-                return (
-                    Token(
-                        kind: .closeExpression,
-                        value: source[position ..< endIndex],
-                        position: charPosition
-                    ), endIndex
-                )
+        // Closing delimiters are only meaningful inside {{ ... }} / {% ... %}
+        if inTag {
+            if char == "}" {
+                let nextIndex = source.index(after: position)
+                if nextIndex < source.endIndex && source[nextIndex] == "}"
+                    && curlyBracketDepth == 0
+                {
+                    let endIndex = source.index(after: nextIndex)
+                    return (
+                        Token(
+                            kind: .closeExpression,
+                            value: source[position ..< endIndex],
+                            position: charPosition
+                        ), endIndex
+                    )
+                }
             }
-        }
-        if char == "%" {
-            let nextIndex = source.index(after: position)
-            if nextIndex < source.endIndex && source[nextIndex] == "}" {
-                let endIndex = source.index(after: nextIndex)
-                return (
-                    Token(
-                        kind: .closeStatement,
-                        value: source[position ..< endIndex],
-                        position: charPosition
-                    ), endIndex
-                )
+            if char == "%" {
+                let nextIndex = source.index(after: position)
+                if nextIndex < source.endIndex && source[nextIndex] == "}" {
+                    let endIndex = source.index(after: nextIndex)
+                    return (
+                        Token(
+                            kind: .closeStatement,
+                            value: source[position ..< endIndex],
+                            position: charPosition
+                        ), endIndex
+                    )
+                }
             }
-        }
-
-        if !inTag {
+        } else {
             return extractTextToken(from: source, at: position)
         }
 
@@ -349,20 +351,10 @@ public enum Lexer: Sendable {
             let char = source[pos]
             let nextIndex = source.index(after: pos)
 
-            if nextIndex <= source.endIndex {
-                if char == "{" && nextIndex < source.endIndex {
-                    let nextChar = source[nextIndex]
-                    if nextChar == "{" || nextChar == "%" || nextChar == "#" {
-                        break
-                    }
-                }
-                if char == "}" && nextIndex < source.endIndex && source[nextIndex] == "}" {
-                    break
-                }
-                if char == "%" && nextIndex < source.endIndex && source[nextIndex] == "}" {
-                    break
-                }
-                if char == "#" && nextIndex < source.endIndex && source[nextIndex] == "}" {
+            // Only opening delimiters end a text run; bare }}, %}, and #} are literal text.
+            if char == "{" && nextIndex < source.endIndex {
+                let nextChar = source[nextIndex]
+                if nextChar == "{" || nextChar == "%" || nextChar == "#" {
                     break
                 }
             }
