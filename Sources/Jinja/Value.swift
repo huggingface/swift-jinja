@@ -516,8 +516,20 @@ extension Value: Encodable {
         switch self {
         case let .object(value):
             var keyedContainer = encoder.container(keyedBy: ObjectKey.self)
+            var seenStringValues: Set<String> = []
             for key in value.keys.sorted() {
                 guard let encodedValue = value[key] else { continue }
+                let stringKey = key.stringValue
+                guard seenStringValues.insert(stringKey).inserted else {
+                    throw EncodingError.invalidValue(
+                        self,
+                        EncodingError.Context(
+                            codingPath: encoder.codingPath,
+                            debugDescription:
+                                "Cannot encode object with colliding keys that both serialize to \"\(stringKey)\""
+                        )
+                    )
+                }
                 try keyedContainer.encode(encodedValue, forKey: key)
             }
         case let .string(value):
@@ -745,11 +757,11 @@ extension ObjectKey: CodingKey {
         return int
     }
 
-    public init(stringValue: String) {
+    public init?(stringValue: String) {
         self = .string(stringValue)
     }
 
-    public init(intValue: Int) {
+    public init?(intValue: Int) {
         self = .int(intValue)
     }
 }

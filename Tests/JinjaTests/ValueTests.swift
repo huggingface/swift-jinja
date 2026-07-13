@@ -194,6 +194,14 @@ struct ValueTests {
         #expect(throws: EncodingError.self) {
             _ = try encoder.encode(functionValue)
         }
+
+        // Integer and string keys that share a stringValue must not silently collide
+        var collidingKeys = OrderedDictionary<ObjectKey, Value>()
+        collidingKeys[.int(512)] = Value.string("int")
+        collidingKeys[.string("512")] = Value.string("str")
+        #expect(throws: EncodingError.self) {
+            _ = try encoder.encode(Value.object(collidingKeys))
+        }
     }
 
     @Test("Decodable conformance")
