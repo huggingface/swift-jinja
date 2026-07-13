@@ -179,6 +179,51 @@ struct PropertyMembersTests {
         }
     }
 
+    @Test("String strip rejects extra arguments")
+    func stringStripRejectsExtraArguments() throws {
+        let value = Value.string("hello")
+        let result = try PropertyMembers.evaluate(value, "strip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        #expect(throws: JinjaError.self) {
+            _ = try fn([.string("x"), .string("y")], [:], Environment())
+        }
+    }
+
+    @Test("String lstrip rejects extra arguments")
+    func stringLstripRejectsExtraArguments() throws {
+        let value = Value.string("hello")
+        let result = try PropertyMembers.evaluate(value, "lstrip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        #expect(throws: JinjaError.self) {
+            _ = try fn([.string("/"), .string("x")], [:], Environment())
+        }
+    }
+
+    @Test("String rstrip rejects extra arguments")
+    func stringRstripRejectsExtraArguments() throws {
+        let value = Value.string("hello")
+        let result = try PropertyMembers.evaluate(value, "rstrip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        #expect(throws: JinjaError.self) {
+            _ = try fn([.string("."), .string("x")], [:], Environment())
+        }
+    }
+
     @Test("String split without separator")
     func stringSplitDefault() throws {
         let value = Value.string("hello world test")

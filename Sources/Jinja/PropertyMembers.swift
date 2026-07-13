@@ -47,6 +47,11 @@ public enum PropertyMembers {
             }
         case "strip":
             return .function { args, kwargs, _ in
+                guard args.count <= 1 else {
+                    throw JinjaError.runtime(
+                        "strip() takes at most 1 argument (\(args.count) given)"
+                    )
+                }
                 let arguments = try resolveCallArguments(
                     args: args,
                     kwargs: kwargs,
@@ -60,12 +65,19 @@ public enum PropertyMembers {
                 case .null, .none:
                     characterSet = .whitespacesAndNewlines
                 default:
-                    throw JinjaError.runtime("chars argument must be a string or null")
+                    throw JinjaError.runtime(
+                        "strip() chars argument must be a string or null"
+                    )
                 }
                 return .string(str.trimmingCharacters(in: characterSet))
             }
         case "lstrip":
             return .function { args, kwargs, _ in
+                guard args.count <= 1 else {
+                    throw JinjaError.runtime(
+                        "lstrip() takes at most 1 argument (\(args.count) given)"
+                    )
+                }
                 let arguments = try resolveCallArguments(
                     args: args,
                     kwargs: kwargs,
@@ -79,7 +91,9 @@ public enum PropertyMembers {
                 case .null, .none:
                     characterSet = .whitespacesAndNewlines
                 default:
-                    throw JinjaError.runtime("chars argument must be a string or null")
+                    throw JinjaError.runtime(
+                        "lstrip() chars argument must be a string or null"
+                    )
                 }
                 return .string(
                     String(
@@ -91,6 +105,11 @@ public enum PropertyMembers {
             }
         case "rstrip":
             return .function { args, kwargs, _ in
+                guard args.count <= 1 else {
+                    throw JinjaError.runtime(
+                        "rstrip() takes at most 1 argument (\(args.count) given)"
+                    )
+                }
                 let arguments = try resolveCallArguments(
                     args: args,
                     kwargs: kwargs,
@@ -104,7 +123,9 @@ public enum PropertyMembers {
                 case .null, .none:
                     characterSet = .whitespacesAndNewlines
                 default:
-                    throw JinjaError.runtime("chars argument must be a string or null")
+                    throw JinjaError.runtime(
+                        "rstrip() chars argument must be a string or null"
+                    )
                 }
                 return .string(
                     String(
