@@ -580,28 +580,42 @@ public struct Parser: Sendable {
             return .array(elements)
         case .openBrace:
             advance()
-            var pairs: OrderedDictionary<String, Expression> = [:]
+            var pairs: OrderedDictionary<ObjectKey, Expression> = [:]
             if !check(.closeBrace) {
                 repeat {
-                    let keyToken: Token
+                    let key: ObjectKey
                     if check(.string) {
-                        keyToken = try consume(
+                        let keyToken = try consume(
                             .string,
                             message: "Expected string literal for object key."
                         )
+                        key = .string(String(keyToken.value))
                     } else if check(.identifier) {
-                        keyToken = try consume(
+                        let keyToken = try consume(
                             .identifier,
                             message: "Expected identifier for object key."
                         )
+                        key = .string(String(keyToken.value))
+                    } else if check(.number) {
+                        let keyToken = try consume(
+                            .number,
+                            message: "Expected number for object key."
+                        )
+                        let raw = String(keyToken.value)
+                        guard !raw.contains("."), let intKey = Int(raw) else {
+                            throw JinjaError.parser(
+                                "Expected integer for numeric object key. Got \(raw) instead"
+                            )
+                        }
+                        key = .int(intKey)
                     } else {
                         throw JinjaError.parser(
-                            "Expected string literal or identifier for object key. Got \(peek().kind) instead"
+                            "Expected string literal, identifier, or integer for object key. Got \(peek().kind) instead"
                         )
                     }
                     try consume(.colon, message: "Expected ':' after object key.")
                     let value = try parseExpression()
-                    pairs[String(keyToken.value)] = value
+                    pairs[key] = value
                     if !check(.closeBrace) && !match(.comma) {
                         break
                     }

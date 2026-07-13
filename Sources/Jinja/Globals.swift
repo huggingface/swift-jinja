@@ -206,9 +206,9 @@ public enum Globals: Sendable {
         _ kwargs: [String: Value],
         _ env: Environment
     ) throws -> Value {
-        var orderedDict = OrderedDictionary<String, Value>()
+        var orderedDict = OrderedDictionary<ObjectKey, Value>()
         for (key, value) in kwargs.sorted(by: { $0.key < $1.key }) {
-            orderedDict[key] = value
+            orderedDict[.string(key)] = value
         }
         return .object(orderedDict)
     }
@@ -265,7 +265,7 @@ public enum Globals: Sendable {
 
         let cyclerInstance = Cycler(items: args)
 
-        var cyclerDict = OrderedDictionary<String, Value>()
+        var cyclerDict = OrderedDictionary<ObjectKey, Value>()
         cyclerDict["current"] = cyclerInstance.current
         cyclerDict["next"] = .function { (_, _, _) throws -> Value in
             return cyclerInstance.next()
@@ -342,9 +342,9 @@ public enum Globals: Sendable {
         _ kwargs: [String: Value],
         _ env: Environment
     ) throws -> Value {
-        var namespaceDict = OrderedDictionary<String, Value>()
+        var namespaceDict = OrderedDictionary<ObjectKey, Value>()
         for (key, value) in kwargs.sorted(by: { $0.key < $1.key }) {
-            namespaceDict[key] = value
+            namespaceDict[.string(key)] = value
         }
         return .object(namespaceDict)
     }

@@ -364,19 +364,19 @@ public enum Interpreter {
                     let items: [Value]
                     switch loopVar {
                     case .single:
-                        items = entries.map { .string($0.key) }
+                        items = entries.map { Value($0.key) }
                     case .tuple:
-                        items = entries.map { .array([.string($0.key), $0.value]) }
+                        items = entries.map { .array([Value($0.key), $0.value]) }
                     }
                     for (index, (key, value)) in entries.enumerated() {
                         switch loopVar {
                         case let .single(varName):
                             // Single variable gets the key
-                            childEnv[varName] = .string(key)
+                            childEnv[varName] = Value(key)
                         case let .tuple(varNames):
                             // Tuple unpacking: first gets key, second gets value
                             if varNames.count >= 1 {
-                                childEnv[varNames[0]] = .string(key)
+                                childEnv[varNames[0]] = Value(key)
                             }
                             if varNames.count >= 2 {
                                 childEnv[varNames[1]] = value
@@ -579,8 +579,8 @@ public enum Interpreter {
 
             if computed {
                 let propertyValue = try evaluateExpression(propertyExpr, env: env)
-                guard case let .string(key) = propertyValue else {
-                    throw JinjaError.runtime("Computed property key must be a string")
+                guard let key = ObjectKey(propertyValue) else {
+                    throw JinjaError.runtime("Computed property key must be a string or integer")
                 }
                 if case var .object(dict) = objectValue {
                     dict[key] = value
@@ -594,7 +594,7 @@ public enum Interpreter {
                     throw JinjaError.runtime("Property assignment requires identifier")
                 }
                 if case var .object(dict) = objectValue {
-                    dict[propertyName] = value
+                    dict[.string(propertyName)] = value
                     // Update the object in the environment
                     if case let .identifier(name) = objectExpr {
                         env.setInChain(name: name, value: .object(dict))
@@ -740,7 +740,10 @@ public enum Interpreter {
             return arr[safeIndex]
 
         case let (.object(obj), .string(key)):
-            return obj[key] ?? .undefined
+            return obj[.string(key)] ?? .undefined
+
+        case let (.object(obj), .int(key)):
+            return obj[.int(key)] ?? .undefined
 
         case let (.string(str), .int(index)):
             let safeIndex = index < 0 ? str.count + index : index
@@ -801,7 +804,7 @@ public enum Interpreter {
         index: Int
     ) -> Value {
         let count = items.count
-        var loopContext: OrderedDictionary<String, Value> = [
+        var loopContext: OrderedDictionary<ObjectKey, Value> = [
             "index": .int(index + 1),
             "index0": .int(index),
             "first": .boolean(index == 0),

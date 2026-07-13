@@ -21,7 +21,7 @@ public enum Value: Sendable {
     /// Array containing ordered collection of values.
     case array([Value])
     /// Object containing key-value pairs with preserved insertion order.
-    case object(OrderedDictionary<String, Value>)
+    case object(OrderedDictionary<ObjectKey, Value>)
     /// Function value that can be called with arguments.
     case function(@Sendable ([Value], [String: Value], Environment) throws -> Value)
     /// Macro value that can be invoked with arguments.
@@ -54,9 +54,9 @@ public enum Value: Sendable {
             let values = try array.map { try Value(any: $0) }
             self = .array(values)
         case let dict as [String: Any?]:
-            var orderedDict = OrderedDictionary<String, Value>()
+            var orderedDict = OrderedDictionary<ObjectKey, Value>()
             for (key, value) in dict.sorted(by: { $0.key < $1.key }) {
-                orderedDict[key] = try Value(any: value)
+                orderedDict[.string(key)] = try Value(any: value)
             }
             self = .object(orderedDict)
         case let macro as Macro:
@@ -65,6 +65,18 @@ public enum Value: Sendable {
             throw JinjaError.runtime(
                 "Cannot convert value of type \(type(of: value)) to Jinja Value"
             )
+        }
+    }
+
+    /// Creates a value from an object key.
+    ///
+    /// - Parameter key: The object key to convert
+    public init(_ key: ObjectKey) {
+        switch key {
+        case let .string(string):
+            self = .string(string)
+        case let .int(int):
+            self = .int(int)
         }
     }
 
@@ -369,7 +381,7 @@ public enum Value: Sendable {
             guard !substr.isEmpty else { return true }  // '' in 'abc' -> true
             return str.contains(substr)
         case let .object(dict):
-            guard case let .string(key) = self else { return false }
+            guard let key = ObjectKey(self) else { return false }
             return dict.keys.contains(key)
 
         default:
@@ -449,7 +461,7 @@ extension Value: CustomStringConvertible {
             }
             return "[\(elements.joined(separator: ", "))]"
         case .object(let o):
-            return "{\(o.map { "\($0.key): \($0.value.description)" }.joined(separator: ", "))}"
+            return "{\(o.map { "\($0.key.description): \($0.value.description)" }.joined(separator: ", "))}"
         case .function: return "[Function]"
         case .macro(let m): return "[Macro \(m.name)]"
         }
@@ -500,30 +512,13 @@ extension Value: Hashable {
 // MARK: - Encodable
 
 extension Value: Encodable {
-    private struct DynamicCodingKey: CodingKey {
-        var stringValue: String
-        var intValue: Int? { nil }
-
-        init?(stringValue: String) {
-            self.stringValue = stringValue
-        }
-
-        init?(intValue: Int) {
-            return nil
-        }
-    }
-
     public func encode(to encoder: Encoder) throws {
         switch self {
         case let .object(value):
-            var keyedContainer = encoder.container(keyedBy: DynamicCodingKey.self)
+            var keyedContainer = encoder.container(keyedBy: ObjectKey.self)
             for key in value.keys.sorted() {
-                guard let codingKey = DynamicCodingKey(stringValue: key),
-                    let encodedValue = value[key]
-                else {
-                    continue
-                }
-                try keyedContainer.encode(encodedValue, forKey: codingKey)
+                guard let encodedValue = value[key] else { continue }
+                try keyedContainer.encode(encodedValue, forKey: key)
             }
         case let .string(value):
             var container = encoder.singleValueContainer()
@@ -579,9 +574,9 @@ extension Value: Decodable {
         } else if let value = try? container.decode([Value].self) {
             self = .array(value)
         } else if let value = try? container.decode([String: Value].self) {
-            var orderedDictionary: OrderedDictionary<String, Value> = [:]
-            for (key) in value.keys.sorted() {
-                orderedDictionary[key] = value[key]
+            var orderedDictionary: OrderedDictionary<ObjectKey, Value> = [:]
+            for key in value.keys.sorted() {
+                orderedDictionary[.string(key)] = value[key]
             }
             self = .object(orderedDictionary)
         } else if let macro = try? container.decode(Macro.self) {
@@ -650,11 +645,158 @@ extension Value: ExpressibleByArrayLiteral {
 // MARK: - ExpressibleByDictionaryLiteral
 
 extension Value: ExpressibleByDictionaryLiteral {
-    public init(dictionaryLiteral elements: (String, Value)...) {
-        var dict = OrderedDictionary<String, Value>()
+    public init(dictionaryLiteral elements: (ObjectKey, Value)...) {
+        var dict = OrderedDictionary<ObjectKey, Value>()
         for (key, value) in elements {
             dict[key] = value
         }
         self = .object(dict)
+    }
+}
+
+// MARK: - ObjectKey
+
+/// A key in a Jinja object (dictionary) value.
+///
+/// Jinja object literals accept string keys (quoted or bare identifiers) and integer keys.
+/// Integer keys are distinct from their string representations:
+/// `{512: "b"}[512]` succeeds while `{512: "b"}["512"]` does not.
+public enum ObjectKey: Hashable, Sendable {
+    /// A string key, from a quoted literal or bare identifier.
+    case string(String)
+    /// An integer key, from a numeric literal.
+    case int(Int)
+
+    /// Creates an object key from a runtime value.
+    ///
+    /// - Parameter value: A string or integer value to use as a key.
+    /// - Returns: The corresponding key, or `nil` if the value is not a valid key type.
+    public init?(_ value: Value) {
+        switch value {
+        case let .string(string):
+            self = .string(string)
+        case let .int(int):
+            self = .int(int)
+        default:
+            return nil
+        }
+    }
+
+    /// Compares this key to another key.
+    ///
+    /// Integer keys compare numerically and sort before string keys.
+    /// String keys compare lexicographically using the given options.
+    ///
+    /// - Parameters:
+    ///   - other: The key to compare against.
+    ///   - options: Options for string comparisons, such as `.caseInsensitive`.
+    /// - Returns: The ordering of this key relative to `other`.
+    public func compare(
+        _ other: ObjectKey,
+        options: String.CompareOptions = []
+    ) -> ComparisonResult {
+        switch (self, other) {
+        case let (.int(a), .int(b)):
+            if a < b { return .orderedAscending }
+            if a > b { return .orderedDescending }
+            return .orderedSame
+        case let (.string(a), .string(b)):
+            return a.compare(b, options: options)
+        case (.int, .string):
+            return .orderedAscending
+        case (.string, .int):
+            return .orderedDescending
+        }
+    }
+}
+
+// MARK: Comparable
+
+extension ObjectKey: Comparable {
+    public static func < (lhs: ObjectKey, rhs: ObjectKey) -> Bool {
+        lhs.compare(rhs) == .orderedAscending
+    }
+}
+
+// MARK: CustomStringConvertible
+
+extension ObjectKey: CustomStringConvertible {
+    public var description: String {
+        stringValue
+    }
+}
+
+// MARK: CodingKey
+
+extension ObjectKey: CodingKey {
+    /// The string representation of the key.
+    public var stringValue: String {
+        switch self {
+        case let .string(string):
+            return string
+        case let .int(int):
+            return String(int)
+        }
+    }
+
+    /// The integer value of the key, or `nil` for string keys.
+    public var intValue: Int? {
+        guard case let .int(int) = self else { return nil }
+        return int
+    }
+
+    public init(stringValue: String) {
+        self = .string(stringValue)
+    }
+
+    public init(intValue: Int) {
+        self = .int(intValue)
+    }
+}
+
+// MARK: ExpressibleByStringLiteral
+
+extension ObjectKey: ExpressibleByStringLiteral {
+    public init(stringLiteral value: String) {
+        self = .string(value)
+    }
+}
+
+// MARK: ExpressibleByIntegerLiteral
+
+extension ObjectKey: ExpressibleByIntegerLiteral {
+    public init(integerLiteral value: Int) {
+        self = .int(value)
+    }
+}
+
+// MARK: Codable
+
+extension ObjectKey: Codable {
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let int = try? container.decode(Int.self) {
+            self = .int(int)
+        } else if let string = try? container.decode(String.self) {
+            self = .string(string)
+        } else {
+            throw DecodingError.typeMismatch(
+                ObjectKey.self,
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "ObjectKey must be a string or integer"
+                )
+            )
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case let .string(string):
+            try container.encode(string)
+        case let .int(int):
+            try container.encode(int)
+        }
     }
 }

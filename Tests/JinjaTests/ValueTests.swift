@@ -165,7 +165,7 @@ struct ValueTests {
         #expect(arrayJSON == "[1,\"test\",false]")
 
         // Test object encoding
-        var objectDict = OrderedDictionary<String, Value>()
+        var objectDict = OrderedDictionary<ObjectKey, Value>()
         objectDict["name"] = Value.string("John")
         objectDict["age"] = Value.int(30)
         objectDict["active"] = Value.boolean(true)
@@ -298,7 +298,7 @@ struct ValueTests {
         let decoder = JSONDecoder()
 
         // Create a complex nested structure
-        var complexDict = OrderedDictionary<String, Value>()
+        var complexDict = OrderedDictionary<ObjectKey, Value>()
         complexDict["users"] = Value.array([
             Value.object([
                 "id": Value.int(1),
@@ -392,7 +392,7 @@ struct ValueTests {
         #expect(decodedMixedArray == mixedArray)
 
         // Test objects with various key types (all should be strings in JSON)
-        var objectWithVariousKeys = OrderedDictionary<String, Value>()
+        var objectWithVariousKeys = OrderedDictionary<ObjectKey, Value>()
         objectWithVariousKeys["stringKey"] = Value.string("stringValue")
         objectWithVariousKeys["numberKey"] = Value.double(123.45)
         objectWithVariousKeys["booleanKey"] = Value.boolean(false)

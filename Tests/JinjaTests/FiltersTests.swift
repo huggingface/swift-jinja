@@ -345,6 +345,22 @@ struct FiltersTests {
         #expect(result == expected)
     }
 
+    @Test("dictsort filter with integer keys")
+    func dictsortFilterWithIntegerKeys() throws {
+        let dict = Value.object([
+            1024: .int(256),
+            0: .int(0),
+            512: .int(128),
+        ])
+        let result = try Filters.dictsort([dict], kwargs: [:], env: env)
+        let expected = Value.array([
+            .array([.int(0), .int(0)]),
+            .array([.int(512), .int(128)]),
+            .array([.int(1024), .int(256)]),
+        ])
+        #expect(result == expected)
+    }
+
     @Test("dictsort filter with reverse")
     func dictsortFilterWithReverse() throws {
         let dict = Value.object(["b": .int(2), "a": .int(1)])

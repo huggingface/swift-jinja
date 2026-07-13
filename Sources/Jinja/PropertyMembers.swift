@@ -148,7 +148,7 @@ public enum PropertyMembers {
     // MARK: - Object Properties
 
     private static func evaluateObjectProperty(
-        _ obj: OrderedDictionary<String, Value>,
+        _ obj: OrderedDictionary<ObjectKey, Value>,
         _ propertyName: String
     ) throws -> Value {
         switch propertyName {
@@ -158,7 +158,7 @@ public enum PropertyMembers {
                 kwargs,
                 _ in
                 _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                let pairs = obj.map { key, value in Value.array([.string(key), value]) }
+                let pairs = obj.map { key, value in Value.array([Value(key), value]) }
                 return .array(pairs)
             }
             return .function(fn)
@@ -178,15 +178,10 @@ public enum PropertyMembers {
                     throw JinjaError.runtime("get() requires a 'key' argument")
                 }
 
-                let key: String
-                switch keyValue {
-                case let .string(s):
-                    key = s
-                default:
-                    key = keyValue.description
-                }
-
                 let defaultValue = arguments["default"] ?? .null
+                guard let key = ObjectKey(keyValue) else {
+                    return defaultValue
+                }
                 return obj[key] ?? defaultValue
             }
             return .function(fn)
@@ -196,7 +191,7 @@ public enum PropertyMembers {
                 kwargs,
                 _ in
                 _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                let keys = obj.keys.map { Value.string($0) }
+                let keys = obj.keys.map(Value.init)
                 return .array(keys)
             }
             return .function(fn)
@@ -210,7 +205,7 @@ public enum PropertyMembers {
             }
             return .function(fn)
         default:
-            return obj[propertyName] ?? .undefined
+            return obj[.string(propertyName)] ?? .undefined
         }
     }
 }
