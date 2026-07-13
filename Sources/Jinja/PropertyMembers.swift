@@ -47,20 +47,64 @@ public enum PropertyMembers {
             }
         case "strip":
             return .function { args, kwargs, _ in
-                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                return .string(str.trimmingCharacters(in: .whitespacesAndNewlines))
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["chars"],
+                    defaults: ["chars": .null]
+                )
+                let characterSet: CharacterSet =
+                    if case let .string(chars) = arguments["chars"] {
+                        CharacterSet(charactersIn: chars)
+                    } else {
+                        .whitespacesAndNewlines
+                    }
+                return .string(str.trimmingCharacters(in: characterSet))
             }
         case "lstrip":
             return .function { args, kwargs, _ in
-                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                let trimmed = str.drop(while: { $0.isWhitespace })
-                return .string(String(trimmed))
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["chars"],
+                    defaults: ["chars": .null]
+                )
+                let characterSet: CharacterSet =
+                    if case let .string(chars) = arguments["chars"] {
+                        CharacterSet(charactersIn: chars)
+                    } else {
+                        .whitespacesAndNewlines
+                    }
+                return .string(
+                    String(
+                        String.UnicodeScalarView(
+                            str.unicodeScalars.drop(while: characterSet.contains)
+                        )
+                    )
+                )
             }
         case "rstrip":
             return .function { args, kwargs, _ in
-                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                let reversed = str.reversed().drop(while: { $0.isWhitespace })
-                return .string(String(reversed.reversed()))
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["chars"],
+                    defaults: ["chars": .null]
+                )
+                let characterSet: CharacterSet =
+                    if case let .string(chars) = arguments["chars"] {
+                        CharacterSet(charactersIn: chars)
+                    } else {
+                        .whitespacesAndNewlines
+                    }
+                return .string(
+                    String(
+                        String.UnicodeScalarView(
+                            str.unicodeScalars.reversed().drop(while: characterSet.contains)
+                                .reversed()
+                        )
+                    )
+                )
             }
         case "split":
             return .function { args, kwargs, _ in
