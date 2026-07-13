@@ -1114,6 +1114,13 @@ struct TemplateTests {
         #expect(rendered == "   test it")
     }
 
+    @Test("String rstrip with chars")
+    func rstripWithChars() throws {
+        let string = #"{{ "hello...".rstrip(".") }}"#
+        let rendered = try Template(string).render([:])
+        #expect(rendered == "hello")
+    }
+
     @Test("String lstrip")
     func lstrip() throws {
         let string = #"{{ "   test it  ".lstrip() }}"#
@@ -1122,6 +1129,21 @@ struct TemplateTests {
         // Check result of template
         let rendered = try Template(string).render(context)
         #expect(rendered == "test it  ")
+    }
+
+    @Test("String lstrip with chars")
+    func lstripWithChars() throws {
+        let string = #"{{ "///path".lstrip("/") }}"#
+        let rendered = try Template(string).render([:])
+        #expect(rendered == "path")
+    }
+
+    @Test("String strip with chars")
+    func stripWithChars() throws {
+        // Matches jinja2: chars is a set, so '</answer>' peels the whole suffix.
+        let string = #"{{ "xy</answer>".strip('</answer>') }}"#
+        let rendered = try Template(string).render([:])
+        #expect(rendered == "xy")
     }
 
     @Test("String split")

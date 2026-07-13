@@ -47,20 +47,94 @@ public enum PropertyMembers {
             }
         case "strip":
             return .function { args, kwargs, _ in
-                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                return .string(str.trimmingCharacters(in: .whitespacesAndNewlines))
+                guard args.count <= 1 else {
+                    throw JinjaError.runtime(
+                        "strip() takes at most 1 argument (\(args.count) given)"
+                    )
+                }
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["chars"],
+                    defaults: ["chars": .null]
+                )
+                let characterSet: CharacterSet
+                switch arguments["chars"] {
+                case let .string(chars):
+                    characterSet = CharacterSet(charactersIn: chars)
+                case .null, .none:
+                    characterSet = .whitespacesAndNewlines
+                default:
+                    throw JinjaError.runtime(
+                        "strip() chars argument must be a string or null"
+                    )
+                }
+                return .string(str.trimmingCharacters(in: characterSet))
             }
         case "lstrip":
             return .function { args, kwargs, _ in
-                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                let trimmed = str.drop(while: { $0.isWhitespace })
-                return .string(String(trimmed))
+                guard args.count <= 1 else {
+                    throw JinjaError.runtime(
+                        "lstrip() takes at most 1 argument (\(args.count) given)"
+                    )
+                }
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["chars"],
+                    defaults: ["chars": .null]
+                )
+                let characterSet: CharacterSet
+                switch arguments["chars"] {
+                case let .string(chars):
+                    characterSet = CharacterSet(charactersIn: chars)
+                case .null, .none:
+                    characterSet = .whitespacesAndNewlines
+                default:
+                    throw JinjaError.runtime(
+                        "lstrip() chars argument must be a string or null"
+                    )
+                }
+                return .string(
+                    String(
+                        String.UnicodeScalarView(
+                            str.unicodeScalars.drop(while: characterSet.contains)
+                        )
+                    )
+                )
             }
         case "rstrip":
             return .function { args, kwargs, _ in
-                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
-                let reversed = str.reversed().drop(while: { $0.isWhitespace })
-                return .string(String(reversed.reversed()))
+                guard args.count <= 1 else {
+                    throw JinjaError.runtime(
+                        "rstrip() takes at most 1 argument (\(args.count) given)"
+                    )
+                }
+                let arguments = try resolveCallArguments(
+                    args: args,
+                    kwargs: kwargs,
+                    parameters: ["chars"],
+                    defaults: ["chars": .null]
+                )
+                let characterSet: CharacterSet
+                switch arguments["chars"] {
+                case let .string(chars):
+                    characterSet = CharacterSet(charactersIn: chars)
+                case .null, .none:
+                    characterSet = .whitespacesAndNewlines
+                default:
+                    throw JinjaError.runtime(
+                        "rstrip() chars argument must be a string or null"
+                    )
+                }
+                return .string(
+                    String(
+                        String.UnicodeScalarView(
+                            str.unicodeScalars.reversed().drop(while: characterSet.contains)
+                                .reversed()
+                        )
+                    )
+                )
             }
         case "split":
             return .function { args, kwargs, _ in
