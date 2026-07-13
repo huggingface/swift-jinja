@@ -64,6 +64,20 @@ struct PropertyMembersTests {
         #expect(stripResult == .string("hello world"))
     }
 
+    @Test("String strip with chars")
+    func stringStripWithChars() throws {
+        let value = Value.string("xy</answer>")
+        let result = try PropertyMembers.evaluate(value, "strip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        let stripResult = try fn([.string("</answer>")], [:], Environment())
+        #expect(stripResult == .string("xy"))
+    }
+
     @Test("String lstrip method")
     func stringLstrip() throws {
         let value = Value.string("  hello world  ")
@@ -78,6 +92,20 @@ struct PropertyMembersTests {
         #expect(lstripResult == .string("hello world  "))
     }
 
+    @Test("String lstrip with chars")
+    func stringLstripWithChars() throws {
+        let value = Value.string("///path")
+        let result = try PropertyMembers.evaluate(value, "lstrip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        let lstripResult = try fn([.string("/")], [:], Environment())
+        #expect(lstripResult == .string("path"))
+    }
+
     @Test("String rstrip method")
     func stringRstrip() throws {
         let value = Value.string("  hello world  ")
@@ -90,6 +118,20 @@ struct PropertyMembersTests {
 
         let rstripResult = try fn([], [:], Environment())
         #expect(rstripResult == .string("  hello world"))
+    }
+
+    @Test("String rstrip with chars")
+    func stringRstripWithChars() throws {
+        let value = Value.string("hello...")
+        let result = try PropertyMembers.evaluate(value, "rstrip")
+
+        guard case let .function(fn) = result else {
+            Issue.record("Expected function")
+            return
+        }
+
+        let rstripResult = try fn([.string(".")], [:], Environment())
+        #expect(rstripResult == .string("hello"))
     }
 
     @Test("String split without separator")
