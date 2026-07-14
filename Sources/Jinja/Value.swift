@@ -82,6 +82,41 @@ public enum Value: Sendable {
         }
     }
 
+    /// Creates an object value from a dictionary keyed by strings.
+    ///
+    /// This is a source-compatibility affordance for callers written against versions of the
+    /// library where object values were keyed by `String` rather than ``ObjectKey``. Each key is
+    /// wrapped as ``ObjectKey/string(_:)`` while preserving the dictionary's insertion order.
+    ///
+    /// - Parameter dictionary: The string-keyed key-value pairs to store, in order.
+    /// - Returns: An object value with the equivalent ``ObjectKey``-keyed storage.
+    @_disfavoredOverload
+    public static func object(_ dictionary: OrderedDictionary<String, Value>) -> Value {
+        var storage = OrderedDictionary<ObjectKey, Value>(minimumCapacity: dictionary.count)
+        for (key, value) in dictionary {
+            storage[.string(key)] = value
+        }
+        return .object(storage)
+    }
+
+    /// Creates an object value from a dictionary keyed by strings.
+    ///
+    /// This is a source-compatibility affordance for callers written against versions of the
+    /// library where object values were keyed by `String` rather than ``ObjectKey``. Each key is
+    /// wrapped as ``ObjectKey/string(_:)``, and keys are stored in sorted order for deterministic
+    /// output, matching ``init(any:)``.
+    ///
+    /// - Parameter dictionary: The string-keyed key-value pairs to store.
+    /// - Returns: An object value with the equivalent ``ObjectKey``-keyed storage.
+    @_disfavoredOverload
+    public static func object(_ dictionary: [String: Value]) -> Value {
+        var storage = OrderedDictionary<ObjectKey, Value>(minimumCapacity: dictionary.count)
+        for key in dictionary.keys.sorted() {
+            storage[.string(key)] = dictionary[key]
+        }
+        return .object(storage)
+    }
+
     /// Creates a value from an object key.
     ///
     /// - Parameter key: The object key to convert
@@ -671,10 +706,16 @@ extension Value: ExpressibleByArrayLiteral {
 // MARK: - ExpressibleByDictionaryLiteral
 
 extension Value: ExpressibleByDictionaryLiteral {
-    public init(dictionaryLiteral elements: (ObjectKey, Value)...) {
-        var dict = OrderedDictionary<ObjectKey, Value>()
+    /// Creates an object value from a dictionary literal.
+    ///
+    /// Keys use `String` (rather than ``ObjectKey``) so that dictionary literals with dynamic
+    /// string keys, such as `[someString: value]`, remain source compatible. Each key is stored
+    /// as ``ObjectKey/string(_:)``. To create an object with integer keys, use ``object(_:)-swift.type.method``
+    /// with an explicitly ``ObjectKey``-keyed dictionary.
+    public init(dictionaryLiteral elements: (String, Value)...) {
+        var dict = OrderedDictionary<ObjectKey, Value>(minimumCapacity: elements.count)
         for (key, value) in elements {
-            dict[key] = value
+            dict[.string(key)] = value
         }
         self = .object(dict)
     }
@@ -798,6 +839,23 @@ extension ObjectKey: ExpressibleByStringLiteral {
 extension ObjectKey: ExpressibleByIntegerLiteral {
     public init(integerLiteral value: Int) {
         self = .int(value)
+    }
+}
+
+// MARK: - Object storage affordances
+
+extension OrderedDictionary where Key == ObjectKey, Value == Jinja.Value {
+    /// Accesses the value associated with a string key.
+    ///
+    /// This is a source-compatibility affordance for callers written against versions of the
+    /// library where object values were keyed by `String`. It is equivalent to subscripting with
+    /// ``ObjectKey/string(_:)``, so it only matches string keys and never integer keys.
+    ///
+    /// - Parameter key: The string key to look up, wrapped as ``ObjectKey/string(_:)``.
+    @_disfavoredOverload
+    public subscript(key: String) -> Jinja.Value? {
+        get { self[.string(key)] }
+        set { self[.string(key)] = newValue }
     }
 }
 
