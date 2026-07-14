@@ -104,6 +104,69 @@ struct ValueTests {
         #expect(nilValue == Value.null)
     }
 
+    @Test("object(_:) from String-keyed OrderedDictionary preserves order")
+    func objectFromStringKeyedOrderedDictionary() {
+        var source = OrderedDictionary<String, Value>()
+        source["z"] = .int(1)
+        source["a"] = .int(2)
+
+        let value = Value.object(source)
+        guard case let .object(dict) = value else {
+            Issue.record("Expected object value")
+            return
+        }
+        // Keys are wrapped as .string and insertion order is preserved.
+        #expect(Array(dict.keys) == [.string("z"), .string("a")])
+        #expect(dict[.string("z")] == .int(1))
+        #expect(dict[.string("a")] == .int(2))
+    }
+
+    @Test("object(_:) from String-keyed Dictionary sorts keys")
+    func objectFromStringKeyedDictionary() {
+        let source: [String: Value] = ["z": .int(1), "a": .int(2), "m": .int(3)]
+
+        let value = Value.object(source)
+        guard case let .object(dict) = value else {
+            Issue.record("Expected object value")
+            return
+        }
+        #expect(Array(dict.keys) == [.string("a"), .string("m"), .string("z")])
+    }
+
+    @Test("object(_:) via init(uniqueKeysWithValues:) stays source-compatible")
+    func objectFromUniqueKeysWithValues() {
+        // Mirrors how downstream code built String-keyed objects before ObjectKey.
+        var result: [String: Value] = [:]
+        result["role"] = .string("user")
+        let value = Value.object(.init(uniqueKeysWithValues: result))
+        #expect(value == ["role": .string("user")])
+    }
+
+    @Test("Dictionary literal accepts dynamic String keys")
+    func dictionaryLiteralWithDynamicStringKey() {
+        // A non-literal String key would fail if the literal required ObjectKey keys.
+        let key = String("role")
+        let value: Value = [key: .string("user")]
+        guard case let .object(dict) = value else {
+            Issue.record("Expected object value")
+            return
+        }
+        #expect(dict[.string("role")] == .string("user"))
+    }
+
+    @Test("String subscript reads and writes object storage")
+    func objectStorageStringSubscript() {
+        var dict = OrderedDictionary<ObjectKey, Value>()
+        let dynamicKey = "count"
+        dict[dynamicKey] = .int(7)
+
+        #expect(dict[dynamicKey] == .int(7))
+        #expect(dict[.string("count")] == .int(7))
+        // The string subscript never matches integer keys.
+        dict[.int(512)] = .string("int")
+        #expect(dict["512"] == nil)
+    }
+
     @Test("Dictionary conversion via any is key-sorted")
     func initFromAnyDictionarySortsKeys() throws {
         let source: [String: Any?] = [
