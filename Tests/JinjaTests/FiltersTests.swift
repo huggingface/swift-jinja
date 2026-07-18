@@ -19,6 +19,26 @@ struct FiltersTests {
         #expect(result == .string("hello world"))
     }
 
+    @Test("upper filter coerces non-strings (Jinja2 soft_str)")
+    func upperFilterCoercesNonStrings() throws {
+        #expect(try Filters.upper([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.upper([.null], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.upper([.int(5)], kwargs: [:], env: env) == .string("5"))
+    }
+
+    @Test("lower filter coerces non-strings (Jinja2 soft_str)")
+    func lowerFilterCoercesNonStrings() throws {
+        #expect(try Filters.lower([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.lower([.int(42)], kwargs: [:], env: env) == .string("42"))
+    }
+
+    @Test("upper on an undefined value renders empty instead of raising")
+    func upperOnUndefinedRendersEmpty() throws {
+        // Mirrors chat templates that apply `| upper` to a possibly-absent value, e.g. a
+        // JSON-Schema property using anyOf with no scalar `type`: `value['type'] | upper`.
+        #expect(try Template("{{ missing | upper }}").render([:]) == "")
+    }
+
     @Test("length filter for strings")
     func lengthFilterString() throws {
         let result = try Filters.length([.string("hello")], kwargs: [:], env: env)
@@ -681,18 +701,14 @@ struct FiltersTests {
 
     // MARK: - Error/Edge Case Coverage
 
-    @Test("upper filter with non-string throws")
+    @Test("upper filter coerces a non-string (like Jinja2) rather than throwing")
     func upperFilterNonString() throws {
-        #expect(throws: JinjaError.self) {
-            try Filters.upper([.int(42)], kwargs: [:], env: env)
-        }
+        #expect(try Filters.upper([.int(42)], kwargs: [:], env: env) == .string("42"))
     }
 
-    @Test("lower filter with non-string throws")
+    @Test("lower filter coerces a non-string (like Jinja2) rather than throwing")
     func lowerFilterNonString() throws {
-        #expect(throws: JinjaError.self) {
-            try Filters.lower([.int(42)], kwargs: [:], env: env)
-        }
+        #expect(try Filters.lower([.int(42)], kwargs: [:], env: env) == .string("42"))
     }
 
     @Test("length filter for objects")

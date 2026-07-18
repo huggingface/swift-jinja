@@ -14,10 +14,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            throw JinjaError.runtime("upper filter requires string")
-        }
-
         _ = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -25,6 +21,12 @@ public enum Filters {
             defaults: [:]
         )
 
+        // Coerce the input to a string (Jinja2's `soft_str`, which `do_upper` applies) instead
+        // of requiring one: `undefined`/`null` -> "", numbers -> their string form. This matches
+        // interpolation (`Value.description`) and the reference implementations (CPython Jinja2
+        // and llama.cpp's minja), so `x | upper` on a missing/undefined value yields "" rather
+        // than raising - which some chat templates rely on (e.g. `value['type'] | upper`).
+        let str = (args.first ?? .undefined).description
         return .string(str.uppercased())
     }
 
@@ -34,10 +36,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            throw JinjaError.runtime("lower filter requires string")
-        }
-
         _ = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -45,6 +43,10 @@ public enum Filters {
             defaults: [:]
         )
 
+        // Coerce the input to a string like `upper` (Jinja2's `soft_str`, applied by `do_lower`):
+        // `undefined`/`null` -> "", numbers -> their string form, matching interpolation and the
+        // CPython Jinja2 / minja reference implementations rather than raising on a non-string.
+        let str = (args.first ?? .undefined).description
         return .string(str.lowercased())
     }
 
