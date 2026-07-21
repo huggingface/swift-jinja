@@ -34,8 +34,9 @@ struct FiltersTests {
 
     @Test("upper on an undefined value renders empty instead of raising")
     func upperOnUndefinedRendersEmpty() throws {
-        // Mirrors chat templates that apply `| upper` to a possibly-absent value, e.g. a
-        // JSON-Schema property using anyOf with no scalar `type`: `value['type'] | upper`.
+        // Mirrors chat templates that apply `| upper` to a possibly-absent value.
+        // For example, a JSON Schema property using `anyOf` with no scalar `type`
+        // yields `value['type'] | upper`.
         #expect(try Template("{{ missing | upper }}").render([:]) == "")
     }
 

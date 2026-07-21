@@ -3,8 +3,9 @@ import Foundation
 /// Built-in filters for Jinja template rendering.
 ///
 /// Filters transform values in template expressions using the pipe syntax (`|`).
-/// All filter functions follow the same signature pattern, accepting an array of values
-/// (with the filtered value as the first element), optional keyword arguments, and an environment.
+/// Each filter accepts an array of values (with the filtered value first),
+/// optional keyword arguments,
+/// and an environment.
 public enum Filters {
     // MARK: - Basic String Filters
 
@@ -1103,21 +1104,6 @@ public enum Filters {
         }
     }
 
-    /// Escapes non-ASCII characters in a string as `\uXXXX` sequences.
-    private static func escapeNonASCII(_ string: String) -> String {
-        var result = ""
-        result.reserveCapacity(string.utf16.count)
-        // Iterate UTF-16 code units so non-BMP scalars emit surrogate pairs.
-        for codeUnit in string.utf16 {
-            if codeUnit > 127 {
-                result += String(format: "\\u%04x", codeUnit)
-            } else if let scalar = UnicodeScalar(codeUnit) {
-                result.append(Character(scalar))
-            }
-        }
-        return result
-    }
-
     /// Returns absolute value of a number.
     @Sendable public static func abs(
         _ args: [Value],
@@ -2074,6 +2060,51 @@ private func softString(_ value: Value?) -> String {
     (value ?? .undefined).description
 }
 
+/// Escapes HTML special characters in a string.
+///
+/// Replaces `&`, `<`, `>`, `"`, and `'` with their corresponding HTML entities.
+///
+/// - Parameter string: The string to escape.
+/// - Returns: An HTML-safe copy of `string`.
+private func htmlEscape(_ string: String) -> String {
+    string
+        .replacingOccurrences(of: "&", with: "&amp;")
+        .replacingOccurrences(of: "<", with: "&lt;")
+        .replacingOccurrences(of: ">", with: "&gt;")
+        .replacingOccurrences(of: "\"", with: "&#34;")
+        .replacingOccurrences(of: "'", with: "&#39;")
+}
+
+/// Escapes non-ASCII characters in a string as `\uXXXX` sequences.
+///
+/// Iterates UTF-16 code units so non-BMP scalars emit surrogate pairs.
+///
+/// - Parameter string: The string to escape.
+/// - Returns: An ASCII-only string with non-ASCII characters escaped.
+private func escapeNonASCII(_ string: String) -> String {
+    var result = ""
+    result.reserveCapacity(string.utf16.count)
+    for codeUnit in string.utf16 {
+        if codeUnit > 127 {
+            result += String(format: "\\u%04x", codeUnit)
+        } else if let scalar = UnicodeScalar(codeUnit) {
+            result.append(Character(scalar))
+        }
+    }
+    return result
+}
+
+/// Returns the value of an attribute on an item.
+///
+/// Resolves string attribute names through property members,
+/// and integer indexes into arrays or objects.
+/// Returns `undefined` when the attribute cannot be resolved.
+///
+/// - Parameters:
+///   - item: The value to read from.
+///   - attribute: A string name or integer index identifying the attribute.
+/// - Returns: The attribute value, or `undefined` if it is missing.
+/// - Throws: An error if evaluating a string attribute fails.
 private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
     switch attribute {
     case let .string(name):
@@ -2095,6 +2126,28 @@ private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Va
     }
 }
 
+/// Compares two values for ordering.
+///
+/// When both values are strings and comparison is case-insensitive,
+/// or when `useStringComparisonWhenCaseSensitive` is true,
+/// compares their string forms directly.
+/// Otherwise uses ``Value/compare(to:)``,
+/// optionally falling back to description-based ordering on failure.
+///
+/// - Parameters:
+///   - lhs: The left-hand value.
+///   - rhs: The right-hand value.
+///   - caseSensitive: A Boolean value that indicates whether string comparison
+///     is case-sensitive.
+///   - useStringComparisonWhenCaseSensitive: A Boolean value that indicates whether
+///     to compare strings lexicographically even when `caseSensitive` is true.
+///   - fallbackToDescription: A Boolean value that indicates whether to compare
+///     `description` strings when ``Value/compare(to:)`` fails.
+/// - Returns: A negative value if `lhs` precedes `rhs`,
+///   zero if they are equal,
+///   and a positive value if `lhs` follows `rhs`.
+/// - Throws: An error if the values cannot be compared
+///   and `fallbackToDescription` is false.
 private func compareValues(
     _ lhs: Value,
     _ rhs: Value,
@@ -2122,13 +2175,4 @@ private func compareValues(
         }
         throw error
     }
-}
-
-private func htmlEscape(_ string: String) -> String {
-    string
-        .replacingOccurrences(of: "&", with: "&amp;")
-        .replacingOccurrences(of: "<", with: "&lt;")
-        .replacingOccurrences(of: ">", with: "&gt;")
-        .replacingOccurrences(of: "\"", with: "&#34;")
-        .replacingOccurrences(of: "'", with: "&#39;")
 }
