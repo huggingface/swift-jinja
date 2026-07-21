@@ -19,6 +19,93 @@ struct FiltersTests {
         #expect(result == .string("hello world"))
     }
 
+    @Test("upper filter coerces non-strings (Jinja2 soft_str)")
+    func upperFilterCoercesNonStrings() throws {
+        #expect(try Filters.upper([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.upper([.null], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.upper([.int(5)], kwargs: [:], env: env) == .string("5"))
+    }
+
+    @Test("lower filter coerces non-strings (Jinja2 soft_str)")
+    func lowerFilterCoercesNonStrings() throws {
+        #expect(try Filters.lower([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.lower([.int(42)], kwargs: [:], env: env) == .string("42"))
+    }
+
+    @Test("upper on an undefined value renders empty instead of raising")
+    func upperOnUndefinedRendersEmpty() throws {
+        // Mirrors chat templates that apply `| upper` to a possibly-absent value.
+        // For example, a JSON Schema property using `anyOf` with no scalar `type`
+        // yields `value['type'] | upper`.
+        #expect(try Template("{{ missing | upper }}").render([:]) == "")
+    }
+
+    @Test("capitalize filter coerces non-strings (Jinja2 soft_str)")
+    func capitalizeFilterCoercesNonStrings() throws {
+        #expect(try Filters.capitalize([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.capitalize([.null], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.capitalize([.int(42)], kwargs: [:], env: env) == .string("42"))
+        #expect(try Filters.capitalize([.string("hello")], kwargs: [:], env: env) == .string("Hello"))
+    }
+
+    @Test("title filter coerces non-strings (Jinja2 soft_str)")
+    func titleFilterCoercesNonStrings() throws {
+        #expect(try Filters.title([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.title([.int(42)], kwargs: [:], env: env) == .string("42"))
+    }
+
+    @Test("trim filter coerces non-strings (Jinja2 soft_str)")
+    func trimFilterCoercesNonStrings() throws {
+        #expect(try Filters.trim([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.trim([.int(42)], kwargs: [:], env: env) == .string("42"))
+    }
+
+    @Test("center filter coerces non-strings (Jinja2 soft_str)")
+    func centerFilterCoercesNonStrings() throws {
+        #expect(try Filters.center([.undefined, .int(4)], kwargs: [:], env: env) == .string("    "))
+        #expect(try Filters.center([.int(5), .int(1)], kwargs: [:], env: env) == .string("5"))
+        #expect(try Filters.center([.int(5), .int(5)], kwargs: [:], env: env) == .string("  5  "))
+    }
+
+    @Test("wordcount filter coerces non-strings (Jinja2 soft_str)")
+    func wordcountFilterCoercesNonStrings() throws {
+        #expect(try Filters.wordcount([.undefined], kwargs: [:], env: env) == .int(0))
+        #expect(try Filters.wordcount([.int(42)], kwargs: [:], env: env) == .int(1))
+    }
+
+    @Test("replace filter coerces non-strings (Jinja2 soft_str)")
+    func replaceFilterCoercesNonStrings() throws {
+        #expect(
+            try Filters.replace([.undefined, .string("a"), .string("b")], kwargs: [:], env: env)
+                == .string("")
+        )
+        #expect(
+            try Filters.replace([.int(42), .string("4"), .string("x")], kwargs: [:], env: env)
+                == .string("x2")
+        )
+        #expect(
+            try Filters.replace([.string("a1"), .int(1), .int(9)], kwargs: [:], env: env)
+                == .string("a9")
+        )
+    }
+
+    @Test("format filter coerces non-strings (Jinja2 soft_str)")
+    func formatFilterCoercesNonStrings() throws {
+        #expect(try Filters.format([.undefined], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.format([.int(42)], kwargs: [:], env: env) == .string("42"))
+        #expect(
+            try Filters.format([.string("n=%s"), .int(7)], kwargs: [:], env: env) == .string("n=7")
+        )
+    }
+
+    @Test("join filter coerces non-string separator (Jinja2 soft_str)")
+    func joinFilterCoercesNonStringSeparator() throws {
+        let values = [Value.string("a"), .string("b")]
+        #expect(
+            try Filters.join([.array(values), .int(0)], kwargs: [:], env: env) == .string("a0b")
+        )
+    }
+
     @Test("length filter for strings")
     func lengthFilterString() throws {
         let result = try Filters.length([.string("hello")], kwargs: [:], env: env)
@@ -681,18 +768,14 @@ struct FiltersTests {
 
     // MARK: - Error/Edge Case Coverage
 
-    @Test("upper filter with non-string throws")
+    @Test("upper filter coerces a non-string (like Jinja2) rather than throwing")
     func upperFilterNonString() throws {
-        #expect(throws: JinjaError.self) {
-            try Filters.upper([.int(42)], kwargs: [:], env: env)
-        }
+        #expect(try Filters.upper([.int(42)], kwargs: [:], env: env) == .string("42"))
     }
 
-    @Test("lower filter with non-string throws")
+    @Test("lower filter coerces a non-string (like Jinja2) rather than throwing")
     func lowerFilterNonString() throws {
-        #expect(throws: JinjaError.self) {
-            try Filters.lower([.int(42)], kwargs: [:], env: env)
-        }
+        #expect(try Filters.lower([.int(42)], kwargs: [:], env: env) == .string("42"))
     }
 
     @Test("length filter for objects")
@@ -715,11 +798,12 @@ struct FiltersTests {
         }
     }
 
-    @Test("join filter with non-string separator throws")
+    @Test("join filter coerces a non-string separator (like Jinja2) rather than throwing")
     func joinFilterNonStringSeparator() throws {
-        #expect(throws: JinjaError.self) {
-            try Filters.join([.array([.int(1)]), .int(42)], kwargs: [:], env: env)
-        }
+        #expect(
+            try Filters.join([.array([.int(1), .int(2)]), .int(42)], kwargs: [:], env: env)
+                == .string("1422")
+        )
     }
 
     @Test("default filter with boolean mode")
@@ -1327,10 +1411,10 @@ struct FiltersTests {
         #expect(result == .string(""))
     }
 
-    @Test("trim filter with non-string")
+    @Test("trim filter coerces a non-string (like Jinja2) rather than emptying")
     func trimFilterNonString() throws {
         let result = try Filters.trim([.int(42)], kwargs: [:], env: env)
-        #expect(result == .string(""))
+        #expect(result == .string("42"))
     }
 
     @Test("tojson filter with no args")
@@ -1359,16 +1443,16 @@ struct FiltersTests {
         }
     }
 
-    @Test("capitalize filter with non-string")
+    @Test("capitalize filter coerces a non-string (like Jinja2) rather than emptying")
     func capitalizeFilterNonString() throws {
         let result = try Filters.capitalize([.int(42)], kwargs: [:], env: env)
-        #expect(result == .string(""))
+        #expect(result == .string("42"))
     }
 
-    @Test("center filter with non-string returns input")
+    @Test("center filter coerces a non-string (like Jinja2) rather than returning input")
     func centerFilterNonString() throws {
-        let result = try Filters.center([.int(42), .int(10)], kwargs: [:], env: env)
-        #expect(result == .int(42))
+        let result = try Filters.center([.int(42), .int(6)], kwargs: [:], env: env)
+        #expect(result == .string("  42  "))
     }
 
     @Test("center filter missing width throws")
@@ -1589,22 +1673,22 @@ struct FiltersTests {
         #expect(result == .double(2.5))
     }
 
-    @Test("title filter with non-string")
+    @Test("title filter coerces a non-string (like Jinja2) rather than emptying")
     func titleFilterNonString() throws {
         let result = try Filters.title([.int(42)], kwargs: [:], env: env)
-        #expect(result == .string(""))
+        #expect(result == .string("42"))
     }
 
-    @Test("wordcount filter with non-string")
+    @Test("wordcount filter coerces a non-string (like Jinja2) rather than returning zero")
     func wordcountFilterNonString() throws {
         let result = try Filters.wordcount([.int(42)], kwargs: [:], env: env)
-        #expect(result == .int(0))
+        #expect(result == .int(1))
     }
 
-    @Test("replace filter with non-string returns input")
+    @Test("replace filter coerces a non-string (like Jinja2) rather than returning input")
     func replaceFilterNonString() throws {
-        let result = try Filters.replace([.int(42), .string("a"), .string("b")], kwargs: [:], env: env)
-        #expect(result == .int(42))
+        let result = try Filters.replace([.int(42), .string("4"), .string("x")], kwargs: [:], env: env)
+        #expect(result == .string("x2"))
     }
 
     @Test("replace filter with empty old string")
