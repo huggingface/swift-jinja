@@ -21,13 +21,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        // Coerce the input to a string (Jinja2's `soft_str`, which `do_upper` applies) instead
-        // of requiring one: `undefined`/`null` -> "", numbers -> their string form. This matches
-        // interpolation (`Value.description`) and the reference implementations (CPython Jinja2
-        // and llama.cpp's minja), so `x | upper` on a missing/undefined value yields "" rather
-        // than raising - which some chat templates rely on (e.g. `value['type'] | upper`).
-        let str = (args.first ?? .undefined).description
-        return .string(str.uppercased())
+        return .string(softString(args.first).uppercased())
     }
 
     /// Converts a string to lowercase.
@@ -43,11 +37,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        // Coerce the input to a string like `upper` (Jinja2's `soft_str`, applied by `do_lower`):
-        // `undefined`/`null` -> "", numbers -> their string form, matching interpolation and the
-        // CPython Jinja2 / minja reference implementations rather than raising on a non-string.
-        let str = (args.first ?? .undefined).description
-        return .string(str.lowercased())
+        return .string(softString(args.first).lowercased())
     }
 
     /// Returns the length of a string, array, or object.
@@ -94,9 +84,7 @@ public enum Filters {
             defaults: ["separator": .string(""), "attribute": .null]
         )
 
-        guard case let .string(separator) = arguments["separator"] else {
-            throw JinjaError.runtime("join filter requires string separator")
-        }
+        let separator = softString(arguments["separator"])
 
         let strings: [String]
         if let attribute = arguments["attribute"], attribute != .null {
@@ -764,10 +752,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard args.count > 1, case let .string(formatString) = args[0] else {
-            return args.first ?? .string("")
-        }
-
         _ = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -775,7 +759,12 @@ public enum Filters {
             defaults: [:]
         )
 
+        let formatString = softString(args.first)
         let formatArgs = Array(args.dropFirst())
+        guard !formatArgs.isEmpty else {
+            return .string(formatString)
+        }
+
         var result = ""
         var formatIdx = formatString.startIndex
         var argIdx = 0
@@ -1030,16 +1019,14 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            return .string("")
-        }
-
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
             parameters: ["chars"],
             defaults: ["chars": .null]
         )
+
+        let str = softString(args.first)
 
         let characterSet: CharacterSet
         if case let .string(chars) = arguments["chars"], !chars.isEmpty {
@@ -1164,10 +1151,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            return .string("")
-        }
-
         _ = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -1175,6 +1158,7 @@ public enum Filters {
             defaults: [:]
         )
 
+        let str = softString(args.first)
         return .string(str.prefix(1).uppercased() + str.dropFirst().lowercased())
     }
 
@@ -1184,10 +1168,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            return args.first ?? .string("")
-        }
-
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -1199,6 +1179,7 @@ public enum Filters {
             throw JinjaError.runtime("center filter requires width parameter")
         }
 
+        let str = softString(args.first)
         let padCount = width - str.count
         if padCount <= 0 {
             return .string(str)
@@ -1452,10 +1433,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            return .string("")
-        }
-
         _ = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -1463,7 +1440,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        return .string(str.capitalized)
+        return .string(softString(args.first).capitalized)
     }
 
     /// Counts words in a string.
@@ -1472,10 +1449,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            return .int(0)
-        }
-
         _ = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -1483,7 +1456,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        let words = str.split { $0.isWhitespace || $0.isNewline }
+        let words = softString(args.first).split { $0.isWhitespace || $0.isNewline }
         return .int(words.count)
     }
 
@@ -1497,10 +1470,6 @@ public enum Filters {
         kwargs: [String: Value] = [:],
         env: Environment
     ) throws -> Value {
-        guard case let .string(str) = args.first else {
-            return args.first ?? .string("")
-        }
-
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -1508,11 +1477,9 @@ public enum Filters {
             defaults: ["count": .null]
         )
 
-        guard case let .string(old) = arguments["old"],
-            case let .string(new) = arguments["new"]
-        else {
-            throw JinjaError.runtime("replace() requires 'old' and 'new' string arguments.")
-        }
+        let str = softString(args.first)
+        let old = softString(arguments["old"])
+        let new = softString(arguments["new"])
 
         // Handle count parameter - can be positional (3rd arg) or named (count=)
         let count: Int?
@@ -2092,6 +2059,20 @@ public enum Filters {
 }
 
 // MARK: -
+
+/// Returns the string form of a value, matching Jinja2's `soft_str`.
+///
+/// Treats `undefined` and `null` as an empty string.
+/// Other values use the same representation as template interpolation
+/// (`Value.description`).
+/// String filters call this instead of requiring a `.string` case,
+/// so expressions like `value['type'] | upper` succeed when the value is missing.
+///
+/// - Parameter value: The value to convert, or `nil` to treat as undefined.
+/// - Returns: A string suitable for string filters that accept non-string input.
+private func softString(_ value: Value?) -> String {
+    (value ?? .undefined).description
+}
 
 private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
     switch attribute {
