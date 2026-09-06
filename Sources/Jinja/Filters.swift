@@ -1057,6 +1057,10 @@ public enum Filters {
 
     /// Converts value to JSON string.
     ///
+    /// Slashes are written as `/`, as `json.dumps` writes them; Foundation's
+    /// default `\/` is a JavaScript-embedding safeguard that a chat template
+    /// does not need and that puts a backslash into the prompt.
+    ///
     /// - Parameters:
     ///   - indent: If greater than 0, enables pretty-printed output using
     ///             Foundation's default indentation (optional).
@@ -1078,6 +1082,7 @@ public enum Filters {
 
         let encoder = JSONEncoder()
         encoder.outputFormatting.insert(.sortedKeys)
+        encoder.outputFormatting.insert(.withoutEscapingSlashes)
         if let indent = arguments["indent"],
             case .int(let count) = indent,
             count > 0
