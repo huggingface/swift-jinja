@@ -111,28 +111,42 @@ struct JSONTests {
         }
     }
 
-    @Test("dumps options can be read from a kwargs object")
-    func dumpsOptionsFromKwargs() throws {
-        let options = try JSON.DumpsOptions(
-            kwargs: [
-                "ensure_ascii": false,
-                "sort_keys": true,
-                "indent": 4,
-                "separators": [",", ": "],
-            ]
+    @Test("dumps sorts integer keys numerically before stringifying them")
+    func dumpsSortsIntegerKeys() throws {
+        let value = Value.object([.int(10): .string("ten"), .int(2): .string("two")])
+        #expect(
+            try JSON.dumps(value, options: .init(sortKeys: true))
+                == #"{"2": "two", "10": "ten"}"#
         )
-        #expect(options.ensureASCII == false)
-        #expect(options.sortKeys == true)
-        #expect(options.indent == 4)
-        #expect(options.separators?.item == ",")
-        #expect(options.separators?.key == ": ")
     }
 
-    @Test("dumps options reject unknown kwargs")
-    func dumpsOptionsRejectUnknownKwargs() throws {
+    @Test("dumps rejects mixed key types only when sorting")
+    func dumpsMixedKeys() throws {
+        let value = Value.object([.int(2): .string("two"), .string("a"): .int(1)])
+        #expect(try JSON.dumps(value) == #"{"2": "two", "a": 1}"#)
         #expect(throws: JinjaError.self) {
-            try JSON.DumpsOptions(kwargs: ["allow_nan": false])
+            try JSON.dumps(value, options: .init(sortKeys: true))
         }
+    }
+
+    @Test("dumps sorts string keys by Unicode scalar order like Python")
+    func dumpsSortsUnicodeKeys() throws {
+        let value: Value = ["é": 1, "z": 2, "e\u{301}x": 3]
+        #expect(
+            try JSON.dumps(value, options: .init(ensureASCII: false, sortKeys: true))
+                == "{\"e\u{301}x\": 3, \"z\": 2, \"é\": 1}"
+        )
+    }
+
+    @Test("dumps treats negative indentation as zero through all option paths")
+    func dumpsNegativeIndent() throws {
+        let value: Value = [[1]]
+        let expected = "[\n[\n1\n]\n]"
+        #expect(try JSON.dumps(value, options: .init(indent: -1)) == expected)
+        var options = JSON.DumpsOptions(indent: 2)
+        options.indent = Int.min
+        #expect(try JSON.dumps(value, options: options) == expected)
+        #expect(try JSON.dumps(value, options: .init(indent: 0)) == expected)
     }
 
     @Test("htmlSafeDumps escapes HTML-significant characters like Jinja2")

@@ -1057,16 +1057,16 @@ public enum Filters {
 
     /// Converts value to a JSON string.
     ///
-    /// The output follows the environment's `json.dumps_function`
-    /// and `json.dumps_kwargs` policies (see ``Environment/policies``).
+    /// The output follows the environment's typed JSON policies
+    /// (see ``Environment/policies``).
     /// By default that is Python's `json.dumps` with `ensure_ascii=False`,
     /// which is what transformers uses to render chat templates.
     ///
     /// - Parameters:
     ///   - indent: Number of spaces to indent nested values by.
-    ///             Overrides the `indent` in `json.dumps_kwargs`.
+    ///             Overrides the policy's indentation.
     ///   - ensure_ascii: Whether to escape non-ASCII characters as `\uXXXX`.
-    ///                   Overrides the `ensure_ascii` in `json.dumps_kwargs`.
+    ///                   Overrides the policy's non-ASCII escaping.
     @Sendable public static func tojson(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -1081,27 +1081,21 @@ public enum Filters {
             defaults: ["indent": .null, "ensure_ascii": .null]
         )
 
-        var dumpsKwargs: [String: Value] = [:]
-        if case let .object(policy) = env.policies["json.dumps_kwargs"] {
-            for (key, value) in policy {
-                dumpsKwargs[key.stringValue] = value
-            }
+        let policies = env.policies
+        var options = policies.jsonDumpsOptions
+        switch arguments["indent"] {
+        case .int(let count):
+            options.indent = count
+        case .null, .undefined, nil:
+            break
+        default:
+            throw JinjaError.runtime("tojson indent must be an integer or none")
         }
-        for name in ["indent", "ensure_ascii"] {
-            if let argument = arguments[name], argument != .null {
-                dumpsKwargs[name] = argument
-            }
-        }
-
-        if case let .function(dumps) = env.policies["json.dumps_function"] {
-            let result = try dumps([value], dumpsKwargs, env)
-            guard case .string = result else {
-                throw JinjaError.runtime("json.dumps_function must return a string")
-            }
-            return result
+        if let ensureASCII = arguments["ensure_ascii"], ensureASCII != .null {
+            options.ensureASCII = ensureASCII.isTruthy
         }
 
-        return .string(try JSON.dumps(value, options: try JSON.DumpsOptions(kwargs: dumpsKwargs)))
+        return .string(try policies.jsonSerializer.dumps(value, options: options))
     }
 
     /// Returns absolute value of a number.

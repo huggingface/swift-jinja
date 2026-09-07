@@ -18,6 +18,7 @@ public enum JSON {
 
         /// Number of spaces to indent nested values by.
         /// `nil` writes everything on one line.
+        /// Zero or negative values insert newlines without leading spaces.
         public var indent: Int?
 
         /// The separators written between items and between a key and its value.
@@ -36,50 +37,26 @@ public enum JSON {
             self.indent = indent
             self.separators = separators
         }
+    }
 
-        /// Creates options from `json.dumps` keyword arguments,
-        /// as found in an environment's `json.dumps_kwargs` policy.
-        ///
-        /// Recognized keys are `ensure_ascii`, `sort_keys`, `indent`, and `separators`.
-        ///
-        /// - Throws: `JinjaError.runtime` for an unknown key or an unusable value.
-        public init(kwargs: [String: Value]) throws {
-            self.init()
-            for (name, value) in kwargs {
-                switch name {
-                case "ensure_ascii":
-                    ensureASCII = value.isTruthy
-                case "sort_keys":
-                    sortKeys = value.isTruthy
-                case "indent":
-                    switch value {
-                    case .null, .undefined:
-                        indent = nil
-                    case let .int(count):
-                        indent = Swift.max(0, count)
-                    default:
-                        throw JinjaError.runtime("json.dumps indent must be an integer or none")
-                    }
-                case "separators":
-                    switch value {
-                    case .null, .undefined:
-                        separators = nil
-                    case let .array(pair):
-                        guard pair.count == 2,
-                            case let .string(item) = pair[0],
-                            case let .string(key) = pair[1]
-                        else {
-                            throw JinjaError.runtime(
-                                "json.dumps separators must be a pair of strings"
-                            )
-                        }
-                        separators = (item, key)
-                    default:
-                        throw JinjaError.runtime("json.dumps separators must be a pair of strings")
-                    }
-                default:
-                    throw JinjaError.runtime("Unexpected keyword argument '\(name)' for json.dumps")
-                }
+    /// The serializer used by the `tojson` filter.
+    public enum Serializer: Sendable {
+        /// Python's `json.dumps` formatting without HTML escaping.
+        case standard
+        /// JSON with `<`, `>`, `&`, and `'` escaped for embedding in HTML.
+        case htmlSafe
+        /// A custom serializer receiving the value and resolved options.
+        case custom(@Sendable (Value, DumpsOptions) throws -> String)
+
+        /// Serializes a value using the selected behavior.
+        public func dumps(_ value: Value, options: DumpsOptions = DumpsOptions()) throws -> String {
+            switch self {
+            case .standard:
+                return try JSON.dumps(value, options: options)
+            case .htmlSafe:
+                return try JSON.htmlSafeDumps(value, options: options)
+            case .custom(let serialize):
+                return try serialize(value, options)
             }
         }
     }
@@ -105,18 +82,6 @@ public enum JSON {
             .replacingOccurrences(of: ">", with: "\\u003e")
             .replacingOccurrences(of: "&", with: "\\u0026")
             .replacingOccurrences(of: "'", with: "\\u0027")
-    }
-
-    /// A `json.dumps_function` policy value that gives `tojson` Jinja2's HTML-safe output.
-    ///
-    /// ```swift
-    /// let environment = Environment()
-    /// environment.policies["json.dumps_function"] = JSON.htmlSafeDumpsFunction
-    /// environment.policies["json.dumps_kwargs"] = ["sort_keys": true]
-    /// ```
-    public static let htmlSafeDumpsFunction: Value = .function { args, kwargs, _ in
-        guard let value = args.first else { return .string("null") }
-        return .string(try htmlSafeDumps(value, options: try DumpsOptions(kwargs: kwargs)))
     }
 }
 
@@ -170,15 +135,24 @@ extension JSON {
                     output += "{}"
                     return
                 }
-                var entries = members.map { (key: $0.key.stringValue, value: $0.value) }
+                var entries = Array(members)
                 if options.sortKeys {
-                    entries.sort { $0.key < $1.key }
+                    try entries.sort {
+                        switch ($0.key, $1.key) {
+                        case let (.int(lhs), .int(rhs)):
+                            return lhs < rhs
+                        case let (.string(lhs), .string(rhs)):
+                            return lhs.unicodeScalars.lexicographicallyPrecedes(rhs.unicodeScalars)
+                        default:
+                            throw JinjaError.runtime("json.dumps cannot sort mixed integer and string keys")
+                        }
+                    }
                 }
                 output += "{"
                 for (index, entry) in entries.enumerated() {
                     if index > 0 { output += itemSeparator }
                     newline(depth: depth + 1)
-                    writeString(entry.key)
+                    writeString(entry.key.stringValue)
                     output += keySeparator
                     try write(entry.value, depth: depth + 1)
                 }
@@ -194,7 +168,7 @@ extension JSON {
         private mutating func newline(depth: Int) {
             guard let indent = options.indent else { return }
             output += "\n"
-            output += String(repeating: " ", count: indent * depth)
+            output += String(repeating: " ", count: Swift.max(0, indent) * depth)
         }
 
         private mutating func writeString(_ string: String) {

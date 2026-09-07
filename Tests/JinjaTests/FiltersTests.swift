@@ -606,7 +606,7 @@ struct FiltersTests {
     @Test("tojson filter honors json.dumps_kwargs policy")
     func tojsonFilterHonorsDumpsKwargsPolicy() throws {
         let env = Environment()
-        env.policies["json.dumps_kwargs"] = ["sort_keys": true]
+        env.policies.jsonDumpsOptions = .init(sortKeys: true)
         let value: Value = ["z": "—", "a": 1]
         let result = try Filters.tojson([value], kwargs: [:], env: env)
         // Jinja2's default policy: sorted keys, and json.dumps' own
@@ -617,7 +617,7 @@ struct FiltersTests {
     @Test("tojson filter arguments override json.dumps_kwargs policy")
     func tojsonFilterArgumentsOverridePolicy() throws {
         let env = Environment()
-        env.policies["json.dumps_kwargs"] = ["sort_keys": true, "indent": 4, "ensure_ascii": true]
+        env.policies.jsonDumpsOptions = .init(ensureASCII: true, sortKeys: true, indent: 4)
         let value: Value = ["b": "—", "a": 1]
         let result = try Filters.tojson(
             [value],
@@ -630,18 +630,24 @@ struct FiltersTests {
     @Test("tojson filter honors json.dumps_function policy")
     func tojsonFilterHonorsDumpsFunctionPolicy() throws {
         let env = Environment()
-        env.policies["json.dumps_function"] = .function { args, kwargs, _ in
-            let indent = kwargs["indent"] ?? .null
-            return .string("dumped \(args.count) value(s) with indent \(indent)")
+        env.policies.jsonDumpsOptions.sortKeys = true
+        env.policies.jsonSerializer = .custom { value, options in
+            #expect(value == .int(1))
+            #expect(options.sortKeys)
+            #expect(!options.ensureASCII)
+            #expect(options.indent == 2)
+            return "custom JSON"
         }
-        let result = try Filters.tojson([.int(1)], kwargs: ["indent": 2], env: env)
-        #expect(result == .string("dumped 1 value(s) with indent 2"))
+        let template = try Template("{{ value | tojson(indent=2) }}")
+        let result = try template.render(["value": 1], environment: env)
+        #expect(result == "custom JSON")
+        #expect(env.policies.jsonDumpsOptions.indent == nil)
     }
 
     @Test("tojson filter can be made HTML-safe like Jinja2")
     func tojsonFilterHTMLSafePolicy() throws {
         let env = Environment()
-        env.policies["json.dumps_function"] = JSON.htmlSafeDumpsFunction
+        env.policies.jsonSerializer = .htmlSafe
         let result = try Filters.tojson([.string("<script>")], kwargs: [:], env: env)
         #expect(result == .string("\"\\u003cscript\\u003e\""))
     }
@@ -649,20 +655,78 @@ struct FiltersTests {
     @Test("tojson filter reads policies from parent environments")
     func tojsonFilterReadsPoliciesFromParent() throws {
         let parent = Environment()
-        parent.policies["json.dumps_kwargs"] = ["sort_keys": true]
+        parent.policies.jsonDumpsOptions.sortKeys = true
         let child = Environment(parent: parent)
         let value: Value = ["b": 1, "a": 2]
         let result = try Filters.tojson([value], kwargs: [:], env: child)
         #expect(result == .string(#"{"a": 2, "b": 1}"#))
     }
 
-    @Test("tojson filter rejects unknown json.dumps_kwargs")
-    func tojsonFilterRejectsUnknownDumpsKwargs() throws {
-        let env = Environment()
-        env.policies["json.dumps_kwargs"] = ["allow_nan": false]
+    @Test("tojson filter rejects invalid template indentation")
+    func tojsonFilterRejectsInvalidIndent() throws {
         #expect(throws: JinjaError.self) {
-            try Filters.tojson([.int(1)], kwargs: [:], env: env)
+            try Filters.tojson([.int(1)], kwargs: ["indent": "invalid"], env: env)
         }
+    }
+
+    @Test("tojson filter normalizes negative template indentation")
+    func tojsonFilterNegativeIndent() throws {
+        #expect(
+            try Filters.tojson([[1]], kwargs: ["indent": -1], env: env)
+                == .string("[\n1\n]")
+        )
+    }
+
+    @Test("tojson filter propagates custom serializer errors")
+    func tojsonFilterCustomError() throws {
+        let environment = Environment()
+        environment.policies.jsonSerializer = .custom { _, _ in
+            throw JinjaError.runtime("custom serializer failed")
+        }
+        let error = #expect(throws: JinjaError.self) {
+            try Filters.tojson([1], env: environment)
+        }
+        #expect(error?.errorDescription == "Runtime error: custom serializer failed")
+    }
+
+    @Test("JSON policy presets apply when rendering templates")
+    func tojsonPolicyPresets() throws {
+        let environment = Environment()
+        let template = try Template("{{ value | tojson }}")
+        let context: Context = ["value": ["z": "—</script>&'", "a": 1]]
+        let plain = #"{"z": "—</script>&'", "a": 1}"#
+        #expect(try template.render(context, environment: environment) == plain)
+        environment.policies = .jinja2
+        #expect(
+            try template.render(context, environment: environment)
+                == #"{"a": 1, "z": "\u2014\u003c/script\u003e\u0026\u0027"}"#
+        )
+        environment.policies = .transformers
+        #expect(try template.render(context, environment: environment) == plain)
+    }
+
+    @Test("Child JSON policy overrides retain inherited settings and isolate mutations")
+    func tojsonPolicyInheritance() throws {
+        let parent = Environment()
+        let child = Environment(parent: parent)
+        parent.policies = .jinja2
+        let template = try Template("{{ value | tojson }}")
+        let context: Context = ["value": ["z": "—<", "a": 1]]
+        #expect(
+            try template.render(context, environment: child)
+                == #"{"a": 1, "z": "\u2014\u003c"}"#
+        )
+        child.policies.jsonDumpsOptions.ensureASCII = false
+        #expect(parent.policies.jsonDumpsOptions.ensureASCII)
+        parent.policies = .transformers
+        #expect(
+            try template.render(context, environment: child)
+                == #"{"a": 1, "z": "—\u003c"}"#
+        )
+        #expect(
+            try template.render(context, environment: parent)
+                == #"{"z": "—<", "a": 1}"#
+        )
     }
 
     @Test("tojson filter does not escape slashes")
@@ -716,7 +780,7 @@ struct FiltersTests {
 
     @Test("tojson filter keeps non-ASCII by default")
     func tojsonFilterKeepsNonASCIIByDefault() throws {
-        // The default json.dumps_kwargs policy sets ensure_ascii=False,
+        // The default Transformers policy sets ensureASCII to false,
         // as transformers does, so "你好" is written as is.
         let result = try Filters.tojson([.string("你好")], kwargs: [:], env: env)
         #expect(result == .string("\"你好\""))

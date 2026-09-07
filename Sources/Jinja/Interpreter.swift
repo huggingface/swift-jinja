@@ -27,41 +27,49 @@ public final class Environment: @unchecked Sendable {
     /// The default value is `false`.
     public var trimBlocks: Bool = false
 
-    /// Settings that adjust how built-in filters behave,
-    /// mirroring Jinja2's `Environment.policies`.
+    /// Settings that adjust the behavior of built-in filters.
+    public struct Policies: Sendable {
+        /// The serializer corresponding to Jinja2's `json.dumps_function` policy.
+        public var jsonSerializer: JSON.Serializer
+
+        /// Options corresponding to Jinja2's `json.dumps_kwargs` policy.
+        /// Explicit non-null `tojson` arguments override these options for that call.
+        public var jsonDumpsOptions: JSON.DumpsOptions
+
+        /// Creates policies with Transformers-compatible defaults.
+        public init(
+            jsonSerializer: JSON.Serializer = .standard,
+            jsonDumpsOptions: JSON.DumpsOptions = .init(ensureASCII: false)
+        ) {
+            self.jsonSerializer = jsonSerializer
+            self.jsonDumpsOptions = jsonDumpsOptions
+        }
+
+        /// Plain JSON with non-ASCII characters and insertion order preserved.
+        public static let transformers = Policies()
+
+        /// HTML-safe JSON with sorted keys and non-ASCII characters escaped.
+        public static let jinja2 = Policies(
+            jsonSerializer: .htmlSafe,
+            jsonDumpsOptions: .init(ensureASCII: true, sortKeys: true)
+        )
+    }
+
+    /// Settings that adjust how built-in filters behave.
     ///
-    /// Policies are inherited from the parent environment
-    /// until an environment sets its own.
-    /// The recognized keys are:
-    ///
-    /// - `json.dumps_function`:
-    ///   The function `tojson` calls as `function(value, **kwargs)`.
-    ///   `.null` selects ``JSON/dumps(_:options:)``.
-    ///   ``JSON/htmlSafeDumpsFunction`` gives Jinja2's HTML-safe output.
-    /// - `json.dumps_kwargs`:
-    ///   Keyword arguments for that function,
-    ///   using the names of Python's `json.dumps` parameters.
-    ///   The `indent` argument passed to `tojson` overrides the one set here.
-    ///
-    /// The defaults match what transformers uses to render chat templates:
-    /// `ensure_ascii` false and `sort_keys` false.
-    /// To get Jinja2's own `tojson` output instead:
-    ///
-    /// ```swift
-    /// environment.policies["json.dumps_function"] = JSON.htmlSafeDumpsFunction
-    /// environment.policies["json.dumps_kwargs"] = ["sort_keys": true]
-    /// ```
-    public var policies: [String: Value] {
+    /// Policies are inherited from the parent environment until any policy is set.
+    /// Mutating a policy copies all inherited settings into this environment;
+    /// subsequent parent changes do not affect that copy.
+    /// Root environments default to ``Policies/transformers``.
+    /// Set `environment.policies = .jinja2` for sorted, ASCII, HTML-safe JSON.
+    public var policies: Policies {
         get { policyStorage ?? parent?.policies ?? Environment.defaultPolicies }
         set { policyStorage = newValue }
     }
-    private var policyStorage: [String: Value]?
+    private var policyStorage: Policies?
 
     /// The policies a root environment starts with.
-    public static let defaultPolicies: [String: Value] = [
-        "json.dumps_function": .null,
-        "json.dumps_kwargs": ["ensure_ascii": false, "sort_keys": false],
-    ]
+    public static let defaultPolicies: Policies = .transformers
 
     // MARK: -
 
@@ -154,6 +162,7 @@ public enum Interpreter {
     public static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
         // Use the fast path with synchronous environment
         let env = Environment(initial: environment.variables)
+        env.policies = environment.policies
         var buffer = ""
         buffer.reserveCapacity(1024)
         try interpret(nodes, env: env, into: &buffer)
