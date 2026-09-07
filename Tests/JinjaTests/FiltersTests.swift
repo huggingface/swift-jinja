@@ -707,6 +707,26 @@ struct FiltersTests {
         #expect(try template.render(context, environment: environment) == plain)
     }
 
+    @Test("JSON policy presets reject missing template values but serialize null")
+    func tojsonPolicyPresetsRejectUndefined() throws {
+        let policies: [Environment.Policies] = [.transformers, .jinja2]
+        for policy in policies {
+            let environment = Environment()
+            environment.policies = policy
+            for source in [
+                "{{ missing | tojson }}",
+                "{{ [missing] | tojson }}",
+                "{{ {'key': missing} | tojson }}",
+            ] {
+                let template = try Template(source)
+                #expect(throws: JinjaError.self) {
+                    try template.render([:], environment: environment)
+                }
+            }
+            #expect(try Template("{{ none | tojson }}").render([:], environment: environment) == "null")
+        }
+    }
+
     @Test("Child JSON policy overrides retain inherited settings and isolate mutations")
     func tojsonPolicyInheritance() throws {
         let parent = Environment()

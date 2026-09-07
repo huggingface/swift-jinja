@@ -64,7 +64,7 @@ public enum JSON {
     /// Serializes a value the way `json.dumps` does.
     ///
     /// - Throws: `JinjaError.runtime` when the value contains something
-    ///   that has no JSON representation, such as a function.
+    ///   that has no JSON representation, such as an undefined value or a function.
     public static func dumps(_ value: Value, options: DumpsOptions = DumpsOptions()) throws -> String {
         var writer = Writer(options: options)
         try writer.write(value, depth: 0)
@@ -107,8 +107,10 @@ extension JSON {
 
         mutating func write(_ value: Value, depth: Int) throws {
             switch value {
-            case .null, .undefined:
+            case .null:
                 output += "null"
+            case .undefined:
+                throw JinjaError.runtime("Object of type Undefined is not JSON serializable")
             case let .boolean(flag):
                 output += flag ? "true" : "false"
             case let .int(number):

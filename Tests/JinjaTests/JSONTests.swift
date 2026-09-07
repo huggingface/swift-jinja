@@ -111,6 +111,17 @@ struct JSONTests {
         }
     }
 
+    @Test("dumps rejects undefined values at any depth")
+    func dumpsRejectsUndefined() throws {
+        let values: [Value] = [.undefined, [.undefined], ["key": .undefined], ["key": [1, .undefined]]]
+        for value in values {
+            #expect(throws: JinjaError.self) {
+                try JSON.dumps(value)
+            }
+        }
+        #expect(try JSON.dumps(.null) == "null")
+    }
+
     @Test("dumps sorts integer keys numerically before stringifying them")
     func dumpsSortsIntegerKeys() throws {
         let value = Value.object([.int(10): .string("ten"), .int(2): .string("two")])
