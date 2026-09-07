@@ -591,6 +591,19 @@ struct FiltersTests {
         #expect(result == .string("[1,2,3]"))
     }
 
+    @Test("tojson filter does not escape slashes")
+    func tojsonFilterDoesNotEscapeSlashes() throws {
+        let result = try Filters.tojson([.string("</style> a/b")], kwargs: [:], env: env)
+        #expect(result == .string("\"</style> a/b\""))
+    }
+
+    @Test("tojson filter does not escape slashes when pretty printed")
+    func tojsonFilterDoesNotEscapeSlashesWhenPrettyPrinted() throws {
+        let result = try Filters.tojson(
+            [.object(["path": .string("a/b")])], kwargs: ["indent": .int(2)], env: env)
+        #expect(result == .string("{\n  \"path\" : \"a/b\"\n}"))
+    }
+
     @Test("tojson filter sorts object keys deterministically")
     func tojsonFilterSortsObjectKeysDeterministically() throws {
         let tool = Value.object([
