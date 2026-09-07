@@ -683,10 +683,12 @@ struct FiltersTests {
         environment.policies.jsonSerializer = .custom { _, _ in
             throw JinjaError.runtime("custom serializer failed")
         }
-        let error = #expect(throws: JinjaError.self) {
-            try Filters.tojson([1], env: environment)
+        do {
+            _ = try Filters.tojson([1], env: environment)
+            Issue.record("Expected custom serializer to throw")
+        } catch JinjaError.runtime(let message) {
+            #expect(message == "custom serializer failed")
         }
-        #expect(error?.errorDescription == "Runtime error: custom serializer failed")
     }
 
     @Test("JSON policy presets apply when rendering templates")
