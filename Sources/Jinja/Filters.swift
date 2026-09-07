@@ -1055,20 +1055,18 @@ public enum Filters {
         return try forceescape(args, kwargs: kwargs, env: env)
     }
 
-    /// Converts value to JSON string.
+    /// Converts value to a JSON string.
     ///
-    /// Slashes are written as `/`, as `json.dumps` writes them;
-    /// Foundation's default `\/` is a JavaScript-embedding safeguard
-    /// that a chat template does not need
-    /// and that puts a backslash into the prompt.
+    /// The output follows the environment's `json.dumps_function`
+    /// and `json.dumps_kwargs` policies (see ``Environment/policies``).
+    /// By default that is Python's `json.dumps` with `ensure_ascii=False`,
+    /// which is what transformers uses to render chat templates.
     ///
     /// - Parameters:
-    ///   - indent: If greater than 0,
-    ///             enables pretty-printed output
-    ///             using Foundation's default indentation (optional).
-    ///   - ensure_ascii: If true (default),
-    ///                   escape non-ASCII characters as `\uXXXX`.
-    ///                   If false, output Unicode characters directly.
+    ///   - indent: Number of spaces to indent nested values by.
+    ///             Overrides the `indent` in `json.dumps_kwargs`.
+    ///   - ensure_ascii: Whether to escape non-ASCII characters as `\uXXXX`.
+    ///                   Overrides the `ensure_ascii` in `json.dumps_kwargs`.
     @Sendable public static func tojson(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -1080,36 +1078,30 @@ public enum Filters {
             args: Array(args.dropFirst()),
             kwargs: kwargs,
             parameters: ["indent", "ensure_ascii"],
-            defaults: ["indent": .null, "ensure_ascii": .boolean(true)]
+            defaults: ["indent": .null, "ensure_ascii": .null]
         )
 
-        let encoder = JSONEncoder()
-        encoder.outputFormatting.insert(.sortedKeys)
-        encoder.outputFormatting.insert(.withoutEscapingSlashes)
-        if let indent = arguments["indent"],
-            case .int(let count) = indent,
-            count > 0
-        {
-            encoder.outputFormatting.insert(.prettyPrinted)
-        }
-
-        let ensureASCII: Bool
-        if let ensureASCIIValue = arguments["ensure_ascii"] {
-            ensureASCII = ensureASCIIValue.isTruthy
-        } else {
-            ensureASCII = true
-        }
-
-        if let jsonData = (try? encoder.encode(value)),
-            let jsonString = String(data: jsonData, encoding: .utf8)
-        {
-            if ensureASCII {
-                return .string(escapeNonASCII(jsonString))
+        var dumpsKwargs: [String: Value] = [:]
+        if case let .object(policy) = env.policies["json.dumps_kwargs"] {
+            for (key, value) in policy {
+                dumpsKwargs[key.stringValue] = value
             }
-            return .string(jsonString)
-        } else {
-            return .string("null")
         }
+        for name in ["indent", "ensure_ascii"] {
+            if let argument = arguments[name], argument != .null {
+                dumpsKwargs[name] = argument
+            }
+        }
+
+        if case let .function(dumps) = env.policies["json.dumps_function"] {
+            let result = try dumps([value], dumpsKwargs, env)
+            guard case .string = result else {
+                throw JinjaError.runtime("json.dumps_function must return a string")
+            }
+            return result
+        }
+
+        return .string(try JSON.dumps(value, options: try JSON.DumpsOptions(kwargs: dumpsKwargs)))
     }
 
     /// Returns absolute value of a number.
@@ -2089,19 +2081,6 @@ private func htmlEscape(_ string: String) -> String {
 ///
 /// - Parameter string: The string to escape.
 /// - Returns: An ASCII-only string with non-ASCII characters escaped.
-private func escapeNonASCII(_ string: String) -> String {
-    var result = ""
-    result.reserveCapacity(string.utf16.count)
-    for codeUnit in string.utf16 {
-        if codeUnit > 127 {
-            result += String(format: "\\u%04x", codeUnit)
-        } else if let scalar = UnicodeScalar(codeUnit) {
-            result.append(Character(scalar))
-        }
-    }
-    return result
-}
-
 /// Returns the value of an attribute on an item.
 ///
 /// Resolves string attribute names through property members,

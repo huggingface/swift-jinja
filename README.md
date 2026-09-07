@@ -342,6 +342,43 @@ let context: [String: Value] = [
 let result = try template.render(context)
 ```
 
+#### JSON output
+
+The `tojson` filter writes JSON the way Python's `json.dumps` does,
+so a chat template renders the same text here as it does in
+[transformers](https://github.com/huggingface/transformers).
+Like transformers, the defaults are `ensure_ascii=False` and `sort_keys=False`:
+non-ASCII characters are kept as they are,
+and object keys stay in insertion order.
+
+```swift
+let template = try Template("{{ tool | tojson }}")
+let tool: Value = ["name": "read", "description": "Use offset/limit — see docs"]
+try template.render(["tool": tool])
+// {"name": "read", "description": "Use offset/limit — see docs"}
+```
+
+You can change this through the environment's `policies`,
+which mirror Jinja2's
+[`json.dumps_function` and `json.dumps_kwargs`](https://jinja.palletsprojects.com/en/stable/api/#policies).
+To get Jinja2's own `tojson` output,
+which sorts keys, escapes non-ASCII characters,
+and writes `<`, `>`, `&`, and `'` as `\u` escapes
+so the result is safe to embed in HTML:
+
+```swift
+let environment = Environment()
+environment.policies["json.dumps_function"] = JSON.htmlSafeDumpsFunction
+environment.policies["json.dumps_kwargs"] = ["sort_keys": true]
+try template.render(["tool": tool], environment: environment)
+```
+
+Any `json.dumps` keyword argument can go in `json.dumps_kwargs`:
+`ensure_ascii`, `sort_keys`, `indent`, and `separators`.
+An `indent` or `ensure_ascii` argument passed to the filter itself
+takes precedence.
+The serializer is also available directly as `JSON.dumps(_:options:)`.
+
 ### Tests
 
 Jinja provides

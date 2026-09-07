@@ -1438,12 +1438,12 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered.contains("\"key\":\"value\""))
+        #expect(rendered.contains("\"key\": \"value\""))
         #expect(rendered.contains("\"test\""))
         #expect(rendered.contains("1"))
         #expect(rendered.contains("true"))
         #expect(rendered.contains("null"))
-        #expect(rendered.contains("[1,2,3]"))
+        #expect(rendered.contains("[1, 2, 3]"))
     }
 
     @Test("Filter statements")
@@ -1913,8 +1913,8 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered.contains(#""string" : "world""#))
-        #expect(rendered.contains(#""number" : 5"#))
+        #expect(rendered.contains(#""string": "world""#))
+        #expect(rendered.contains(#""number": 5"#))
     }
 
     @Test("Filter operator with map")

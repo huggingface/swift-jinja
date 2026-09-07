@@ -588,7 +588,81 @@ struct FiltersTests {
     @Test("tojson filter with array")
     func tojsonFilterWithArray() throws {
         let result = try Filters.tojson([.array([.int(1), .int(2), .int(3)])], kwargs: [:], env: env)
-        #expect(result == .string("[1,2,3]"))
+        #expect(result == .string("[1, 2, 3]"))
+    }
+
+    // MARK: tojson policies
+
+    @Test("tojson filter matches transformers by default")
+    func tojsonFilterMatchesTransformersByDefault() throws {
+        // transformers replaces Jinja2's tojson with
+        // json.dumps(ensure_ascii=False, sort_keys=False):
+        // insertion order, a space after "," and ":", and non-ASCII kept as is.
+        let value: Value = ["path": "</style> a/b — c 🏳️", "z": 1]
+        let result = try Filters.tojson([value], kwargs: [:], env: env)
+        #expect(result == .string(#"{"path": "</style> a/b — c 🏳️", "z": 1}"#))
+    }
+
+    @Test("tojson filter honors json.dumps_kwargs policy")
+    func tojsonFilterHonorsDumpsKwargsPolicy() throws {
+        let env = Environment()
+        env.policies["json.dumps_kwargs"] = ["sort_keys": true]
+        let value: Value = ["z": "—", "a": 1]
+        let result = try Filters.tojson([value], kwargs: [:], env: env)
+        // Jinja2's default policy: sorted keys, and json.dumps' own
+        // ensure_ascii=True default applies.
+        #expect(result == .string("{\"a\": 1, \"z\": \"\\u2014\"}"))
+    }
+
+    @Test("tojson filter arguments override json.dumps_kwargs policy")
+    func tojsonFilterArgumentsOverridePolicy() throws {
+        let env = Environment()
+        env.policies["json.dumps_kwargs"] = ["sort_keys": true, "indent": 4, "ensure_ascii": true]
+        let value: Value = ["b": "—", "a": 1]
+        let result = try Filters.tojson(
+            [value],
+            kwargs: ["indent": 2, "ensure_ascii": false],
+            env: env
+        )
+        #expect(result == .string("{\n  \"a\": 1,\n  \"b\": \"—\"\n}"))
+    }
+
+    @Test("tojson filter honors json.dumps_function policy")
+    func tojsonFilterHonorsDumpsFunctionPolicy() throws {
+        let env = Environment()
+        env.policies["json.dumps_function"] = .function { args, kwargs, _ in
+            let indent = kwargs["indent"] ?? .null
+            return .string("dumped \(args.count) value(s) with indent \(indent)")
+        }
+        let result = try Filters.tojson([.int(1)], kwargs: ["indent": 2], env: env)
+        #expect(result == .string("dumped 1 value(s) with indent 2"))
+    }
+
+    @Test("tojson filter can be made HTML-safe like Jinja2")
+    func tojsonFilterHTMLSafePolicy() throws {
+        let env = Environment()
+        env.policies["json.dumps_function"] = JSON.htmlSafeDumpsFunction
+        let result = try Filters.tojson([.string("<script>")], kwargs: [:], env: env)
+        #expect(result == .string("\"\\u003cscript\\u003e\""))
+    }
+
+    @Test("tojson filter reads policies from parent environments")
+    func tojsonFilterReadsPoliciesFromParent() throws {
+        let parent = Environment()
+        parent.policies["json.dumps_kwargs"] = ["sort_keys": true]
+        let child = Environment(parent: parent)
+        let value: Value = ["b": 1, "a": 2]
+        let result = try Filters.tojson([value], kwargs: [:], env: child)
+        #expect(result == .string(#"{"a": 2, "b": 1}"#))
+    }
+
+    @Test("tojson filter rejects unknown json.dumps_kwargs")
+    func tojsonFilterRejectsUnknownDumpsKwargs() throws {
+        let env = Environment()
+        env.policies["json.dumps_kwargs"] = ["allow_nan": false]
+        #expect(throws: JinjaError.self) {
+            try Filters.tojson([.int(1)], kwargs: [:], env: env)
+        }
     }
 
     @Test("tojson filter does not escape slashes")
@@ -604,11 +678,11 @@ struct FiltersTests {
             kwargs: ["indent": .int(2)],
             env: env
         )
-        #expect(result == .string("{\n  \"path\" : \"a/b\"\n}"))
+        #expect(result == .string("{\n  \"path\": \"a/b\"\n}"))
     }
 
-    @Test("tojson filter sorts object keys deterministically")
-    func tojsonFilterSortsObjectKeysDeterministically() throws {
+    @Test("tojson filter preserves object key order")
+    func tojsonFilterPreservesObjectKeyOrder() throws {
         let tool = Value.object([
             "type": .string("function"),
             "function": .object([
@@ -635,23 +709,17 @@ struct FiltersTests {
         #expect(
             result
                 == .string(
-                    "{\"function\":{\"description\":\"Returns the current temperature in degrees Fahrenheit for the provided USA state\",\"name\":\"state_weather\",\"parameters\":{\"properties\":{\"state\":{\"description\":\"The 2 digit code for the USA state. Example: \\\"CA\\\" for California.\",\"type\":\"string\"}},\"required\":[\"state\"],\"type\":\"object\"}},\"type\":\"function\"}"
+                    "{\"type\": \"function\", \"function\": {\"parameters\": {\"type\": \"object\", \"required\": [\"state\"], \"properties\": {\"state\": {\"type\": \"string\", \"description\": \"The 2 digit code for the USA state. Example: \\\"CA\\\" for California.\"}}}, \"name\": \"state_weather\", \"description\": \"Returns the current temperature in degrees Fahrenheit for the provided USA state\"}}"
                 )
         )
     }
 
-    @Test("tojson filter escapes non-ASCII by default")
-    func tojsonFilterEscapesNonASCIIByDefault() throws {
-        // Chinese characters "你好" should be escaped as \uXXXX by default
+    @Test("tojson filter keeps non-ASCII by default")
+    func tojsonFilterKeepsNonASCIIByDefault() throws {
+        // The default json.dumps_kwargs policy sets ensure_ascii=False,
+        // as transformers does, so "你好" is written as is.
         let result = try Filters.tojson([.string("你好")], kwargs: [:], env: env)
-        if case .string(let str) = result {
-            #expect(str.contains("\\u4f60"))  // 你
-            #expect(str.contains("\\u597d"))  // 好
-            #expect(!str.contains("你"))
-            #expect(!str.contains("好"))
-        } else {
-            Issue.record("Expected string result")
-        }
+        #expect(result == .string("\"你好\""))
     }
 
     @Test("tojson filter with ensure_ascii=true")
@@ -1439,11 +1507,12 @@ struct FiltersTests {
         #expect(result == .string("null"))
     }
 
-    @Test("tojson filter with function falls back to null")
+    @Test("tojson filter rejects a function, like json.dumps")
     func tojsonFilterFunction() throws {
         let fn = Value.function { _, _, _ in .null }
-        let result = try Filters.tojson([fn], kwargs: [:], env: env)
-        #expect(result == .string("null"))
+        #expect(throws: JinjaError.self) {
+            try Filters.tojson([fn], kwargs: [:], env: env)
+        }
     }
 
     @Test("abs filter with no args")
