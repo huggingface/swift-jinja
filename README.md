@@ -342,6 +342,62 @@ let context: [String: Value] = [
 let result = try template.render(context)
 ```
 
+#### JSON output
+
+The `tojson` filter writes JSON the way Python's `json.dumps` does,
+so a chat template renders the same text here as it does in
+[transformers](https://github.com/huggingface/transformers).
+Like transformers, the defaults are `ensure_ascii=False` and `sort_keys=False`:
+non-ASCII characters are kept as they are,
+and object keys stay in insertion order.
+
+```swift
+let template = try Template("{{ tool | tojson }}")
+let tool: Value = ["name": "read", "description": "Use offset/limit — see docs"]
+try template.render(["tool": tool])
+// {"name": "read", "description": "Use offset/limit — see docs"}
+```
+
+The environment's typed `policies` expose the behavior of Jinja2's
+[`json.dumps_function` and `json.dumps_kwargs`](https://jinja.palletsprojects.com/en/stable/api/#policies)
+through `JSON.Serializer` and `JSON.DumpsOptions`.
+Use the `.jinja2` preset for sorted keys, escaped non-ASCII characters,
+and HTML-safe escaping of `<`, `>`, `&`, and `'`:
+
+```swift
+let environment = Environment()
+environment.policies = .jinja2
+try template.render(["tool": tool], environment: environment)
+```
+
+The default preset is `.transformers`.
+You can customize either preset with typed options:
+
+```swift
+environment.policies = .transformers
+environment.policies.jsonDumpsOptions.sortKeys = true
+environment.policies.jsonDumpsOptions.indent = 2
+environment.policies.jsonDumpsOptions.separators = (item: ",", key: ": ")
+environment.policies.jsonSerializer = .htmlSafe
+```
+
+`JSON.Serializer` supports `.standard`, `.htmlSafe`,
+and `.custom` with a `@Sendable (Value, JSON.DumpsOptions) throws -> String` closure.
+Custom serializers receive the resolved options, including template overrides:
+
+```swift
+environment.policies.jsonSerializer = .custom { value, options in
+    try JSON.dumps(value, options: options)
+}
+```
+
+The `tojson` filter's non-null `indent` and `ensure_ascii` arguments
+override the policy options for that call without changing the environment.
+An indentation of zero or less inserts newlines without leading spaces.
+Policies are inherited from the parent environment until a child changes a policy,
+which copies all inherited settings into that child.
+The serializer is also available directly as `JSON.dumps(_:options:)`.
+
 ### Tests
 
 Jinja provides
