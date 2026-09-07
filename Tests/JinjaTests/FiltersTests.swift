@@ -600,7 +600,10 @@ struct FiltersTests {
     @Test("tojson filter does not escape slashes when pretty printed")
     func tojsonFilterDoesNotEscapeSlashesWhenPrettyPrinted() throws {
         let result = try Filters.tojson(
-            [.object(["path": .string("a/b")])], kwargs: ["indent": .int(2)], env: env)
+            [.object(["path": .string("a/b")])],
+            kwargs: ["indent": .int(2)],
+            env: env
+        )
         #expect(result == .string("{\n  \"path\" : \"a/b\"\n}"))
     }
 
