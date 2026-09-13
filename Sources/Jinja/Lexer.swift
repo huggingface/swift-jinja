@@ -112,6 +112,15 @@ public enum Lexer: Sendable {
 
         // Handle whitespace control
 
+        // 0. Comments with whitespace control (`{#-`, `-#}`). A comment renders nothing, so a dashed
+        // comment is removed outright together with the whitespace its dash controls. Removing it,
+        // rather than rewriting `{#-` to `{#`, also avoids merging a preceding literal '{' into a
+        // delimiter: "{\n{#- x #}z" becomes "{z", exactly as jinja2 renders it.
+        // The comment body may not contain "#}", so a match never runs past the comment's own end.
+        result = result.replacing(#/\s*\{#-(?:(?!#\})[\s\S])*?-#\}\s*/#, with: "")
+        result = result.replacing(#/\s*\{#-(?:(?!#\})[\s\S])*?#\}/#, with: "")
+        result = result.replacing(#/\{#(?:(?!#\})[\s\S])*?-#\}\s*/#, with: "")
+
         // Note: We must avoid merging a literal '{' with the delimiter.
         // For example, "{<newline>{%-" should become "{ {%" not "{{%" (which would be parsed as "{{" + "%").
         // Since Swift Regex doesn't support lookbehind
