@@ -121,6 +121,7 @@ public enum Lexer: Sendable {
         // 1. Handle closing delimiters (these don't have the merging issue)
         result = result.replacing(#/-%}\s*/#, with: "%}")
         result = result.replacing(#/-}}\s*/#, with: "}}")
+        result = result.replacing(#/-#}\s*/#, with: "#}")
 
         // 2. For opening delimiters, we need to be careful about preceding '{'
         // When preceded by '{', we keep a single space to prevent token merging.
@@ -139,6 +140,16 @@ public enum Lexer: Sendable {
             "\(match.1){{"
         }
         result = result.replacing(#/^\s*\{\{-/#, with: "{{")
+
+        // Handle {#- the same way.
+        // Comments render nothing,
+        // so the kept space becomes literal output after a '{',
+        // the same deviation from jinja2 as for statements and expressions.
+        result = result.replacing(#/\{\s+\{#-/#, with: "{ {#")
+        result = result.replacing(#/([^\{])\s*\{#-/#) { match in
+            "\(match.1){#"
+        }
+        result = result.replacing(#/^\s*\{#-/#, with: "{#")
 
         return result
     }

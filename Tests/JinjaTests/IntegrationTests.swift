@@ -722,8 +722,11 @@ struct IntegrationTests {
         context["add_generation_prompt"] = .boolean(false)
 
         let result = try template.render(context)
+        // No newline after <bos>:
+        // the template's `{#- ... -#}` comments strip it,
+        // matching jinja2 3.1.6.
         let expected =
-            "<bos>\n<|turn>user\nHello, how are you?<turn|>\n<|turn>model\nI'm doing great. How can I help you today?<turn|>\n<|turn>user\nI'd like to show off how chat templating works!<turn|>\n"
+            "<bos><|turn>user\nHello, how are you?<turn|>\n<|turn>model\nI'm doing great. How can I help you today?<turn|>\n<|turn>user\nI'd like to show off how chat templating works!<turn|>\n"
         #expect(result == expected)
     }
 
