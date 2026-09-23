@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: ["main"]
 
+permissions: {}
+
 jobs:
   build:
+    permissions:
+      contents: read
     name: Swift ${{ matrix.swift }} on Xcode ${{ matrix.xcode }}
     runs-on: ${{ matrix.runs-on }}
     env:
