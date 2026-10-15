@@ -52,7 +52,8 @@ public enum Lexer: Sendable {
                 from: preprocessed,
                 at: position,
                 inTag: inTag,
-                curlyBracketDepth: curlyBracketDepth
+                curlyBracketDepth: curlyBracketDepth,
+                afterDot: tokens.last?.kind == .dot
             )
 
             switch token.kind {
@@ -147,7 +148,8 @@ public enum Lexer: Sendable {
         from source: String,
         at position: String.Index,
         inTag: Bool,
-        curlyBracketDepth: Int = 0
+        curlyBracketDepth: Int = 0,
+        afterDot: Bool = false
     ) throws -> (Token, String.Index) {
         guard position < source.endIndex else {
             let charPosition = source.distance(from: source.startIndex, to: position)
@@ -325,7 +327,7 @@ public enum Lexer: Sendable {
 
         // Numbers
         if char.isNumber {
-            return extractNumberToken(from: source, at: position)
+            return extractNumberToken(from: source, at: position, allowDecimalPoint: !afterDot)
         }
 
         // Identifiers and keywords
@@ -420,7 +422,8 @@ public enum Lexer: Sendable {
 
     private static func extractNumberToken(
         from source: String,
-        at position: String.Index
+        at position: String.Index,
+        allowDecimalPoint: Bool = true
     ) -> (Token, String.Index) {
         var pos = position
         var hasDot = false
@@ -430,7 +433,7 @@ public enum Lexer: Sendable {
             let char = source[pos]
             if char.isNumber {
                 pos = source.index(after: pos)
-            } else if char == "." && !hasDot {
+            } else if char == "." && allowDecimalPoint && !hasDot {
                 hasDot = true
                 pos = source.index(after: pos)
             } else {

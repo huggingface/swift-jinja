@@ -519,8 +519,33 @@ public struct Parser: Sendable {
 
         while true {
             if match(.dot) {
-                let name = try consumeIdentifier()
-                expr = .member(expr, .identifier(name), computed: false)
+                if check(.number) {
+                    let token = advance()
+                    let raw = String(token.value)
+                    guard raw.utf8.allSatisfy({ (48 ... 57).contains($0) }),
+                        raw.first != "0" || raw.allSatisfy({ $0 == "0" }),
+                        let index = Int(raw)
+                    else {
+                        throw JinjaError.parser("Expected a representable integer after '.'.")
+                    }
+                    // An integer attribute must end at a postfix, operator or
+                    // expression boundary. Do not let parseConcat reinterpret
+                    // a suffix such as .0foo or .1e2 as a second expression.
+                    // Postfix calls/subscripts and keyword operators remain
+                    // valid, including when whitespace separates the tokens.
+                    switch peek().kind {
+                    case .identifier, .number, .string, .boolean, .null, .openBrace:
+                        throw JinjaError.parser("Expected a boundary after integer attribute.")
+                    default:
+                        break
+                    }
+                    // Jinja's numeric dot lookup is integer item access, not
+                    // an identifier or a string key. Reuse bracket indexing.
+                    expr = .member(expr, .integer(index), computed: true)
+                } else {
+                    let name = try consumeIdentifier()
+                    expr = .member(expr, .identifier(name), computed: false)
+                }
             } else if match(.openBracket) {
                 // Slice or subscript
                 let start = try? parseExpression()
