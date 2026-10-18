@@ -63,3 +63,37 @@ internal func resolveCallArguments(
 
     return resolvedArgs
 }
+
+/// Returns the value of an `Int` operation, or throws if the operation overflowed.
+///
+/// Python integers have arbitrary precision, so Jinja2 doesn't overflow.
+/// swift-jinja has no arbitrary-precision integers,
+/// so it throws instead of trapping.
+///
+/// - Parameters:
+///   - result: The result of an operation such as `addingReportingOverflow(_:)`.
+///   - expression: A description of the operation for the error message.
+/// - Returns: The result of the operation.
+/// - Throws: `JinjaError.runtime` if the operation overflowed.
+internal func checkedInt(
+    _ result: (partialValue: Int, overflow: Bool),
+    _ expression: @autoclosure () -> String
+) throws -> Int {
+    guard !result.overflow else {
+        throw JinjaError.runtime("Integer overflow in \(expression())")
+    }
+    return result.partialValue
+}
+
+/// Converts a double to an integer, rounding toward zero as Python's `int()` does.
+///
+/// - Parameter value: The double to convert.
+/// - Returns: The integer part of the double.
+/// - Throws: `JinjaError.runtime` if the double is infinite, NaN,
+///   or outside the range of `Int`.
+internal func truncatedInt(_ value: Double) throws -> Int {
+    guard let int = Int(exactly: value.rounded(.towardZero)) else {
+        throw JinjaError.runtime("Cannot convert \(value) to an integer")
+    }
+    return int
+}

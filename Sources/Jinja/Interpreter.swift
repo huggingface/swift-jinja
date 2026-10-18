@@ -16,6 +16,11 @@ public final class Environment: @unchecked Sendable {
     private let parent: Environment?
     private(set) var variables: [String: Value] = [:]
 
+    /// The number of macro and `caller` invocations in progress
+    /// when this environment was created.
+    /// A child environment starts with the depth of its parent.
+    var callDepth: Int
+
     // Options
 
     /// Whether leading spaces and tabs are stripped from the start of a line to a block.
@@ -85,6 +90,7 @@ public final class Environment: @unchecked Sendable {
     ) {
         self.parent = parent
         self.variables = initial
+        self.callDepth = parent?.callDepth ?? 0
 
         if parent == nil {
             // Only add built-ins to the root environment to avoid duplication
@@ -508,8 +514,9 @@ public enum Interpreter {
             let callableValue = try evaluateExpression(callable, env: env)
 
             let callTimeEnv = Environment(parent: env)
-            callTimeEnv["caller"] = .function { callerArgs, _, _ in
+            callTimeEnv["caller"] = .function { callerArgs, _, callerEnv in
                 let bodyEnv = Environment(parent: env)
+                bodyEnv.callDepth = try nextCallDepth(after: callerEnv)
                 for (paramName, value) in zip(callerParameters ?? [], callerArgs) {
                     guard case let .identifier(paramName) = paramName else {
                         throw JinjaError.runtime("Caller parameter must be an identifier")
@@ -665,6 +672,35 @@ public enum Interpreter {
         )
     }
 
+    /// The maximum number of nested macro and `caller` invocations.
+    ///
+    /// Swift can't recover from a stack overflow, so a template that recurses without end
+    /// would crash the process, where Jinja2 raises `RecursionError`.
+    /// The stack that each nested call takes grows with how deeply the macro body nests blocks.
+    /// Measured on a thread with a 512 KB stack in a release build on arm64,
+    /// a call takes about 3 KB for `{{ r() }}`,
+    /// 6 KB for `{% if n %}{{ r(n - 1) }}{% endif %}`,
+    /// and 19 KB for the type macro of the Hermes 3 tool-use template,
+    /// which recurses from an `elif` branch inside a `for` loop.
+    /// At 20 calls, that macro used 377 KB of the 512 KB,
+    /// so 16 calls take about 300 KB,
+    /// which leaves room for the frames of the code that renders the template.
+    /// 32 calls of that macro would overflow a 512 KB stack.
+    /// Debug builds take about 2.7 times as much stack per call.
+    /// Jinja2 has no limit of its own;
+    /// it allows about 250 nested macro calls under Python's default recursion limit.
+    static let maximumCallDepth = 16
+
+    /// Returns the call depth for an invocation from the given environment.
+    ///
+    /// - Throws: `JinjaError.runtime` if the invocation would exceed ``maximumCallDepth``.
+    static func nextCallDepth(after env: Environment) throws -> Int {
+        guard env.callDepth < maximumCallDepth else {
+            throw JinjaError.runtime("Maximum recursion depth of \(maximumCallDepth) exceeded")
+        }
+        return env.callDepth + 1
+    }
+
     static func callMacro(
         macro: Macro,
         arguments: [Value],
@@ -672,6 +708,7 @@ public enum Interpreter {
         env: Environment
     ) throws -> Value {
         let macroEnv = Environment(parent: env)
+        macroEnv.callDepth = try nextCallDepth(after: env)
 
         let caller = env["caller"]
         if caller != .undefined {
@@ -758,7 +795,7 @@ public enum Interpreter {
             case let .double(n):
                 return .double(-n)
             case let .int(i):
-                return .int(-i)
+                return .int(try checkedInt(Int(0).subtractingReportingOverflow(i), "-(\(i))"))
             default:
                 throw JinjaError.runtime("Cannot negate non-numeric value")
             }

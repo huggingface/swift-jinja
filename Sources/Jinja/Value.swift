@@ -221,7 +221,7 @@ public enum Value: Sendable {
     public func add(with other: Value) throws -> Value {
         switch (self, other) {
         case let (.int(a), .int(b)):
-            return .int(a + b)
+            return .int(try checkedInt(a.addingReportingOverflow(b), "\(a) + \(b)"))
         case let (.double(a), .double(b)):
             return .double(a + b)
         case let (.int(a), .double(b)):
@@ -267,7 +267,7 @@ public enum Value: Sendable {
     public func subtract(by other: Value) throws -> Value {
         switch (self, other) {
         case let (.int(a), .int(b)):
-            return .int(a - b)
+            return .int(try checkedInt(a.subtractingReportingOverflow(b), "\(a) - \(b)"))
         case let (.double(a), .double(b)):
             return .double(a - b)
         case let (.int(a), .double(b)):
@@ -286,17 +286,18 @@ public enum Value: Sendable {
     public func multiply(by other: Value) throws -> Value {
         switch (self, other) {
         case let (.int(a), .int(b)):
-            return .int(a * b)
+            return .int(try checkedInt(a.multipliedReportingOverflow(by: b), "\(a) * \(b)"))
         case let (.double(a), .double(b)):
             return .double(a * b)
         case let (.int(a), .double(b)):
             return .double(Double(a) * b)
         case let (.double(a), .int(b)):
             return .double(a * Double(b))
+        // Python repeats a string zero times for a negative count.
         case let (.string(s), .int(n)):
-            return .string(String(repeating: s, count: n))
+            return .string(String(repeating: s, count: Swift.max(0, n)))
         case let (.int(n), .string(s)):
-            return .string(String(repeating: s, count: n))
+            return .string(String(repeating: s, count: Swift.max(0, n)))
         default:
             throw JinjaError.runtime("Cannot multiply values of these types (\(self) and \(other))")
         }
@@ -333,7 +334,8 @@ public enum Value: Sendable {
         switch (self, other) {
         case let (.int(a), .int(b)):
             guard b != 0 else { throw JinjaError.runtime("Modulo by zero") }
-            return .int(a % b)
+            // `Int.min % -1` overflows in Swift; the remainder is 0.
+            return .int(a.remainderReportingOverflow(dividingBy: b).partialValue)
         default:
             throw JinjaError.runtime("Modulo operation requires integers (\(self) and \(other))")
         }
@@ -347,16 +349,17 @@ public enum Value: Sendable {
         switch (self, other) {
         case let (.int(a), .int(b)):
             guard b != 0 else { throw JinjaError.runtime("Division by zero") }
-            return .int(a / b)  // Integer division in Swift already floors
+            // Integer division in Swift already floors
+            return .int(try checkedInt(a.dividedReportingOverflow(by: b), "\(a) // \(b)"))
         case let (.double(a), .double(b)):
             guard b != 0 else { throw JinjaError.runtime("Division by zero") }
-            return .int(Int(floor(a / b)))
+            return .int(try truncatedInt(floor(a / b)))
         case let (.int(a), .double(b)):
             guard b != 0 else { throw JinjaError.runtime("Division by zero") }
-            return .int(Int(floor(Double(a) / b)))
+            return .int(try truncatedInt(floor(Double(a) / b)))
         case let (.double(a), .int(b)):
             guard b != 0 else { throw JinjaError.runtime("Division by zero") }
-            return .int(Int(floor(a / Double(b))))
+            return .int(try truncatedInt(floor(a / Double(b))))
         default:
             throw JinjaError.runtime(
                 "Cannot floor divide non-numeric values (\(self) and \(other))"
@@ -374,7 +377,20 @@ public enum Value: Sendable {
             guard b >= 0 else {
                 return .double(pow(Double(a), Double(b)))
             }
-            return .int(Int(pow(Double(a), Double(b))))
+            // Exponentiation by squaring, which is exact where `pow` on doubles is not.
+            var result = 1
+            var base = a
+            var exponent = b
+            while exponent > 0 {
+                if exponent & 1 == 1 {
+                    result = try checkedInt(result.multipliedReportingOverflow(by: base), "\(a) ** \(b)")
+                }
+                exponent >>= 1
+                if exponent > 0 {
+                    base = try checkedInt(base.multipliedReportingOverflow(by: base), "\(a) ** \(b)")
+                }
+            }
+            return .int(result)
         case let (.double(a), .double(b)):
             return .double(pow(a, b))
         case let (.int(a), .double(b)):
