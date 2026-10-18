@@ -214,6 +214,46 @@ public enum PropertyMembers {
                 }
                 return .boolean(str.hasSuffix(suffix))
             }
+        case "format":
+            return .function { args, kwargs, _ in
+                let result = try pythonFormat(string: str, args: args, kwargs: kwargs)
+                return .string(result)
+            }
+        case "join":
+            return .function { args, kwargs, _ in
+                guard kwargs.isEmpty else {
+                    throw JinjaError.runtime("join() takes no keyword arguments")
+                }
+                guard args.count == 1 else {
+                    throw JinjaError.runtime(
+                        "join() takes exactly one argument (\(args.count) given)"
+                    )
+                }
+
+                let items: [Value]
+                switch args[0] {
+                case let .array(array):
+                    items = array
+                case let .string(string):
+                    items = string.unicodeScalars.map { .string(String($0)) }
+                case let .object(object):
+                    items = object.keys.map(Value.init)
+                case .undefined:
+                    items = []
+                default:
+                    throw JinjaError.runtime("join() can only join an iterable")
+                }
+
+                let strings = try items.enumerated().map { index, item in
+                    guard case let .string(string) = item else {
+                        throw JinjaError.runtime(
+                            "join() sequence item \(index): expected a string"
+                        )
+                    }
+                    return string
+                }
+                return .string(strings.joined(separator: str))
+            }
         default:
             return .undefined
         }
@@ -315,6 +355,237 @@ private func split(string: String, separator: String?, limit: Int?) -> [String] 
         // Split on whitespace
         return string.split(separator: " ").map(String.init)
     }
+}
+
+/// Formats a string the way Python's `str.format` does.
+///
+/// Supports automatic (`{}`), positional (`{0}`), and keyword (`{name}`) fields,
+/// the `!s` and `!r` conversions, and the `{{` and `}}` escapes.
+/// Throws for format specs, other conversions, and attribute or item access in fields,
+/// rather than rendering them differently from Python.
+/// - Parameters:
+///   - string: The format string
+///   - args: The positional arguments
+///   - kwargs: The keyword arguments
+/// - Returns: The formatted string
+private func pythonFormat(string: String, args: [Value], kwargs: [String: Value]) throws -> String {
+    let scalars = Array(string.unicodeScalars)
+    var result = String.UnicodeScalarView()
+    var automaticIndex = 0
+    var usesAutomaticNumbering = false
+    var usesManualNumbering = false
+    var index = 0
+
+    while index < scalars.count {
+        let scalar = scalars[index]
+        let next = index + 1 < scalars.count ? scalars[index + 1] : nil
+
+        if scalar == "}" {
+            guard next == "}" else {
+                throw JinjaError.runtime("Single '}' encountered in format string")
+            }
+            result.append("}")
+            index += 2
+            continue
+        }
+        guard scalar == "{" else {
+            result.append(scalar)
+            index += 1
+            continue
+        }
+        if next == "{" {
+            result.append("{")
+            index += 2
+            continue
+        }
+
+        // Find the closing brace, allowing for nested fields in a format spec.
+        var end = index + 1
+        var depth = 1
+        while end < scalars.count {
+            if scalars[end] == "{" {
+                depth += 1
+            } else if scalars[end] == "}" {
+                depth -= 1
+                if depth == 0 { break }
+            }
+            end += 1
+        }
+        guard end < scalars.count else {
+            throw JinjaError.runtime("expected '}' before end of string")
+        }
+        let field = String(String.UnicodeScalarView(scalars[(index + 1) ..< end]))
+        index = end + 1
+
+        // Split the field into its name, conversion, and format spec.
+        let nameEnd = field.firstIndex { $0 == "!" || $0 == ":" } ?? field.endIndex
+        let name = field[..<nameEnd]
+        guard !name.contains("."), !name.contains("[") else {
+            throw JinjaError.runtime(
+                "format() doesn't support attribute or item access in field '{\(field)}'"
+            )
+        }
+        var conversion: Character?
+        var rest = field[nameEnd...]
+        if rest.first == "!" {
+            rest = rest.dropFirst()
+            guard let character = rest.first else {
+                throw JinjaError.runtime("format() field '{\(field)}' is missing a conversion")
+            }
+            conversion = character
+            rest = rest.dropFirst()
+            guard rest.isEmpty || rest.first == ":" else {
+                throw JinjaError.runtime("expected ':' after conversion specifier")
+            }
+        }
+        let spec = rest.dropFirst()
+        guard spec.isEmpty else {
+            throw JinjaError.runtime("format() doesn't support the format spec ':\(spec)'")
+        }
+
+        // Look up the value for the field.
+        let value: Value
+        if name.isEmpty {
+            guard !usesManualNumbering else {
+                throw JinjaError.runtime(
+                    "cannot switch from manual field specification to automatic field numbering"
+                )
+            }
+            usesAutomaticNumbering = true
+            guard automaticIndex < args.count else {
+                throw JinjaError.runtime(
+                    "Replacement index \(automaticIndex) out of range for positional args tuple"
+                )
+            }
+            value = args[automaticIndex]
+            automaticIndex += 1
+        } else if name.allSatisfy({ $0.isASCII && $0.isNumber }) {
+            guard !usesAutomaticNumbering else {
+                throw JinjaError.runtime(
+                    "cannot switch from automatic field numbering to manual field specification"
+                )
+            }
+            usesManualNumbering = true
+            guard let position = Int(name), position < args.count else {
+                throw JinjaError.runtime(
+                    "Replacement index \(name) out of range for positional args tuple"
+                )
+            }
+            value = args[position]
+        } else {
+            guard let keywordValue = kwargs[String(name)] else {
+                throw JinjaError.runtime("format() is missing keyword argument '\(name)'")
+            }
+            value = keywordValue
+        }
+
+        switch conversion {
+        case nil, "s":
+            result.append(contentsOf: try pythonStr(value).unicodeScalars)
+        case "r":
+            result.append(contentsOf: try pythonRepr(value).unicodeScalars)
+        case let conversion?:
+            throw JinjaError.runtime("format() doesn't support the conversion '!\(conversion)'")
+        }
+    }
+
+    return String(result)
+}
+
+/// Returns the string form of a value as Python's `str()` gives it.
+///
+/// An undefined value is an empty string, as in Jinja2.
+/// - Parameter value: The value to convert
+/// - Returns: The string form of the value
+private func pythonStr(_ value: Value) throws -> String {
+    switch value {
+    case let .string(string):
+        return string
+    case .undefined:
+        return ""
+    default:
+        return try pythonRepr(value)
+    }
+}
+
+/// Returns the representation of a value as Python's `repr()` gives it.
+/// - Parameter value: The value to represent
+/// - Returns: The representation of the value
+private func pythonRepr(_ value: Value) throws -> String {
+    switch value {
+    case let .string(string):
+        return pythonRepr(string)
+    case let .int(int):
+        return String(int)
+    case let .double(double):
+        if double.isNaN { return "nan" }
+        if double.isInfinite { return double < 0 ? "-inf" : "inf" }
+        return JSON.pythonRepr(double)
+    case let .boolean(flag):
+        return flag ? "True" : "False"
+    case .null:
+        return "None"
+    case .undefined:
+        return "Undefined"
+    case let .array(array):
+        let elements = try array.map { try pythonRepr($0) }
+        return "[\(elements.joined(separator: ", "))]"
+    case let .object(object):
+        let pairs = try object.map { key, value in
+            let keyRepr: String
+            switch key {
+            case let .string(string): keyRepr = pythonRepr(string)
+            case let .int(int): keyRepr = String(int)
+            }
+            return "\(keyRepr): \(try pythonRepr(value))"
+        }
+        return "{\(pairs.joined(separator: ", "))}"
+    case let .macro(macro):
+        return "<Macro \(pythonRepr(macro.name))>"
+    case .function:
+        throw JinjaError.runtime("format() can't convert a function to a string")
+    }
+}
+
+/// Returns the representation of a string as Python's `repr()` gives it.
+///
+/// Uses single quotes unless the string contains a single quote and no double quote,
+/// and escapes backslashes, the quote, and characters that Python doesn't print.
+/// - Parameter string: The string to represent
+/// - Returns: The quoted and escaped string
+private func pythonRepr(_ string: String) -> String {
+    let quote: Unicode.Scalar = string.contains("'") && !string.contains("\"") ? "\"" : "'"
+    var result = String(quote)
+    for scalar in string.unicodeScalars {
+        switch scalar {
+        case quote, "\\":
+            result += "\\\(scalar)"
+        case "\t":
+            result += "\\t"
+        case "\n":
+            result += "\\n"
+        case "\r":
+            result += "\\r"
+        case " ":
+            result.unicodeScalars.append(scalar)
+        default:
+            switch scalar.properties.generalCategory {
+            case .control, .format, .surrogate, .privateUse, .unassigned,
+                .lineSeparator, .paragraphSeparator, .spaceSeparator:
+                if scalar.value <= 0xFF {
+                    result += String(format: "\\x%02x", scalar.value)
+                } else if scalar.value <= 0xFFFF {
+                    result += String(format: "\\u%04x", scalar.value)
+                } else {
+                    result += String(format: "\\U%08x", scalar.value)
+                }
+            default:
+                result.unicodeScalars.append(scalar)
+            }
+        }
+    }
+    result.unicodeScalars.append(quote)
+    return result
 }
 
 /// Replaces occurrences of old string with new string, optionally limiting replacements.
