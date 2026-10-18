@@ -204,7 +204,7 @@ extension JSON {
     /// the shortest digits that round-trip,
     /// positional for exponents from -4 up to 15,
     /// and exponential with a signed two-digit exponent otherwise.
-    private static func pythonRepr(_ number: Double) -> String {
+    static func pythonRepr(_ number: Double) -> String {
         if number.isNaN { return "NaN" }
         if number.isInfinite { return number < 0 ? "-Infinity" : "Infinity" }
         if number == 0 { return number.sign == .minus ? "-0.0" : "0.0" }
