@@ -1199,8 +1199,8 @@ struct TemplateTests {
         }
     }
 
-    // Jinja2 reads these as `foo[1]`, `foo[10]`, and an out-of-range index,
-    // but this package has no hexadecimal, underscored, or arbitrary-precision integers,
+    // Jinja2 reads these as `foo[1]`, `foo[10]`, and `foo[99999999999999999999]`,
+    // but this package has no hexadecimal, underscore-separated, or arbitrary-precision integers,
     // so these throw instead of reading a different item.
     @Test(
         "Unsupported integer attributes",
