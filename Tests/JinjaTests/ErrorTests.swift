@@ -44,6 +44,10 @@ struct ErrorTests {
                 "{{ name",
                 "Parser error: Expected '}}' after expression. Got end of input instead."
             ),
+            (
+                "{{ {[1]: 2} }}",
+                "Parser error: Expected string literal, identifier, or integer for object key. Got '[' (openBracket) instead."
+            ),
         ]
     )
     func parserErrorNamesUnexpectedToken(source: String, description: String) {
