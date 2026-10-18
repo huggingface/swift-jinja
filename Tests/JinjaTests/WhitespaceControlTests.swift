@@ -150,6 +150,21 @@ struct WhitespaceControlTests {
         ),
     ]
 
+    @Test("Dashes are part of the delimiter tokens")
+    func dashedDelimiterTokens() throws {
+        let tokens = try Lexer.tokenize("a \n{{- x -}}\n b")
+        #expect(
+            tokens == [
+                Token(kind: .text, value: "a", position: 0),
+                Token(kind: .openExpression, value: "{{-", position: 3),
+                Token(kind: .identifier, value: "x", position: 7),
+                Token(kind: .closeExpression, value: "-}}", position: 9),
+                Token(kind: .text, value: "b", position: 14),
+                Token(kind: .eof, value: "", position: 15),
+            ]
+        )
+    }
+
     @Test(arguments: cases)
     func matchesJinja2WithDefaultOptions(_ c: Case) throws {
         let rendered = try Template(c.template).render([:])
