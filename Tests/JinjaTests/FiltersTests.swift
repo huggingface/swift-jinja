@@ -677,6 +677,92 @@ struct FiltersTests {
         )
     }
 
+    // Expected values are Jinja2 3.1.6 output with transformers' tojson,
+    // json.dumps(x, ensure_ascii=False, indent=None, separators=None, sort_keys=False).
+
+    @Test("tojson filter accepts separators as a tuple or list")
+    func tojsonFilterSeparators() throws {
+        let context: Context = ["x": ["b": 1, "a": [1, ["d": nil, "c": "é"]]]]
+        let compact = #"{"b":1,"a":[1,{"d":null,"c":"é"}]}"#
+        for source in [
+            "{{ x | tojson(separators=(',', ':')) }}",
+            "{{ x | tojson(separators=[',', ':']) }}",
+        ] {
+            #expect(try Template(source).render(context) == compact)
+        }
+        #expect(
+            try Template("{{ x | tojson(separators=(';', '=')) }}").render(context)
+                == #"{"b"=1;"a"=[1;{"d"=null;"c"="é"}]}"#
+        )
+        #expect(
+            try Template("{{ x | tojson(separators=none) }}").render(context)
+                == #"{"b": 1, "a": [1, {"d": null, "c": "é"}]}"#
+        )
+    }
+
+    @Test("tojson filter separators apply with indentation")
+    func tojsonFilterSeparatorsWithIndent() throws {
+        let context: Context = ["x": ["b": 1, "a": [1]]]
+        #expect(
+            try Template("{{ x | tojson(indent=2, separators=(',', ':')) }}").render(context)
+                == "{\n  \"b\":1,\n  \"a\":[\n    1\n  ]\n}"
+        )
+        #expect(
+            try Template("{{ x | tojson(indent=2, separators=(', ', ': ')) }}").render(context)
+                == "{\n  \"b\": 1, \n  \"a\": [\n    1\n  ]\n}"
+        )
+    }
+
+    @Test("tojson filter rejects separators that are not a pair of strings")
+    func tojsonFilterRejectsInvalidSeparators() throws {
+        for source in [
+            "{{ 1 | tojson(separators=(',',)) }}",
+            "{{ 1 | tojson(separators=(',', ':', ';')) }}",
+            "{{ 1 | tojson(separators=(1, 2)) }}",
+            "{{ 1 | tojson(separators=1) }}",
+            "{{ 1 | tojson(separators=missing) }}",
+        ] {
+            #expect(throws: JinjaError.self, "\(source)") {
+                try Template(source).render([:])
+            }
+        }
+    }
+
+    @Test("tojson filter accepts sort_keys")
+    func tojsonFilterSortKeys() throws {
+        let context: Context = ["x": ["b": 1, "a": [1, ["d": nil, "c": "é"]]]]
+        let sorted = #"{"a": [1, {"c": "é", "d": null}], "b": 1}"#
+        let unsorted = #"{"b": 1, "a": [1, {"d": null, "c": "é"}]}"#
+        #expect(try Template("{{ x | tojson(sort_keys=true) }}").render(context) == sorted)
+        #expect(try Template("{{ x | tojson(sort_keys=1) }}").render(context) == sorted)
+        #expect(try Template("{{ x | tojson(sort_keys=false) }}").render(context) == unsorted)
+        #expect(try Template("{{ x | tojson(sort_keys=none) }}").render(context) == unsorted)
+        #expect(
+            try Template(
+                "{{ x | tojson(sort_keys=true, separators=(',', ':'), ensure_ascii=true) }}"
+            ).render(context) == #"{"a":[1,{"c":"\u00e9","d":null}],"b":1}"#
+        )
+    }
+
+    @Test("tojson filter separators and sort_keys override json.dumps_kwargs policy")
+    func tojsonFilterSeparatorsAndSortKeysOverridePolicy() throws {
+        let env = Environment()
+        env.policies.jsonDumpsOptions = .init(sortKeys: true, separators: (item: ",", key: ":"))
+        let value: Value = ["b": 1, "a": 2]
+        #expect(try Filters.tojson([value], kwargs: [:], env: env) == .string(#"{"a":2,"b":1}"#))
+        #expect(
+            try Filters.tojson([value], kwargs: ["separators": .null, "sort_keys": .null], env: env)
+                == .string(#"{"a":2,"b":1}"#)
+        )
+        #expect(
+            try Filters.tojson(
+                [value],
+                kwargs: ["separators": [", ", ": "], "sort_keys": false],
+                env: env
+            ) == .string(#"{"b": 1, "a": 2}"#)
+        )
+    }
+
     @Test("tojson filter propagates custom serializer errors")
     func tojsonFilterCustomError() throws {
         let environment = Environment()
