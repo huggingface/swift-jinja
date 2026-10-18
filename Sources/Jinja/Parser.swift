@@ -519,8 +519,16 @@ public struct Parser: Sendable {
 
         while true {
             if match(.dot) {
-                let name = try consumeIdentifier()
-                expr = .member(expr, .identifier(name), computed: false)
+                if check(.number) {
+                    // As in Jinja2, `foo.0` is `foo[0]`.
+                    let index = try consumeIntegerAttribute()
+                    expr = .member(expr, .integer(index), computed: true)
+                } else if check(anyOf: Token.Kind.allowedAsIdentifier) {
+                    let name = try consumeIdentifier()
+                    expr = .member(expr, .identifier(name), computed: false)
+                } else {
+                    throw JinjaError.parser("Expected identifier or integer after '.' but found \(peek().kind).")
+                }
             } else if match(.openBracket) {
                 // Slice or subscript
                 let start = try check(.colon) || check(.closeBracket) ? nil : parseExpression()
@@ -606,13 +614,13 @@ public struct Parser: Sendable {
                         )
                         guard !keyToken.value.contains(".") else {
                             throw JinjaError.parser(
-                                "Expected integer for numeric object key. Got \(keyToken.value) instead"
+                                "Expected integer for numeric object key. Got \(describe(keyToken)) instead."
                             )
                         }
                         key = .int(try parseIntegerLiteral(keyToken))
                     } else {
                         throw JinjaError.parser(
-                            "Expected string literal, identifier, or integer for object key. Got \(peek().kind) instead"
+                            "Expected string literal, identifier, or integer for object key. Got \(describe(peek())) instead."
                         )
                     }
                     try consume(.colon, message: "Expected ':' after object key.")
@@ -760,7 +768,12 @@ public struct Parser: Sendable {
     @discardableResult
     private mutating func consume(_ kind: Token.Kind, message: String) throws -> Token {
         if check(kind) { return advance() }
-        throw JinjaError.parser("\(message). Got \(peek().kind) instead")
+        throw JinjaError.parser("\(message) Got \(describe(peek())) instead.")
+    }
+
+    /// Describes a token for an error message, such as `'none' (null)`.
+    private func describe(_ token: Token) -> String {
+        token.kind == .eof ? "end of input" : "'\(token.value)' (\(token.kind))"
     }
 
     @discardableResult
@@ -776,6 +789,24 @@ public struct Parser: Sendable {
         }
         throw JinjaError.parser("Expected identifier but found \(token.kind).")
     }
+
+    /// Consumes the integer in an attribute such as `foo.0`.
+    ///
+    /// Jinja2 rejects a decimal (`foo. 1.5`), a leading zero (`foo.01`),
+    /// and a name or literal after the integer (`foo.0abc`, `foo.1e2`),
+    /// so these throw instead of becoming an index or an implicit concatenation.
+    /// An integer too large for `Int` also throws.
+    private mutating func consumeIntegerAttribute() throws -> Int {
+        let digits = advance().value
+        guard let index = Int(digits), digits.first != "0" || index == 0 else {
+            throw JinjaError.parser("Invalid integer '\(digits)' after '.'.")
+        }
+        if check(anyOf: Token.Kind.invalidAfterIntegerAttribute) {
+            let token = peek()
+            throw JinjaError.parser("Unexpected \(token.kind) '\(token.value)' after '.\(digits)'.")
+        }
+        return index
+    }
 }
 
 // MARK: -
@@ -788,4 +819,11 @@ extension Token.Kind {
     fileprivate static let primaryExpressionStarters: Set<Token.Kind> = [
         .string, .identifier, .number, .boolean, .openParen, .openBracket, .openBrace,
     ]
+
+    /// Tokens that can't follow an integer attribute such as `foo.0`,
+    /// because implicit concatenation would join them, as in `foo.0abc`.
+    /// Calls and subscripts, such as `foo.0()` and `foo.0[1]`, still parse.
+    fileprivate static let invalidAfterIntegerAttribute = primaryExpressionStarters.subtracting([
+        .openParen, .openBracket,
+    ])
 }

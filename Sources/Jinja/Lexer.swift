@@ -338,7 +338,10 @@ public enum Lexer: Sendable {
 
         // Numbers
         if char.isNumber {
-            return extractNumberToken(from: source, at: position)
+            // As in Jinja2, a number right after a dot has no fraction,
+            // so `foo.0.1` is `foo[0][1]`, not `foo` and `0.1`.
+            let followsDot = position > source.startIndex && source[source.index(before: position)] == "."
+            return extractNumberToken(from: source, at: position, allowsFraction: !followsDot)
         }
 
         // Identifiers and keywords
@@ -423,7 +426,8 @@ public enum Lexer: Sendable {
 
     private static func extractNumberToken(
         from source: String,
-        at position: String.Index
+        at position: String.Index,
+        allowsFraction: Bool
     ) -> (Token, String.Index) {
         var pos = position
         var hasDot = false
@@ -433,7 +437,7 @@ public enum Lexer: Sendable {
             let char = source[pos]
             if char.isNumber {
                 pos = source.index(after: pos)
-            } else if char == "." && !hasDot {
+            } else if char == "." && allowsFraction && !hasDot {
                 hasDot = true
                 pos = source.index(after: pos)
             } else {
