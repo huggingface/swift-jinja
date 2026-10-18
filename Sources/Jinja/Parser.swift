@@ -612,13 +612,13 @@ public struct Parser: Sendable {
                         let raw = String(keyToken.value)
                         guard !raw.contains("."), let intKey = Int(raw) else {
                             throw JinjaError.parser(
-                                "Expected integer for numeric object key. Got \(raw) instead"
+                                "Expected integer for numeric object key. Got \(describe(keyToken)) instead."
                             )
                         }
                         key = .int(intKey)
                     } else {
                         throw JinjaError.parser(
-                            "Expected string literal, identifier, or integer for object key. Got \(peek().kind) instead"
+                            "Expected string literal, identifier, or integer for object key. Got \(describe(peek())) instead."
                         )
                     }
                     try consume(.colon, message: "Expected ':' after object key.")
@@ -754,7 +754,12 @@ public struct Parser: Sendable {
     @discardableResult
     private mutating func consume(_ kind: Token.Kind, message: String) throws -> Token {
         if check(kind) { return advance() }
-        throw JinjaError.parser("\(message). Got \(peek().kind) instead")
+        throw JinjaError.parser("\(message) Got \(describe(peek())) instead.")
+    }
+
+    /// Describes a token for an error message, such as `'none' (null)`.
+    private func describe(_ token: Token) -> String {
+        token.kind == .eof ? "end of input" : "'\(token.value)' (\(token.kind))"
     }
 
     @discardableResult
