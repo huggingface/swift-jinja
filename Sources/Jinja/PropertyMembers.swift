@@ -479,11 +479,16 @@ private func pythonFormat(string: String, args: [Value], kwargs: [String: Value]
             value = keywordValue
         }
 
+        // Python would show a function's memory address, which can't match.
+        if case .function = value {
+            throw JinjaError.runtime("format() can't convert a function to a string")
+        }
+
         switch conversion {
         case nil, "s":
-            result.append(contentsOf: try pythonStr(value).unicodeScalars)
+            result.append(contentsOf: pythonStr(value).unicodeScalars)
         case "r":
-            result.append(contentsOf: try pythonRepr(value).unicodeScalars)
+            result.append(contentsOf: value.pythonRepr.unicodeScalars)
         case let conversion?:
             throw JinjaError.runtime("format() doesn't support the conversion '!\(conversion)'")
         }
@@ -497,95 +502,15 @@ private func pythonFormat(string: String, args: [Value], kwargs: [String: Value]
 /// An undefined value is an empty string, as in Jinja2.
 /// - Parameter value: The value to convert
 /// - Returns: The string form of the value
-private func pythonStr(_ value: Value) throws -> String {
+private func pythonStr(_ value: Value) -> String {
     switch value {
     case let .string(string):
         return string
     case .undefined:
         return ""
     default:
-        return try pythonRepr(value)
+        return value.pythonRepr
     }
-}
-
-/// Returns the representation of a value as Python's `repr()` gives it.
-/// - Parameter value: The value to represent
-/// - Returns: The representation of the value
-private func pythonRepr(_ value: Value) throws -> String {
-    switch value {
-    case let .string(string):
-        return pythonRepr(string)
-    case let .int(int):
-        return String(int)
-    case let .double(double):
-        if double.isNaN { return "nan" }
-        if double.isInfinite { return double < 0 ? "-inf" : "inf" }
-        return JSON.pythonRepr(double)
-    case let .boolean(flag):
-        return flag ? "True" : "False"
-    case .null:
-        return "None"
-    case .undefined:
-        return "Undefined"
-    case let .array(array):
-        let elements = try array.map { try pythonRepr($0) }
-        return "[\(elements.joined(separator: ", "))]"
-    case let .object(object):
-        let pairs = try object.map { key, value in
-            let keyRepr: String
-            switch key {
-            case let .string(string): keyRepr = pythonRepr(string)
-            case let .int(int): keyRepr = String(int)
-            }
-            return "\(keyRepr): \(try pythonRepr(value))"
-        }
-        return "{\(pairs.joined(separator: ", "))}"
-    case let .macro(macro):
-        return "<Macro \(pythonRepr(macro.name))>"
-    case .function:
-        throw JinjaError.runtime("format() can't convert a function to a string")
-    }
-}
-
-/// Returns the representation of a string as Python's `repr()` gives it.
-///
-/// Uses single quotes unless the string contains a single quote and no double quote,
-/// and escapes backslashes, the quote, and characters that Python doesn't print.
-/// - Parameter string: The string to represent
-/// - Returns: The quoted and escaped string
-private func pythonRepr(_ string: String) -> String {
-    let quote: Unicode.Scalar = string.contains("'") && !string.contains("\"") ? "\"" : "'"
-    var result = String(quote)
-    for scalar in string.unicodeScalars {
-        switch scalar {
-        case quote, "\\":
-            result += "\\\(scalar)"
-        case "\t":
-            result += "\\t"
-        case "\n":
-            result += "\\n"
-        case "\r":
-            result += "\\r"
-        case " ":
-            result.unicodeScalars.append(scalar)
-        default:
-            switch scalar.properties.generalCategory {
-            case .control, .format, .surrogate, .privateUse, .unassigned,
-                .lineSeparator, .paragraphSeparator, .spaceSeparator:
-                if scalar.value <= 0xFF {
-                    result += String(format: "\\x%02x", scalar.value)
-                } else if scalar.value <= 0xFFFF {
-                    result += String(format: "\\u%04x", scalar.value)
-                } else {
-                    result += String(format: "\\U%08x", scalar.value)
-                }
-            default:
-                result.unicodeScalars.append(scalar)
-            }
-        }
-    }
-    result.unicodeScalars.append(quote)
-    return result
 }
 
 /// Replaces occurrences of old string with new string, optionally limiting replacements.

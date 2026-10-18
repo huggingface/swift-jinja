@@ -726,4 +726,15 @@ struct PropertyMembersTests {
             #expect(thrown == message)
         }
     }
+
+    @Test("String format rejects a function value")
+    func stringFormatFunction() throws {
+        let template = try Template("{{ '{}'.format(f) }}")
+        do {
+            _ = try template.render(["f": .function { _, _, _ in .null }])
+            Issue.record("Expected a runtime error")
+        } catch JinjaError.runtime(let message) {
+            #expect(message == "format() can't convert a function to a string")
+        }
+    }
 }
