@@ -403,6 +403,39 @@ struct InterpreterTests {
         #expect(result == "2143")
     }
 
+    @Test("Filtered for loop computes loop variables that don't need later items")
+    func filteredForLoopVariablesWithoutLaterItems() throws {
+        let template = try Template(
+            "{% for x in items if x > 1 %}{{ loop.index }}{{ loop.index0 }}{{ 'F' if loop.first }}{{ loop.previtem }}{{ loop.cycle('a', 'b') }};{% endfor %}"
+        )
+        let result = try template.render([
+            "items": .array([.int(1), .int(2), .int(3), .int(1), .int(4)])
+        ])
+        #expect(result == "10Fa;212b;323a;")
+    }
+
+    @Test(
+        "Filtered for loop tests each item with the state that the body leaves",
+        arguments: [
+            // The test sees each change that the body makes to the namespace.
+            ("{{ x }}", [1, 2, 3, 4], "12"),
+            ("{{ x }}{{ loop.index }}", [1, 2, 3, 4], "1122"),
+            // `loop.last` in a nested loop is the nested loop's.
+            ("{% for y in [0] %}{{ loop.last }}{% endfor %}{{ x }}", [1, 2, 3, 4], "True1True2"),
+            ("{{ x }}", [], "empty"),
+            // `loop.length` needs every item,
+            // so Jinja2 tests them all before the body changes the namespace.
+            ("{{ x }}{{ loop.length }}", [1, 2, 3, 4], "14243444"),
+        ]
+    )
+    func filteredForLoopStatefulTest(body: String, items: [Int], expected: String) throws {
+        let template = try Template(
+            "{% set ns = namespace(n=0) %}{% for x in items if ns.n < 2 %}\(body){% set ns.n = ns.n + 1 %}{% else %}empty{% endfor %}"
+        )
+        let result = try template.render(["items": .array(items.map { .int($0) })])
+        #expect(result == expected)
+    }
+
     // MARK: - Set with body
 
     @Test("Set block with body")

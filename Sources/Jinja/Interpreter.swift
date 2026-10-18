@@ -385,42 +385,63 @@ public enum Interpreter {
                 throw JinjaError.runtime("Cannot iterate over non-iterable value")
             }
 
-            // Jinja2 filters the items before it computes the loop variables,
-            // so `loop.index`, `loop.last`, `loop.length`, and the `else` block
-            // count only the items that pass the test.
+            // Jinja2 computes the loop variables, and whether the `else` block runs,
+            // over the items that pass the test.
             // The test sees the loop variables, but not this loop's `loop`.
-            // Jinja2 filters lazily, but this tests every item before the body runs,
-            // so a test that reads a namespace that the body changes can differ.
+            // Like Jinja2, the loop tests each item just before the body runs with it,
+            // so the test sees changes that the body makes to a namespace.
+            // When the body reads `loop.last`, `loop.length`, `loop.revindex`,
+            // `loop.revindex0`, or `loop.nextitem`, the loop tests every item first.
+            // Then a test that reads state that the body changes can differ from Jinja2,
+            // which tests later items only when the body reads one of those attributes.
+            let testEnv = Environment(parent: env)
+            var testEachItem = false
             if let test = test {
-                let testEnv = Environment(parent: env)
-                items = try items.filter { item in
-                    try bindLoopVariables(loopVar, to: item, in: testEnv)
-                    return try evaluateExpression(test, env: testEnv).isTruthy
+                if bodyReadsLaterItems(body) {
+                    items = try items.filter { item in
+                        try bindLoopVariables(loopVar, to: item, in: testEnv)
+                        return try evaluateExpression(test, env: testEnv).isTruthy
+                    }
+                } else {
+                    testEachItem = true
                 }
             }
 
-            if items.isEmpty {
+            let childEnv = Environment(parent: env)
+            var index = 0
+            var previtem = Value.undefined
+            for item in items {
+                if testEachItem, let test = test {
+                    try bindLoopVariables(loopVar, to: item, in: testEnv)
+                    if !(try evaluateExpression(test, env: testEnv).isTruthy) { continue }
+                }
+
+                try bindLoopVariables(loopVar, to: item, in: childEnv)
+                childEnv["loop"] = makeLoopObject(
+                    index: index,
+                    previtem: previtem,
+                    items: testEachItem ? nil : items
+                )
+                index += 1
+                previtem = item
+
+                var shouldBreak = false
+                for node in body {
+                    do {
+                        try interpretNode(node, env: childEnv, into: &buffer)
+                    } catch ControlFlow.break {
+                        shouldBreak = true
+                        break
+                    } catch ControlFlow.continue {
+                        break  // Break from inner loop (current iteration)
+                    }
+                }
+                if shouldBreak { break }
+            }
+
+            if index == 0 {
                 for node in elseBody {
                     try interpretNode(node, env: env, into: &buffer)
-                }
-            } else {
-                let childEnv = Environment(parent: env)
-                for (index, item) in items.enumerated() {
-                    try bindLoopVariables(loopVar, to: item, in: childEnv)
-                    childEnv["loop"] = makeLoopObject(items: items, index: index)
-
-                    var shouldBreak = false
-                    for node in body {
-                        do {
-                            try interpretNode(node, env: childEnv, into: &buffer)
-                        } catch ControlFlow.break {
-                            shouldBreak = true
-                            break
-                        } catch ControlFlow.continue {
-                            break  // Break from inner loop (current iteration)
-                        }
-                    }
-                    if shouldBreak { break }
                 }
             }
 
@@ -860,22 +881,36 @@ public enum Interpreter {
         }
     }
 
+    /// Returns the `loop` object for an iteration of a for loop.
+    ///
+    /// - Parameters:
+    ///   - index: The zero-based index of the iteration.
+    ///   - previtem: The item of the previous iteration, or `.undefined`.
+    ///   - items: All the items of the loop,
+    ///     or `nil` when the loop tests each item as it reaches it.
+    ///     Without them, `loop` has no `last`, `length`, `revindex`,
+    ///     `revindex0`, or `nextitem`.
     private static func makeLoopObject(
-        items: [Value],
-        index: Int
+        index: Int,
+        previtem: Value,
+        items: [Value]?
     ) -> Value {
-        let count = items.count
         var loopContext: OrderedDictionary<ObjectKey, Value> = [
             "index": .int(index + 1),
             "index0": .int(index),
             "first": .boolean(index == 0),
-            "last": .boolean(index == count - 1),
-            "length": .int(count),
-            "revindex": .int(count - index),
-            "revindex0": .int(count - index - 1),
-            "previtem": index > 0 ? items[index - 1] : .undefined,
-            "nextitem": index + 1 < count ? items[index + 1] : .undefined,
         ]
+        if let items = items {
+            let count = items.count
+            loopContext["last"] = .boolean(index == count - 1)
+            loopContext["length"] = .int(count)
+            loopContext["revindex"] = .int(count - index)
+            loopContext["revindex0"] = .int(count - index - 1)
+        }
+        loopContext["previtem"] = previtem
+        if let items = items {
+            loopContext["nextitem"] = index + 1 < items.count ? items[index + 1] : .undefined
+        }
 
         loopContext["cycle"] = .function { args, _, _ in
             guard !args.isEmpty else { return .string("") }
@@ -884,6 +919,93 @@ public enum Interpreter {
         }
 
         return .object(loopContext)
+    }
+
+    /// The `loop` attributes that Jinja2's `LoopContext` computes
+    /// without the later items of the loop.
+    private static let loopAttributesWithoutLaterItems: Set<String> = [
+        "index", "index0", "first", "previtem", "cycle",
+    ]
+
+    /// Returns whether a for loop body may read a `loop` attribute
+    /// that needs the later items of the loop, such as `loop.last` or `loop.length`.
+    ///
+    /// The check is conservative: any use of `loop` other than an attribute
+    /// in ``loopAttributesWithoutLaterItems`` counts,
+    /// such as `loop['index']` or passing `loop` to a macro.
+    /// The body of a nested for loop doesn't count,
+    /// because its `loop` is the nested loop's.
+    private static func bodyReadsLaterItems(_ nodes: [Node]) -> Bool {
+        nodes.contains { node in
+            switch node {
+            case .text, .comment:
+                return false
+            case let .expression(expr):
+                return readsLaterItems(expr)
+            case let .statement(statement):
+                switch statement {
+                case let .program(nodes), let .generation(nodes):
+                    return bodyReadsLaterItems(nodes)
+                case let .set(target, value, body):
+                    return readsLaterItems(target) || value.map(readsLaterItems) == true
+                        || bodyReadsLaterItems(body)
+                case let .if(test, body, alternate):
+                    return readsLaterItems(test) || bodyReadsLaterItems(body)
+                        || bodyReadsLaterItems(alternate)
+                case let .for(_, iterable, _, elseBody, test):
+                    return readsLaterItems(iterable) || test.map(readsLaterItems) == true
+                        || bodyReadsLaterItems(elseBody)
+                case let .macro(_, _, defaults, body):
+                    return defaults.values.contains(where: readsLaterItems)
+                        || bodyReadsLaterItems(body)
+                case .break, .continue:
+                    return false
+                case let .call(callable, callerArgs, body):
+                    return readsLaterItems(callable)
+                        || (callerArgs ?? []).contains(where: readsLaterItems)
+                        || bodyReadsLaterItems(body)
+                case let .filter(filterExpr, body):
+                    return readsLaterItems(filterExpr) || bodyReadsLaterItems(body)
+                }
+            }
+        }
+    }
+
+    /// Returns whether an expression may read a `loop` attribute
+    /// that needs the later items of the loop.
+    private static func readsLaterItems(_ expr: Expression) -> Bool {
+        switch expr {
+        case let .member(.identifier("loop"), .identifier(name), computed: false):
+            return !loopAttributesWithoutLaterItems.contains(name)
+        case .identifier(let name):
+            return name == "loop"
+        case .string, .number, .integer, .boolean, .null:
+            return false
+        case let .array(values), let .tuple(values):
+            return values.contains(where: readsLaterItems)
+        case let .object(pairs):
+            return pairs.values.contains(where: readsLaterItems)
+        case let .unary(_, operand):
+            return readsLaterItems(operand)
+        case let .binary(_, left, right):
+            return readsLaterItems(left) || readsLaterItems(right)
+        case let .ternary(value, test, alternate):
+            return readsLaterItems(value) || readsLaterItems(test)
+                || alternate.map(readsLaterItems) == true
+        case let .call(callee, args, kwargs):
+            return readsLaterItems(callee) || args.contains(where: readsLaterItems)
+                || kwargs.values.contains(where: readsLaterItems)
+        case let .member(object, property, computed):
+            // The property of `foo.loop` is a name, not a variable.
+            return readsLaterItems(object) || (computed && readsLaterItems(property))
+        case let .slice(object, start, stop, step):
+            return readsLaterItems(object) || [start, stop, step].contains { $0.map(readsLaterItems) == true }
+        case let .filter(operand, _, args, kwargs):
+            return readsLaterItems(operand) || args.contains(where: readsLaterItems)
+                || kwargs.values.contains(where: readsLaterItems)
+        case let .test(operand, _, args, _):
+            return readsLaterItems(operand) || args.contains(where: readsLaterItems)
+        }
     }
 
     /// The name of a value's type, for error messages.
