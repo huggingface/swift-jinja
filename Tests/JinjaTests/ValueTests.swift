@@ -188,9 +188,9 @@ struct ValueTests {
         #expect(Value.string("test").description == "test")
         #expect(Value.int(42).description == "42")
         #expect(Value.double(3.14).description == "3.14")
-        #expect(Value.boolean(true).description == "true")
-        #expect(Value.boolean(false).description == "false")
-        #expect(Value.null.description == "")
+        #expect(Value.boolean(true).description == "True")
+        #expect(Value.boolean(false).description == "False")
+        #expect(Value.null.description == "None")
         #expect(Value.undefined.description == "")
         #expect(Value.array([Value.int(1), Value.int(2)]).description == "[1, 2]")
         #expect(Value.object(["a": Value.int(1)]).description == "{'a': 1}")
@@ -198,7 +198,7 @@ struct ValueTests {
         var collidingKeys = OrderedDictionary<ObjectKey, Value>()
         collidingKeys[.int(512)] = .string("int")
         collidingKeys[.string("512")] = .string("str")
-        #expect(Value.object(collidingKeys).description == "{512: int, '512': str}")
+        #expect(Value.object(collidingKeys).description == "{512: 'int', '512': 'str'}")
     }
 
     @Test("isTruthy behavior")
@@ -893,7 +893,7 @@ struct ValueTests {
     @Test("Array with mixed types description")
     func arrayMixedDescription() {
         let value = Value.array([.string("a"), .int(1), .boolean(true)])
-        #expect(value.description == "['a', 1, true]")
+        #expect(value.description == "['a', 1, True]")
     }
 
     // MARK: - Hash for various types

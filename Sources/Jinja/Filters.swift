@@ -353,7 +353,7 @@ public enum Filters {
 
         let keyedItems: [(item: Value, displayKey: Value, normalized: Value)] = try items.map {
             let rawKey = try PropertyMembers.evaluate($0, attribute)
-            let displayKey = rawKey == .undefined ? defaultValue : rawKey
+            let displayKey = rawKey == .undefined && defaultValue != .null ? defaultValue : rawKey
             return (item: $0, displayKey: displayKey, normalized: normalizedKey(displayKey))
         }
 
@@ -449,7 +449,7 @@ public enum Filters {
             return try .array(
                 items.map {
                     let value = try resolveAttributeValue($0, attribute: attribute)
-                    return value == .undefined ? defaultValue : value
+                    return value == .undefined && defaultValue != .null ? defaultValue : value
                 }
             )
         }
@@ -1068,6 +1068,11 @@ public enum Filters {
     ///             Overrides the policy's indentation.
     ///   - ensure_ascii: Whether to escape non-ASCII characters as `\uXXXX`.
     ///                   Overrides the policy's non-ASCII escaping.
+    ///   - separators: A tuple or list of the item and key separators,
+    ///                 such as `(',', ':')`.
+    ///                 Overrides the policy's separators.
+    ///   - sort_keys: Whether to write object keys in sorted order.
+    ///                Overrides the policy's key order.
     @Sendable public static func tojson(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -1078,8 +1083,8 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["indent", "ensure_ascii"],
-            defaults: ["indent": .null, "ensure_ascii": .null]
+            parameters: ["indent", "ensure_ascii", "separators", "sort_keys"],
+            defaults: ["indent": .null, "ensure_ascii": .null, "separators": .null, "sort_keys": .null]
         )
 
         let policies = env.policies
@@ -1094,6 +1099,17 @@ public enum Filters {
         }
         if let ensureASCII = arguments["ensure_ascii"], ensureASCII != .null {
             options.ensureASCII = ensureASCII.isTruthy
+        }
+        if let separators = arguments["separators"], separators != .null {
+            guard case .array(let items) = separators, items.count == 2,
+                case .string(let item) = items[0], case .string(let key) = items[1]
+            else {
+                throw JinjaError.runtime("tojson separators must be a pair of strings or none")
+            }
+            options.separators = (item: item, key: key)
+        }
+        if let sortKeys = arguments["sort_keys"], sortKeys != .null {
+            options.sortKeys = sortKeys.isTruthy
         }
 
         return .string(try policies.jsonSerializer.dumps(value, options: options))
@@ -2045,8 +2061,8 @@ public enum Filters {
 
 /// Returns the string form of a value, matching Jinja2's `soft_str`.
 ///
-/// Treats `undefined` and `null` as an empty string.
-/// Other values use the same representation as template interpolation
+/// Treats `undefined` as an empty string.
+/// Other values, including `null`, use the same representation as template interpolation
 /// (`Value.description`).
 /// String filters call this instead of requiring a `.string` case,
 /// so expressions like `value['type'] | upper` succeed when the value is missing.

@@ -22,7 +22,7 @@ struct FiltersTests {
     @Test("upper filter coerces non-strings (Jinja2 soft_str)")
     func upperFilterCoercesNonStrings() throws {
         #expect(try Filters.upper([.undefined], kwargs: [:], env: env) == .string(""))
-        #expect(try Filters.upper([.null], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.upper([.null], kwargs: [:], env: env) == .string("NONE"))
         #expect(try Filters.upper([.int(5)], kwargs: [:], env: env) == .string("5"))
     }
 
@@ -43,7 +43,7 @@ struct FiltersTests {
     @Test("capitalize filter coerces non-strings (Jinja2 soft_str)")
     func capitalizeFilterCoercesNonStrings() throws {
         #expect(try Filters.capitalize([.undefined], kwargs: [:], env: env) == .string(""))
-        #expect(try Filters.capitalize([.null], kwargs: [:], env: env) == .string(""))
+        #expect(try Filters.capitalize([.null], kwargs: [:], env: env) == .string("None"))
         #expect(try Filters.capitalize([.int(42)], kwargs: [:], env: env) == .string("42"))
         #expect(try Filters.capitalize([.string("hello")], kwargs: [:], env: env) == .string("Hello"))
     }
@@ -352,6 +352,22 @@ struct FiltersTests {
             env: env
         )
         #expect(result == .array([.string("a"), .string("n/a")]))
+    }
+
+    // Expected strings were rendered with jinja2 3.1.6,
+    // which leaves a missing attribute undefined unless the default is not none.
+    @Test(
+        "map and groupby leave a missing attribute undefined without a default",
+        arguments: [
+            ("{{ items|map(attribute='x')|join(',') }}", "1,"),
+            ("{{ items|map(attribute='x', default=none)|join(',') }}", "1,"),
+            ("{{ items|map(attribute='x', default='d')|join(',') }}", "1,d"),
+            ("{% for g in [{'y': 1}]|groupby('x') %}[{{ g.grouper }}]{% endfor %}", "[]"),
+        ]
+    )
+    func mapAndGroupbyMissingAttribute(template: String, expected: String) throws {
+        let context: Context = ["items": [["x": 1], [:]]]
+        #expect(try Template(template).render(context) == expected)
     }
 
     @Test("map filter with integer attribute")
@@ -674,6 +690,92 @@ struct FiltersTests {
         #expect(
             try Filters.tojson([[1]], kwargs: ["indent": -1], env: env)
                 == .string("[\n1\n]")
+        )
+    }
+
+    // Expected values are Jinja2 3.1.6 output with transformers' tojson,
+    // json.dumps(x, ensure_ascii=False, indent=None, separators=None, sort_keys=False).
+
+    @Test("tojson filter accepts separators as a tuple or list")
+    func tojsonFilterSeparators() throws {
+        let context: Context = ["x": ["b": 1, "a": [1, ["d": nil, "c": "é"]]]]
+        let compact = #"{"b":1,"a":[1,{"d":null,"c":"é"}]}"#
+        for source in [
+            "{{ x | tojson(separators=(',', ':')) }}",
+            "{{ x | tojson(separators=[',', ':']) }}",
+        ] {
+            #expect(try Template(source).render(context) == compact)
+        }
+        #expect(
+            try Template("{{ x | tojson(separators=(';', '=')) }}").render(context)
+                == #"{"b"=1;"a"=[1;{"d"=null;"c"="é"}]}"#
+        )
+        #expect(
+            try Template("{{ x | tojson(separators=none) }}").render(context)
+                == #"{"b": 1, "a": [1, {"d": null, "c": "é"}]}"#
+        )
+    }
+
+    @Test("tojson filter separators apply with indentation")
+    func tojsonFilterSeparatorsWithIndent() throws {
+        let context: Context = ["x": ["b": 1, "a": [1]]]
+        #expect(
+            try Template("{{ x | tojson(indent=2, separators=(',', ':')) }}").render(context)
+                == "{\n  \"b\":1,\n  \"a\":[\n    1\n  ]\n}"
+        )
+        #expect(
+            try Template("{{ x | tojson(indent=2, separators=(', ', ': ')) }}").render(context)
+                == "{\n  \"b\": 1, \n  \"a\": [\n    1\n  ]\n}"
+        )
+    }
+
+    @Test("tojson filter rejects separators that are not a pair of strings")
+    func tojsonFilterRejectsInvalidSeparators() throws {
+        for source in [
+            "{{ 1 | tojson(separators=(',',)) }}",
+            "{{ 1 | tojson(separators=(',', ':', ';')) }}",
+            "{{ 1 | tojson(separators=(1, 2)) }}",
+            "{{ 1 | tojson(separators=1) }}",
+            "{{ 1 | tojson(separators=missing) }}",
+        ] {
+            #expect(throws: JinjaError.self, "\(source)") {
+                try Template(source).render([:])
+            }
+        }
+    }
+
+    @Test("tojson filter accepts sort_keys")
+    func tojsonFilterSortKeys() throws {
+        let context: Context = ["x": ["b": 1, "a": [1, ["d": nil, "c": "é"]]]]
+        let sorted = #"{"a": [1, {"c": "é", "d": null}], "b": 1}"#
+        let unsorted = #"{"b": 1, "a": [1, {"d": null, "c": "é"}]}"#
+        #expect(try Template("{{ x | tojson(sort_keys=true) }}").render(context) == sorted)
+        #expect(try Template("{{ x | tojson(sort_keys=1) }}").render(context) == sorted)
+        #expect(try Template("{{ x | tojson(sort_keys=false) }}").render(context) == unsorted)
+        #expect(try Template("{{ x | tojson(sort_keys=none) }}").render(context) == unsorted)
+        #expect(
+            try Template(
+                "{{ x | tojson(sort_keys=true, separators=(',', ':'), ensure_ascii=true) }}"
+            ).render(context) == #"{"a":[1,{"c":"\u00e9","d":null}],"b":1}"#
+        )
+    }
+
+    @Test("tojson filter separators and sort_keys override json.dumps_kwargs policy")
+    func tojsonFilterSeparatorsAndSortKeysOverridePolicy() throws {
+        let env = Environment()
+        env.policies.jsonDumpsOptions = .init(sortKeys: true, separators: (item: ",", key: ":"))
+        let value: Value = ["b": 1, "a": 2]
+        #expect(try Filters.tojson([value], kwargs: [:], env: env) == .string(#"{"a":2,"b":1}"#))
+        #expect(
+            try Filters.tojson([value], kwargs: ["separators": .null, "sort_keys": .null], env: env)
+                == .string(#"{"a":2,"b":1}"#)
+        )
+        #expect(
+            try Filters.tojson(
+                [value],
+                kwargs: ["separators": [", ", ": "], "sort_keys": false],
+                env: env
+            ) == .string(#"{"b": 1, "a": 2}"#)
         )
     }
 
