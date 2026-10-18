@@ -933,11 +933,12 @@ public enum Filters {
         let binary = arguments["binary"]!.isTruthy
         let unit: Double = binary ? 1024 : 1000
         if bytes < unit {
-            return .string("\(Int(bytes)) Bytes")
+            return .string("\(try truncatedInt(bytes)) Bytes")
         }
-        let exp = Int(log(bytes) / log(unit))
+        let exp = log(bytes) / log(unit)
         let pre = (binary ? "KMGTPEZY" : "kMGTPEZY")
-        let clampedExp = Swift.min(Swift.max(exp, 1), pre.count)
+        // Compare before converting, because `exp` is infinite or NaN when `bytes` is.
+        let clampedExp = exp < Double(pre.count) ? Swift.max(Int(exp), 1) : pre.count
         let preIndex = pre.index(pre.startIndex, offsetBy: clampedExp - 1)
         let preChar = pre[preIndex]
         let suffix = binary ? "iB" : "B"
@@ -1229,7 +1230,9 @@ public enum Filters {
         case let .int(i):
             return .int(i)
         case let .double(n):
-            return .int(Int(n))
+            // Python's `int()` raises `ValueError` for NaN, and Jinja2 returns the default.
+            if n.isNaN { return defaultValue }
+            return .int(try truncatedInt(n))
         case let .string(s):
             let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.hasPrefix("0b") || trimmed.hasPrefix("0B") {
