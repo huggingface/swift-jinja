@@ -652,4 +652,89 @@ struct PropertyMembersTests {
         let result = try PropertyMembers.evaluate(value, "someProperty")
         #expect(result == .undefined)
     }
+
+    // MARK: - String format and join
+
+    // Expected values come from Jinja2 3.1.6.
+    @Test(
+        "String format and join match Jinja2",
+        arguments: [
+            ("{{ '{} and {}'.format('a', 'b') }}", "a and b"),
+            ("{{ '{1}{0}{1}'.format('a', 'b') }}", "bab"),
+            ("{{ '{x}-{y}'.format(x=1, y=2.5) }}", "1-2.5"),
+            ("{{ '{{}} {{{}}}'.format(1) }}", "{} {1}"),
+            ("{{ '<｜hy_eos{}｜>'.format(':opensource') }}", "<｜hy_eos:opensource｜>"),
+            ("{{ '{}|{}|{}'.format(true, false, none) }}", "True|False|None"),
+            (
+                "{{ '{}|{}|{}|{}'.format(10000000000000000.0, 0.1, 1.0, 1234567890123456.0) }}",
+                "1e+16|0.1|1.0|1234567890123456.0"
+            ),
+            ("{{ '{}'.format([1, 'a', true, none, 1.5]) }}", "[1, 'a', True, None, 1.5]"),
+            ("{{ '{}'.format({'a': [1], 2: \"it's\"}) }}", "{'a': [1], 2: \"it's\"}"),
+            ("{{ '{}'.format(['a\"b', 'g\\nh\\\\']) }}", "['a\"b', 'g\\nh\\\\']"),
+            ("{{ '[{}]'.format(missing) }}", "[]"),
+            ("{{ '{0!r}|{0!s}|{0:}'.format('a') }}", "'a'|a|a"),
+            ("{{ '{!r}'.format('a\\nb') }}", "'a\\nb'"),
+            ("{{ '{!r}'.format('\u{00A0}\u{200B}\u{7F}é') }}", "'\\xa0\\u200b\\x7fé'"),
+            ("{% macro m() %}{% endmacro %}{{ '{}'.format(m) }}", "<Macro 'm'>"),
+            ("{{ '{}'.format('x', 'y', z=1) }}", "x"),
+            ("{{ ', '.join(['a', 'b']) }}", "a, b"),
+            ("{{ '-'.join('abc') }}", "a-b-c"),
+            ("{{ '-'.join({'a': 1, 'b': 2}) }}", "a-b"),
+            ("{{ '[' ~ ''.join([]) ~ ']' }}", "[]"),
+            ("{{ ''.join(['c', 'A', 'b', 'D']|sort) }}", "AbcD"),
+        ]
+    )
+    func stringFormatAndJoin(source: String, expected: String) throws {
+        #expect(try Template(source).render([:]) == expected)
+    }
+
+    // Jinja2 3.1.6 raises for each of these, except the first three:
+    // swift-jinja rejects format specs, the `!a` conversion, and attribute access
+    // instead of rendering them differently.
+    @Test(
+        "String format and join reject invalid or unsupported input",
+        arguments: [
+            ("{{ '{:>10}'.format(1) }}", "format() doesn't support the format spec ':>10'"),
+            ("{{ '{!a}'.format(1) }}", "format() doesn't support the conversion '!a'"),
+            ("{{ '{0.real}'.format(1) }}", "format() doesn't support attribute or item access in field '{0.real}'"),
+            (
+                "{{ '{0} {}'.format(1, 2) }}",
+                "cannot switch from manual field specification to automatic field numbering"
+            ),
+            (
+                "{{ '{} {0}'.format(1, 2) }}",
+                "cannot switch from automatic field numbering to manual field specification"
+            ),
+            ("{{ '{2}'.format(1) }}", "Replacement index 2 out of range for positional args tuple"),
+            ("{{ '{x}'.format() }}", "format() is missing keyword argument 'x'"),
+            ("{{ 'a}b'.format() }}", "Single '}' encountered in format string"),
+            ("{{ 'a{b'.format() }}", "expected '}' before end of string"),
+            ("{{ '{!rr}'.format(1) }}", "expected ':' after conversion specifier"),
+            ("{{ ','.join([1]) }}", "join() sequence item 0: expected a string"),
+            ("{{ ','.join('a', 'b') }}", "join() takes exactly one argument (2 given)"),
+            ("{{ ','.join(iterable=['a']) }}", "join() takes no keyword arguments"),
+            ("{{ ','.join(none) }}", "join() can only join an iterable"),
+        ]
+    )
+    func stringFormatAndJoinErrors(source: String, message: String) throws {
+        let template = try Template(source)
+        do {
+            _ = try template.render([:])
+            Issue.record("Expected a runtime error for \(source)")
+        } catch JinjaError.runtime(let thrown) {
+            #expect(thrown == message)
+        }
+    }
+
+    @Test("String format rejects a function value")
+    func stringFormatFunction() throws {
+        let template = try Template("{{ '{}'.format(f) }}")
+        do {
+            _ = try template.render(["f": .function { _, _, _ in .null }])
+            Issue.record("Expected a runtime error")
+        } catch JinjaError.runtime(let message) {
+            #expect(message == "format() can't convert a function to a string")
+        }
+    }
 }
