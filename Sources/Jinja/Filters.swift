@@ -1067,6 +1067,11 @@ public enum Filters {
     ///             Overrides the policy's indentation.
     ///   - ensure_ascii: Whether to escape non-ASCII characters as `\uXXXX`.
     ///                   Overrides the policy's non-ASCII escaping.
+    ///   - separators: A tuple or list of the item and key separators,
+    ///                 such as `(',', ':')`.
+    ///                 Overrides the policy's separators.
+    ///   - sort_keys: Whether to write object keys in sorted order.
+    ///                Overrides the policy's key order.
     @Sendable public static func tojson(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -1077,8 +1082,8 @@ public enum Filters {
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
-            parameters: ["indent", "ensure_ascii"],
-            defaults: ["indent": .null, "ensure_ascii": .null]
+            parameters: ["indent", "ensure_ascii", "separators", "sort_keys"],
+            defaults: ["indent": .null, "ensure_ascii": .null, "separators": .null, "sort_keys": .null]
         )
 
         let policies = env.policies
@@ -1093,6 +1098,17 @@ public enum Filters {
         }
         if let ensureASCII = arguments["ensure_ascii"], ensureASCII != .null {
             options.ensureASCII = ensureASCII.isTruthy
+        }
+        if let separators = arguments["separators"], separators != .null {
+            guard case .array(let items) = separators, items.count == 2,
+                case .string(let item) = items[0], case .string(let key) = items[1]
+            else {
+                throw JinjaError.runtime("tojson separators must be a pair of strings or none")
+            }
+            options.separators = (item: item, key: key)
+        }
+        if let sortKeys = arguments["sort_keys"], sortKeys != .null {
+            options.sortKeys = sortKeys.isTruthy
         }
 
         return .string(try policies.jsonSerializer.dumps(value, options: options))
