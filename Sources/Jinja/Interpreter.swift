@@ -682,11 +682,14 @@ public enum Interpreter {
     /// 6 KB for `{% if n %}{{ r(n - 1) }}{% endif %}`,
     /// and 19 KB for the type macro of the Hermes 3 tool-use template,
     /// which recurses from an `elif` branch inside a `for` loop.
-    /// At this limit, that macro used 377 KB of the 512 KB,
+    /// At 20 calls, that macro used 377 KB of the 512 KB,
+    /// so 16 calls take about 300 KB,
     /// which leaves room for the frames of the code that renders the template.
+    /// 32 calls of that macro would overflow a 512 KB stack.
     /// Debug builds take about 2.7 times as much stack per call.
-    /// Jinja2 allows about 250 nested macro calls under Python's default recursion limit.
-    static let maximumCallDepth = 20
+    /// Jinja2 has no limit of its own;
+    /// it allows about 250 nested macro calls under Python's default recursion limit.
+    static let maximumCallDepth = 16
 
     /// Returns the call depth for an invocation from the given environment.
     ///

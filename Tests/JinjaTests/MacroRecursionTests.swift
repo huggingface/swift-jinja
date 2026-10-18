@@ -43,21 +43,21 @@ struct MacroRecursionTests {
             let rendered = try await render(source)
             Issue.record("Expected a runtime error; rendered \(rendered)")
         } catch JinjaError.runtime(let message) {
-            #expect(message == "Maximum recursion depth of 20 exceeded")
+            #expect(message == "Maximum recursion depth of 16 exceeded")
         }
     }
 
     @Test("Recursion within the limit renders")
     func recursionWithinLimitRenders() async throws {
-        // Twenty nested calls, from r(19) to r(0).
-        let source = "{% macro r(n) %}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{{ n }}{% endmacro %}{{ r(19) }}"
-        #expect(try await render(source) == "012345678910111213141516171819")
+        // Sixteen nested calls, from r(15) to r(0).
+        let source = "{% macro r(n) %}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{{ n }}{% endmacro %}{{ r(15) }}"
+        #expect(try await render(source) == "0123456789101112131415")
     }
 
     @Test("Recursion past the limit throws")
     func recursionPastLimitThrows() async throws {
-        // Jinja2 renders this template, which makes 21 nested calls.
-        let source = "{% macro r(n) %}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{{ n }}{% endmacro %}{{ r(20) }}"
+        // Jinja2 renders this template, which makes 17 nested calls.
+        let source = "{% macro r(n) %}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{{ n }}{% endmacro %}{{ r(16) }}"
         await #expect(throws: JinjaError.self) {
             try await render(source)
         }
@@ -97,14 +97,14 @@ struct MacroRecursionTests {
     func jsonSchemaTypeWithNullAlternativeThrows() async throws {
         // For a type of `["string", "null"]`, the macro iterates over the characters of "null"
         // and recurses on each one without end.
-        // Each call takes more stack in a debug build than a 512 KB stack can hold for 20 calls,
+        // Each call takes more stack in a debug build than a 512 KB stack can hold for 16 calls,
         // so this test uses the 8 MB stack of a main thread.
         let spec: Value = ["type": ["string", "null"]]
         do {
             let rendered = try await render(Self.jsonToPythonType, ["spec": spec], stackSize: 8 * 1024 * 1024)
             Issue.record("Expected a runtime error; rendered \(rendered)")
         } catch JinjaError.runtime(let message) {
-            #expect(message == "Maximum recursion depth of 20 exceeded")
+            #expect(message == "Maximum recursion depth of 16 exceeded")
         }
     }
 }
