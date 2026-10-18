@@ -986,6 +986,49 @@ struct FiltersTests {
         #expect(result == .string("fallback"))
     }
 
+    // Expected values match Jinja2 3.1.6, which returns the default
+    // for any input where `not value` is true.
+    @Test(
+        "default filter with boolean mode returns the default for falsy input",
+        arguments: [
+            Value.boolean(false), .string(""), .int(0), .double(0.0), .double(-0.0),
+            .null, .array([]), .object([:]),
+        ]
+    )
+    func defaultFilterBooleanModeFalsy(input: Value) throws {
+        let result = try Filters.default(
+            [input, .string("fallback"), .boolean(true)],
+            kwargs: [:],
+            env: env
+        )
+        #expect(result == .string("fallback"))
+    }
+
+    @Test(
+        "default filter with boolean mode keeps truthy input",
+        arguments: [
+            Value.boolean(true), .string(" "), .string("x"), .int(1), .int(-1), .double(0.5),
+            .array([.int(0)]), .array([.null]), .object(["a": .int(0)]),
+        ]
+    )
+    func defaultFilterBooleanModeTruthy(input: Value) throws {
+        let result = try Filters.default(
+            [input, .string("fallback"), .boolean(true)],
+            kwargs: [:],
+            env: env
+        )
+        #expect(result == input)
+    }
+
+    @Test(
+        "default filter without boolean mode keeps falsy input",
+        arguments: [Value.boolean(false), .string(""), .int(0), .null, .array([]), .object([:])]
+    )
+    func defaultFilterWithoutBooleanModeKeepsFalsy(input: Value) throws {
+        let result = try Filters.default([input, .string("fallback")], kwargs: [:], env: env)
+        #expect(result == input)
+    }
+
     @Test("first filter with no args")
     func firstFilterNoArgs() throws {
         let result = try Filters.first([], kwargs: [:], env: env)
