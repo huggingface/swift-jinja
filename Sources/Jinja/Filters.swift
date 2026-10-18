@@ -353,7 +353,7 @@ public enum Filters {
 
         let keyedItems: [(item: Value, displayKey: Value, normalized: Value)] = try items.map {
             let rawKey = try PropertyMembers.evaluate($0, attribute)
-            let displayKey = rawKey == .undefined ? defaultValue : rawKey
+            let displayKey = rawKey == .undefined && defaultValue != .null ? defaultValue : rawKey
             return (item: $0, displayKey: displayKey, normalized: normalizedKey(displayKey))
         }
 
@@ -449,7 +449,7 @@ public enum Filters {
             return try .array(
                 items.map {
                     let value = try resolveAttributeValue($0, attribute: attribute)
-                    return value == .undefined ? defaultValue : value
+                    return value == .undefined && defaultValue != .null ? defaultValue : value
                 }
             )
         }
@@ -2058,8 +2058,8 @@ public enum Filters {
 
 /// Returns the string form of a value, matching Jinja2's `soft_str`.
 ///
-/// Treats `undefined` and `null` as an empty string.
-/// Other values use the same representation as template interpolation
+/// Treats `undefined` as an empty string.
+/// Other values, including `null`, use the same representation as template interpolation
 /// (`Value.description`).
 /// String filters call this instead of requiring a `.string` case,
 /// so expressions like `value['type'] | upper` succeed when the value is missing.

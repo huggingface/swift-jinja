@@ -82,7 +82,7 @@ struct InterpreterTests {
 
     // MARK: - Ternary without alternate
 
-    @Test("Ternary without alternate returns null")
+    @Test("Ternary without alternate returns undefined")
     func ternaryWithoutAlternate() throws {
         let template = try Template("{{ x if false }}")
         let result = try template.render([:])
@@ -559,7 +559,7 @@ struct InterpreterTests {
             "{% for i in [10, 20, 30] %}{{ loop.index }}-{{ loop.index0 }}-{{ loop.first }}-{{ loop.last }}-{{ loop.length }}-{{ loop.revindex }}-{{ loop.revindex0 }} {% endfor %}"
         )
         let result = try template.render([:])
-        #expect(result == "1-0-true-false-3-3-2 2-1-false-false-3-2-1 3-2-false-true-3-1-0 ")
+        #expect(result == "1-0-True-False-3-3-2 2-1-False-False-3-2-1 3-2-False-True-3-1-0 ")
     }
 
     @Test("Call block with macro")
