@@ -390,14 +390,19 @@ public enum Interpreter {
                     case let .single(varName):
                         childEnv[varName] = item
                     case let .tuple(varNames):
-                        // Arrays unpack by position.
-                        // Variables without a value are undefined.
-                        var values: [Value] = []
-                        if case let .array(tupleItems) = item {
-                            values = tupleItems
+                        // Arrays unpack by position, as in Python.
+                        guard case let .array(values) = item else {
+                            throw JinjaError.runtime(
+                                "Cannot unpack \(typeName(of: item)) into \(varNames.count) loop variables"
+                            )
                         }
-                        for (i, varName) in varNames.enumerated() {
-                            childEnv[varName] = i < values.count ? values[i] : .undefined
+                        guard values.count == varNames.count else {
+                            throw JinjaError.runtime(
+                                "Cannot unpack array of \(values.count) values into \(varNames.count) loop variables"
+                            )
+                        }
+                        for (varName, value) in zip(varNames, values) {
+                            childEnv[varName] = value
                         }
                     }
 
@@ -824,6 +829,22 @@ public enum Interpreter {
         }
 
         return .object(loopContext)
+    }
+
+    /// The name of a value's type, for error messages.
+    private static func typeName(of value: Value) -> String {
+        switch value {
+        case .null: return "none"
+        case .undefined: return "undefined"
+        case .boolean: return "boolean"
+        case .int: return "int"
+        case .double: return "float"
+        case .string: return "string"
+        case .array: return "array"
+        case .object: return "object"
+        case .function: return "function"
+        case .macro: return "macro"
+        }
     }
 
     private static func evaluateSlice(

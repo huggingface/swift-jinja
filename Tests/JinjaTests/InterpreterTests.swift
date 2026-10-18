@@ -634,6 +634,25 @@ struct InterpreterTests {
         #expect(result == "10332Fx;21321y;32310Lx;")
     }
 
+    @Test(
+        "For loop tuple unpacking throws when an item can't be unpacked",
+        arguments: [
+            // Items that aren't arrays.
+            Value.array([.int(1), .int(2)]),
+            Value.array([.object(["k": .string("a")])]),
+            Value.string("ab"),
+            // Arrays with too few or too many values.
+            Value.array([.array([.int(1)]), .array([.int(2)])]),
+            Value.array([.array([.int(1), .int(2), .int(3)])]),
+        ]
+    )
+    func forLoopTupleUnpackingMismatchThrows(items: Value) throws {
+        let template = try Template("{% for a, b in items %}{{ a }}{{ b }}{% endfor %}")
+        #expect(throws: JinjaError.self) {
+            try template.render(["items": items])
+        }
+    }
+
     @Test("For loop with loop.cycle")
     func forLoopCycle() throws {
         let template = try Template("{% for i in range(4) %}{{ loop.cycle('a', 'b') }}{% endfor %}")
