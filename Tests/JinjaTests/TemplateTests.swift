@@ -1052,6 +1052,170 @@ struct TemplateTests {
         #expect(rendered == "ok")
     }
 
+    @Test("Integer attributes")
+    func integerAttributes() throws {
+        // As in Jinja2, `foo.0` is `foo[0]`.
+        let string = #"{{ foo.0.1.type }}"#
+        let context: Context = [
+            "foo": [["a", ["type": "text"]]]
+        ]
+
+        // Check result of lexer
+        let tokens = try Lexer.tokenize(string)
+        #expect(
+            tokens == [
+                Token(kind: .openExpression, value: "{{", position: 0),
+                Token(kind: .identifier, value: "foo", position: 3),
+                Token(kind: .dot, value: ".", position: 6),
+                Token(kind: .number, value: "0", position: 7),
+                Token(kind: .dot, value: ".", position: 8),
+                Token(kind: .number, value: "1", position: 9),
+                Token(kind: .dot, value: ".", position: 10),
+                Token(kind: .identifier, value: "type", position: 11),
+                Token(kind: .closeExpression, value: "}}", position: 16),
+                Token(kind: .eof, value: "", position: 18),
+            ]
+        )
+
+        // Check result of parser
+        let nodes = try Parser.parse(tokens)
+        #expect(
+            nodes == [
+                .expression(
+                    .member(
+                        .member(
+                            .member(.identifier("foo"), .integer(0), computed: true),
+                            .integer(1),
+                            computed: true
+                        ),
+                        .identifier("type"),
+                        computed: false
+                    )
+                )
+            ]
+        )
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "text")
+        #expect(try rendered == Template(nodes: nodes).render(context))
+    }
+
+    @Test("Numbers after a dot have no fraction")
+    func numbersAfterDotHaveNoFraction() throws {
+        // As in Jinja2, `x.1.5` is `x[1][5]`, and `1.5` elsewhere is a decimal.
+        let string = #"{{ x.1.5 + 1.5 }}"#
+        let context: Context = [
+            "x": [0, [0, 1, 2, 3, 4, 5]]
+        ]
+
+        // Check result of lexer
+        let tokens = try Lexer.tokenize(string)
+        #expect(
+            tokens == [
+                Token(kind: .openExpression, value: "{{", position: 0),
+                Token(kind: .identifier, value: "x", position: 3),
+                Token(kind: .dot, value: ".", position: 4),
+                Token(kind: .number, value: "1", position: 5),
+                Token(kind: .dot, value: ".", position: 6),
+                Token(kind: .number, value: "5", position: 7),
+                Token(kind: .plus, value: "+", position: 9),
+                Token(kind: .number, value: "1.5", position: 11),
+                Token(kind: .closeExpression, value: "}}", position: 15),
+                Token(kind: .eof, value: "", position: 17),
+            ]
+        )
+
+        // Check result of template
+        let rendered = try Template(string).render(context)
+        #expect(rendered == "6.5")
+    }
+
+    // Expected strings were rendered with jinja2 3.1.6.
+    @Test(
+        "Integer attributes match Jinja2",
+        arguments: [
+            ("{{ foo.0 }}", "a"),
+            ("{{ foo.1 }}", "b"),
+            ("{{ letters.10 }}", "k"),
+            ("{{ nested.0.1 }}", "b"),
+            ("{{ nested.1.1.name }}", "n"),
+            ("{{ messages.0.content.0.type }}", "image"),
+            (#"{{ "abc".0 }}{{ "abc".2 }}"#, "ac"),
+            ("{{ mixed.0 }}|{{ mixed['0'] }}", "int|str"),
+            (#"{% set d = {"0": "str"} %}{{ "undefined" if d.0 is undefined else d.0 }}"#, "undefined"),
+            ("[{{ foo.5 }}]", "[]"),
+            (#"{{ "undefined" if foo.5 is undefined else foo.5 }}"#, "undefined"),
+            ("{{ foo.00 }}", "a"),
+            ("{{ foo . 1 }}", "b"),
+            ("{{ x + 1.5 }}", "2.5"),
+            ("{{ 1.5 + numbers.0.0 }}", "2.5"),
+            ("{% for n in numbers.0 %}{{ n }},{% endfor %}", "1,2,3,"),
+            ("{% set first = foo.0 %}{{ first }}", "a"),
+            ("{{ numbers.0|length }}", "3"),
+            ("{{ foo.0|upper }}", "A"),
+            (#"{{ "defined" if foo.0 is defined else "undefined" }}"#, "defined"),
+            (#"{{ "defined" if foo.0is defined else "undefined" }}"#, "defined"),
+            ("{{ foo.0 ~ foo.1 }}", "ab"),
+            (#"{{ "equal" if foo.0 == "a" else "not equal" }}"#, "equal"),
+            ("{{ nested.0[1] }}", "b"),
+            ("{{ nested[0].1 }}", "b"),
+            ("{{ handlers.0() }}", "called"),
+            ("{{ (foo).1 }}", "b"),
+            ("{% if foo.0 %}yes{% endif %}", "yes"),
+        ]
+    )
+    func integerAttributesMatchJinja2(template: String, expected: String) throws {
+        let context: Context = [
+            "foo": ["a", "b"],
+            "letters": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"],
+            "nested": [["a", "b"], ["c", ["name": "n"]]],
+            "messages": [["content": [["type": "image"]]]],
+            "numbers": [[1, 2, 3]],
+            "mixed": .object([.int(0): "int", .string("0"): "str"]),
+            "x": 1,
+            "handlers": [.function { _, _, _ in "called" }],
+        ]
+        #expect(try Template(template).render(context) == expected)
+    }
+
+    // Jinja2 raises a TemplateSyntaxError for each of these.
+    @Test(
+        "Invalid integer attributes",
+        arguments: [
+            "{{ foo.0abc }}",
+            "{{ foo.0 abc }}",
+            "{{ foo.0 'x' }}",
+            "{{ foo.-1 }}",
+            "{{ foo.01 }}",
+            "{{ foo.1e2 }}",
+            "{{ foo. 1.5 }}",
+            "{{ foo.0. }}",
+        ]
+    )
+    func invalidIntegerAttributes(template: String) {
+        #expect(throws: JinjaError.self) {
+            try Template(template)
+        }
+    }
+
+    // Jinja2 reads these as `foo[1]`, `foo[10]`, and an out-of-range index,
+    // but this package has no hexadecimal, underscored, or arbitrary-precision integers,
+    // so these throw instead of reading a different item.
+    @Test(
+        "Unsupported integer attributes",
+        arguments: [
+            "{{ foo.0x1 }}",
+            "{{ foo.1_0 }}",
+            "{{ foo.99999999999999999999 }}",
+        ]
+    )
+    func unsupportedIntegerAttributes(template: String) {
+        #expect(throws: JinjaError.self) {
+            try Template(template)
+        }
+    }
+
     @Test("Object methods")
     func objMethods() throws {
         let string = #"{{ obj.x(x, y) }}{{ ' ' + obj.x() + ' ' }}{{ obj.z[x](x, y) }}"#
