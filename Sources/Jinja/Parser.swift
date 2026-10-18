@@ -746,7 +746,9 @@ public struct Parser: Sendable {
     @discardableResult
     private mutating func consume(_ kind: Token.Kind, message: String) throws -> Token {
         if check(kind) { return advance() }
-        throw JinjaError.parser("\(message). Got \(peek().kind) instead")
+        let token = peek()
+        let found = token.kind == .eof ? "end of input" : "'\(token.value)' (\(token.kind))"
+        throw JinjaError.parser("\(message) Got \(found) instead.")
     }
 
     @discardableResult
