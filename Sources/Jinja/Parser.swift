@@ -523,9 +523,9 @@ public struct Parser: Sendable {
                 expr = .member(expr, .identifier(name), computed: false)
             } else if match(.openBracket) {
                 // Slice or subscript
-                let start = try? parseExpression()
+                let start = try check(.colon) || check(.closeBracket) ? nil : parseExpression()
                 if match(.colon) {
-                    let stop = try? parseExpression()
+                    let stop = try check(.colon) || check(.closeBracket) ? nil : parseExpression()
                     let step = match(.colon) ? try parseExpression() : nil
                     expr = .slice(expr, start: start, stop: stop, step: step)
                 } else if let index = start {
@@ -555,9 +555,12 @@ public struct Parser: Sendable {
         case .number:
             advance()
             if token.value.contains(".") {
-                return .number(Double(String(token.value)) ?? 0.0)
+                guard let value = Double(String(token.value)) else {
+                    throw JinjaError.parser("Invalid number literal '\(token.value)'.")
+                }
+                return .number(value)
             } else {
-                return .integer(Int(String(token.value)) ?? 0)
+                return .integer(try parseIntegerLiteral(token))
             }
         case .boolean:
             advance()
@@ -601,13 +604,12 @@ public struct Parser: Sendable {
                             .number,
                             message: "Expected number for object key."
                         )
-                        let raw = String(keyToken.value)
-                        guard !raw.contains("."), let intKey = Int(raw) else {
+                        guard !keyToken.value.contains(".") else {
                             throw JinjaError.parser(
-                                "Expected integer for numeric object key. Got \(raw) instead"
+                                "Expected integer for numeric object key. Got \(keyToken.value) instead"
                             )
                         }
-                        key = .int(intKey)
+                        key = .int(try parseIntegerLiteral(keyToken))
                     } else {
                         throw JinjaError.parser(
                             "Expected string literal, identifier, or integer for object key. Got \(peek().kind) instead"
@@ -695,6 +697,18 @@ public struct Parser: Sendable {
     }
 
     // MARK: - Helpers
+
+    /// Converts an integer literal token to `Int`,
+    /// throwing instead of substituting another value when it doesn't fit.
+    private func parseIntegerLiteral(_ token: Token) throws -> Int {
+        if let value = Int(token.value) {
+            return value
+        }
+        if token.value.utf8.allSatisfy({ (UInt8(ascii: "0") ... UInt8(ascii: "9")).contains($0) }) {
+            throw JinjaError.parser("Integer literal '\(token.value)' is too large.")
+        }
+        throw JinjaError.parser("Invalid integer literal '\(token.value)'.")
+    }
 
     @inline(__always)
     private var isAtEnd: Bool {
