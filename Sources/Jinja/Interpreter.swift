@@ -359,117 +359,78 @@ public enum Interpreter {
         case let .for(loopVar, iterable, body, elseBody, test):
             let iterableValue = try evaluateExpression(iterable, env: env)
 
+            // The values that the loop iterates over,
+            // which are also the `loop.previtem`/`loop.nextitem` items,
+            // per Python jinja2 `LoopContext`.
+            let items: [Value]
             switch iterableValue {
-            case let .array(items):
-                if items.isEmpty {
-                    // Execute else block
-                    for node in elseBody {
-                        try interpretNode(node, env: env, into: &buffer)
-                    }
-                } else {
-                    let childEnv = Environment(parent: env)
-                    for (index, item) in items.enumerated() {
-                        // Set loop variables
-                        switch loopVar {
-                        case let .single(varName):
-                            childEnv[varName] = item
-                        case let .tuple(varNames):
-                            if case let .array(tupleItems) = item {
-                                for (i, varName) in varNames.enumerated() {
-                                    let value = i < tupleItems.count ? tupleItems[i] : .undefined
-                                    childEnv[varName] = value
-                                }
-                            }
-                        }
-
-                        childEnv["loop"] = makeLoopObject(items: items, index: index)
-                        if let test = test {
-                            let testValue = try evaluateExpression(test, env: childEnv)
-                            if !testValue.isTruthy { continue }
-                        }
-
-                        var shouldBreak = false
-                        for node in body {
-                            do {
-                                try interpretNode(node, env: childEnv, into: &buffer)
-                            } catch ControlFlow.break {
-                                shouldBreak = true
-                                break
-                            } catch ControlFlow.continue {
-                                break  // Break from inner loop (current iteration)
-                            }
-                        }
-                        if shouldBreak { break }
-                    }
-                }
-
+            case let .array(values):
+                items = values
             case let .object(dict):
-                if dict.isEmpty {
-                    for node in elseBody { try interpretNode(node, env: env, into: &buffer) }
-                } else {
-                    let childEnv = Environment(parent: env)
-                    let entries = Array(dict)
-                    // `loop.previtem`/`loop.nextitem` items, per Python jinja2 `LoopContext`:
-                    // keys alone for `for k in d`,
-                    // `(key, value)` 2-tuples for `for k, v in d.items()`.
-                    let items: [Value]
-                    switch loopVar {
-                    case .single:
-                        items = entries.map { Value($0.key) }
-                    case .tuple:
-                        items = entries.map { .array([Value($0.key), $0.value]) }
-                    }
-                    for (index, (key, value)) in entries.enumerated() {
-                        switch loopVar {
-                        case let .single(varName):
-                            // Single variable gets the key
-                            childEnv[varName] = Value(key)
-                        case let .tuple(varNames):
-                            // Tuple unpacking: first gets key, second gets value
-                            if varNames.count >= 1 {
-                                childEnv[varNames[0]] = Value(key)
-                            }
-                            if varNames.count >= 2 {
-                                childEnv[varNames[1]] = value
-                            }
-                            // Set remaining variables to undefined
-                            for i in 2 ..< varNames.count {
-                                childEnv[varNames[i]] = .undefined
-                            }
-                        }
-                        childEnv["loop"] = makeLoopObject(items: items, index: index)
-                        if let test = test {
-                            let testValue = try evaluateExpression(test, env: childEnv)
-                            if !testValue.isTruthy { continue }
-                        }
-                        for node in body { try interpretNode(node, env: childEnv, into: &buffer) }
-                    }
+                // Keys for a single loop variable,
+                // and `[key, value]` pairs for tuple unpacking (`for k, v in d`),
+                // where Jinja2 would unpack each key instead.
+                switch loopVar {
+                case .single:
+                    items = dict.keys.map { Value($0) }
+                case .tuple:
+                    items = dict.map { .array([Value($0.key), $0.value]) }
                 }
             case let .string(str):
-                let chars = str.map { Value.string(String($0)) }
-                if chars.isEmpty {
-                    for node in elseBody { try interpretNode(node, env: env, into: &buffer) }
-                } else {
-                    let childEnv = Environment(parent: env)
-                    for (index, item) in chars.enumerated() {
-                        switch loopVar {
-                        case let .single(varName):
-                            childEnv[varName] = item
-                        case let .tuple(varNames):
-                            for (i, varName) in varNames.enumerated() {
-                                childEnv[varName] = i == 0 ? item : .undefined
-                            }
-                        }
-                        childEnv["loop"] = makeLoopObject(items: chars, index: index)
-                        if let test = test {
-                            let testValue = try evaluateExpression(test, env: childEnv)
-                            if !testValue.isTruthy { continue }
-                        }
-                        for node in body { try interpretNode(node, env: childEnv, into: &buffer) }
-                    }
-                }
+                items = str.map { .string(String($0)) }
+            case .undefined:
+                // Jinja2's `Undefined` iterates as an empty sequence.
+                items = []
             default:
                 throw JinjaError.runtime("Cannot iterate over non-iterable value")
+            }
+
+            if items.isEmpty {
+                for node in elseBody {
+                    try interpretNode(node, env: env, into: &buffer)
+                }
+            } else {
+                let childEnv = Environment(parent: env)
+                for (index, item) in items.enumerated() {
+                    switch loopVar {
+                    case let .single(varName):
+                        childEnv[varName] = item
+                    case let .tuple(varNames):
+                        // Arrays unpack by position, as in Python.
+                        guard case let .array(values) = item else {
+                            throw JinjaError.runtime(
+                                "Cannot unpack \(typeName(of: item)) into \(varNames.count) loop variables"
+                            )
+                        }
+                        guard values.count == varNames.count else {
+                            throw JinjaError.runtime(
+                                "Cannot unpack array of \(values.count) values into \(varNames.count) loop variables"
+                            )
+                        }
+                        for (varName, value) in zip(varNames, values) {
+                            childEnv[varName] = value
+                        }
+                    }
+
+                    childEnv["loop"] = makeLoopObject(items: items, index: index)
+                    if let test = test {
+                        let testValue = try evaluateExpression(test, env: childEnv)
+                        if !testValue.isTruthy { continue }
+                    }
+
+                    var shouldBreak = false
+                    for node in body {
+                        do {
+                            try interpretNode(node, env: childEnv, into: &buffer)
+                        } catch ControlFlow.break {
+                            shouldBreak = true
+                            break
+                        } catch ControlFlow.continue {
+                            break  // Break from inner loop (current iteration)
+                        }
+                    }
+                    if shouldBreak { break }
+                }
             }
 
         case let .set(target, value, body):
@@ -905,6 +866,22 @@ public enum Interpreter {
         }
 
         return .object(loopContext)
+    }
+
+    /// The name of a value's type, for error messages.
+    private static func typeName(of value: Value) -> String {
+        switch value {
+        case .null: return "none"
+        case .undefined: return "undefined"
+        case .boolean: return "boolean"
+        case .int: return "int"
+        case .double: return "float"
+        case .string: return "string"
+        case .array: return "array"
+        case .object: return "object"
+        case .function: return "function"
+        case .macro: return "macro"
+        }
     }
 
     private static func evaluateSlice(
