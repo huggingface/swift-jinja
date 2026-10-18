@@ -1821,6 +1821,59 @@ struct TemplateTests {
         #expect(rendered == "value")
     }
 
+    // Python prints each element of a list or dict with `repr()`.
+    // Expected values are Jinja2 3.1.6 output.
+    @Test(
+        "Containers print elements with Python repr",
+        arguments: [
+            ("{{ ['a', 'b'] }}", "['a', 'b']"),
+            ("{{ {'a': 'b'} }}", "{'a': 'b'}"),
+            ("{{ [true, false, none] }}", "[True, False, None]"),
+            ("{{ {'a': true, 'b': none} }}", "{'a': True, 'b': None}"),
+            ("{{ [missing] }}", "[Undefined]"),
+            ("{{ {'k': missing} }}", "{'k': Undefined}"),
+            ("{{ single_quote }}", #"["it's"]"#),
+            ("{{ double_quote }}", #"['say "hi"']"#),
+            ("{{ both_quotes }}", #"['it\'s "both"']"#),
+            ("{{ backslash }}", #"['back\\slash']"#),
+            ("{{ control }}", #"['tab\there', 'cr\rlf\n', 'nul\x00', 'bell\x07', 'del\x7f']"#),
+            (
+                "{{ unicode }}",
+                #"['café', '\xa0nbsp', '\x85nel', 'zw\u200bsp', 'ls\u2028', 'emoji 😀', 'rtl\u202e', 'bom\ufeff', 'priv\ue000', 'e\#u{301}', '\U000e0001tag', '\U0010ffff']"#
+            ),
+            ("{{ keys }}", #"{"it's": 'v', 'k\n': 1}"#),
+            ("{{ floats }}", "[1.0, 0.1, 1e+16, 9300000000000000.0, 1e-05, -0.0, 3, nan, inf, -inf]"),
+            ("{{ nested }}", "[[['deep']], {'a': {'b': 'c'}}]"),
+            ("{{ mixed_keys }}", "{1: 'a', '1': 'b'}"),
+            ("{{ message.content }}", "[{'type': 'text', 'text': 'Describe this.'}]"),
+            ("{{ items|string }}", "['a', True, None]"),
+            ("{{ 'v' ~ items }}", "v['a', True, None]"),
+            ("{{ containers|join(', ') }}", "['a'], {'k': 'v'}, s"),
+            ("{% macro m() %}{% endmacro %}{{ [m] }}", "[<Macro 'm'>]"),
+        ]
+    )
+    func containersPrintElementsWithPythonRepr(template: String, expected: String) throws {
+        let context: Context = [
+            "single_quote": ["it's"],
+            "double_quote": ["say \"hi\""],
+            "both_quotes": ["it's \"both\""],
+            "backslash": ["back\\slash"],
+            "control": ["tab\there", "cr\rlf\n", "nul\u{0}", "bell\u{7}", "del\u{7f}"],
+            "unicode": [
+                "café", "\u{a0}nbsp", "\u{85}nel", "zw\u{200b}sp", "ls\u{2028}", "emoji 😀",
+                "rtl\u{202e}", "bom\u{feff}", "priv\u{e000}", "e\u{301}", "\u{e0001}tag", "\u{10ffff}",
+            ],
+            "keys": ["it's": "v", "k\n": 1],
+            "floats": [1.0, 0.1, 1e16, 9.3e15, 1e-5, -0.0, 3, .double(.nan), .double(.infinity), .double(-.infinity)],
+            "nested": [[["deep"]], ["a": ["b": "c"]]],
+            "mixed_keys": .object([.int(1): "a", .string("1"): "b"]),
+            "message": ["content": [["type": "text", "text": "Describe this."]]],
+            "items": ["a", true, nil],
+            "containers": [["a"], ["k": "v"], "s"],
+        ]
+        #expect(try Template(template).render(context) == expected)
+    }
+
     @Test("Array operators")
     func arrayOperators() throws {
         let string = #"{{ ([1, 2, 3] + [4, 5, 6]) | length }}"#

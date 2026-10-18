@@ -198,7 +198,7 @@ struct ValueTests {
         var collidingKeys = OrderedDictionary<ObjectKey, Value>()
         collidingKeys[.int(512)] = .string("int")
         collidingKeys[.string("512")] = .string("str")
-        #expect(Value.object(collidingKeys).description == "{512: int, '512': str}")
+        #expect(Value.object(collidingKeys).description == "{512: 'int', '512': 'str'}")
     }
 
     @Test("isTruthy behavior")
@@ -893,7 +893,7 @@ struct ValueTests {
     @Test("Array with mixed types description")
     func arrayMixedDescription() {
         let value = Value.array([.string("a"), .int(1), .boolean(true)])
-        #expect(value.description == "['a', 1, true]")
+        #expect(value.description == "['a', 1, True]")
     }
 
     // MARK: - Hash for various types
