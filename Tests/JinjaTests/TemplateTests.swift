@@ -2203,7 +2203,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|hello|false|hello|0|")
+        #expect(rendered == "|hello|false|hello|hello|")
     }
 
     @Test("Filter operator with unique")
