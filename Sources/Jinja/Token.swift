@@ -7,13 +7,13 @@ public struct Token: Hashable, Sendable {
     public enum Kind: CaseIterable, Hashable, Codable, Sendable {
         /// Plain text content outside of Jinja template constructs.
         case text
-        /// `{{` delimiter.
+        /// `{{` or `{{-` delimiter.
         case openExpression
-        /// `}}` delimiter.
+        /// `}}` or `-}}` delimiter.
         case closeExpression
-        /// `{%` delimiter.
+        /// `{%` or `{%-` delimiter.
         case openStatement
-        /// `%}` delimiter.
+        /// `%}` or `-%}` delimiter.
         case closeStatement
         /// String literal value enclosed in quotes.
         case string
