@@ -71,6 +71,10 @@ struct IntegerLiteralTests {
             expected: "Integer literal '99999999999999999999' is too large."
         ),
         Case(
+            template: "{{ foo.99999999999999999999 }}",
+            expected: "Integer literal '99999999999999999999' is too large."
+        ),
+        Case(
             template: "{{ \u{00B2} }}",
             expected: "Invalid integer literal '\u{00B2}'."
         ),

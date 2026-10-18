@@ -795,12 +795,14 @@ public struct Parser: Sendable {
     /// Jinja2 rejects a decimal (`foo. 1.5`), a leading zero (`foo.01`),
     /// and a name or literal after the integer (`foo.0abc`, `foo.1e2`),
     /// so these throw instead of becoming an index or an implicit concatenation.
-    /// An integer too large for `Int` also throws.
+    /// An integer too large for `Int` also throws, as other integer literals do.
     private mutating func consumeIntegerAttribute() throws -> Int {
-        let digits = advance().value
-        guard let index = Int(digits), digits.first != "0" || index == 0 else {
+        let token = advance()
+        let digits = token.value
+        guard !digits.contains("."), digits.first != "0" || digits.allSatisfy({ $0 == "0" }) else {
             throw JinjaError.parser("Invalid integer '\(digits)' after '.'.")
         }
+        let index = try parseIntegerLiteral(token)
         if check(anyOf: Token.Kind.invalidAfterIntegerAttribute) {
             let token = peek()
             throw JinjaError.parser("Unexpected \(token.kind) '\(token.value)' after '.\(digits)'.")
