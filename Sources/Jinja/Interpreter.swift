@@ -362,7 +362,7 @@ public enum Interpreter {
             // The values that the loop iterates over,
             // which are also the `loop.previtem`/`loop.nextitem` items,
             // per Python jinja2 `LoopContext`.
-            let items: [Value]
+            var items: [Value]
             switch iterableValue {
             case let .array(values):
                 items = values
@@ -385,6 +385,20 @@ public enum Interpreter {
                 throw JinjaError.runtime("Cannot iterate over non-iterable value")
             }
 
+            // Jinja2 filters the items before it computes the loop variables,
+            // so `loop.index`, `loop.last`, `loop.length`, and the `else` block
+            // count only the items that pass the test.
+            // The test sees the loop variables, but not this loop's `loop`.
+            // Jinja2 filters lazily, but this tests every item before the body runs,
+            // so a test that reads a namespace that the body changes can differ.
+            if let test = test {
+                let testEnv = Environment(parent: env)
+                items = try items.filter { item in
+                    try bindLoopVariables(loopVar, to: item, in: testEnv)
+                    return try evaluateExpression(test, env: testEnv).isTruthy
+                }
+            }
+
             if items.isEmpty {
                 for node in elseBody {
                     try interpretNode(node, env: env, into: &buffer)
@@ -392,31 +406,8 @@ public enum Interpreter {
             } else {
                 let childEnv = Environment(parent: env)
                 for (index, item) in items.enumerated() {
-                    switch loopVar {
-                    case let .single(varName):
-                        childEnv[varName] = item
-                    case let .tuple(varNames):
-                        // Arrays unpack by position, as in Python.
-                        guard case let .array(values) = item else {
-                            throw JinjaError.runtime(
-                                "Cannot unpack \(typeName(of: item)) into \(varNames.count) loop variables"
-                            )
-                        }
-                        guard values.count == varNames.count else {
-                            throw JinjaError.runtime(
-                                "Cannot unpack array of \(values.count) values into \(varNames.count) loop variables"
-                            )
-                        }
-                        for (varName, value) in zip(varNames, values) {
-                            childEnv[varName] = value
-                        }
-                    }
-
+                    try bindLoopVariables(loopVar, to: item, in: childEnv)
                     childEnv["loop"] = makeLoopObject(items: items, index: index)
-                    if let test = test {
-                        let testValue = try evaluateExpression(test, env: childEnv)
-                        if !testValue.isTruthy { continue }
-                    }
 
                     var shouldBreak = false
                     for node in body {
@@ -840,6 +831,33 @@ public enum Interpreter {
         }
 
         throw JinjaError.runtime("Unknown filter: \(filterName)")
+    }
+
+    /// Assigns an item of a for loop to the loop variables.
+    private static func bindLoopVariables(
+        _ loopVar: Statement.LoopVar,
+        to item: Value,
+        in env: Environment
+    ) throws {
+        switch loopVar {
+        case let .single(varName):
+            env[varName] = item
+        case let .tuple(varNames):
+            // Arrays unpack by position, as in Python.
+            guard case let .array(values) = item else {
+                throw JinjaError.runtime(
+                    "Cannot unpack \(typeName(of: item)) into \(varNames.count) loop variables"
+                )
+            }
+            guard values.count == varNames.count else {
+                throw JinjaError.runtime(
+                    "Cannot unpack array of \(values.count) values into \(varNames.count) loop variables"
+                )
+            }
+            for (varName, value) in zip(varNames, values) {
+                env[varName] = value
+            }
+        }
     }
 
     private static func makeLoopObject(
