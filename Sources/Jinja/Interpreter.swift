@@ -264,7 +264,7 @@ public enum Interpreter {
             } else if let alternate = alternate {
                 return try evaluateExpression(alternate, env: env)
             } else {
-                return .null
+                return .undefined
             }
 
         case let .member(object, property, computed):

@@ -192,10 +192,35 @@ struct TemplateTests {
 
         // Check result of template initialized with string
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|true|false|")
+        #expect(rendered == "|True|False|True|False|")
 
         // Check result of template initialized with nodes
         #expect(try rendered == Template(nodes: nodes).render(context))
+    }
+
+    // Expected strings were rendered with jinja2 3.1.6.
+    @Test(
+        "Booleans and none print as Python's str() writes them",
+        arguments: [
+            ("{{ true }}|{{ false }}|{{ none }}", "True|False|None"),
+            ("{{ true|string }}|{{ false|string }}|{{ none|string }}", "True|False|None"),
+            ("{{ [true, false, none]|join(', ') }}", "True, False, None"),
+            ("{{ items|join(',', attribute='v') }}", "True,None"),
+            ("{{ 'x' ~ true ~ false ~ none }}", "xTrueFalseNone"),
+            ("{{ '%s %s %s'|format(true, false, none) }}", "True False None"),
+            ("{{ value }}|{{ value|default('d') }}|{{ value|default('d', true) }}", "None|None|d"),
+            ("{{ value|default('', true)|string|trim }}", ""),
+            ("{{ missing }}|{{ missing|string }}", "|"),
+            ("{{ 'x' if false }}|{{ ('x' if false) is defined }}", "|False"),
+            ("{{ [true, none] }}|{{ {'a': none} }}", "[True, None]|{'a': None}"),
+        ]
+    )
+    func booleansAndNonePrintAsPython(template: String, expected: String) throws {
+        let context: Context = [
+            "value": .null,
+            "items": [["v": true], ["v": .null]],
+        ]
+        #expect(try Template(template).render(context) == expected)
     }
 
     @Test("Logical AND operator")
@@ -245,7 +270,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "truefalsefalsefalse")
+        #expect(rendered == "TrueFalseFalseFalse")
     }
 
     @Test("Logical OR operator")
@@ -295,7 +320,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "truetruetruefalse")
+        #expect(rendered == "TrueTrueTrueFalse")
     }
 
     @Test("Logical NOT operator")
@@ -330,7 +355,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "falsetrue")
+        #expect(rendered == "FalseTrue")
     }
 
     @Test("Logical NOT NOT operator")
@@ -350,7 +375,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "truefalse")
+        #expect(rendered == "TrueFalse")
     }
 
     @Test("Logical AND OR combination")
@@ -384,7 +409,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "truetruetruetruefalse")
+        #expect(rendered == "TrueTrueTrueTrueFalse")
     }
 
     @Test("Logical AND NOT combination")
@@ -407,7 +432,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "falsetruefalsefalse")
+        #expect(rendered == "FalseTrueFalseFalse")
     }
 
     @Test("Logical OR NOT combination")
@@ -430,7 +455,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "truetruefalsetrue")
+        #expect(rendered == "TrueTrueFalseTrue")
     }
 
     @Test("Logical combined with comparison")
@@ -462,7 +487,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "falsetrue")
+        #expect(rendered == "FalseTrue")
     }
 
     @Test("If statement only")
@@ -865,7 +890,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "1truefalsefalsetruetruetrue5")
+        #expect(rendered == "1TrueFalseFalseTrueTrueTrue5")
     }
 
     @Test("Binary expressions with concatenation")
@@ -875,7 +900,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "1+2=3 is true")
+        #expect(rendered == "1+2=3 is True")
     }
 
     @Test("String literals")
@@ -1347,7 +1372,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "true")
+        #expect(rendered == "True")
     }
 
     @Test("String startswith false")
@@ -1357,7 +1382,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "false")
+        #expect(rendered == "False")
     }
 
     @Test("String endswith")
@@ -1367,7 +1392,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "true")
+        #expect(rendered == "True")
     }
 
     @Test("String endswith false")
@@ -1377,7 +1402,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "false")
+        #expect(rendered == "False")
     }
 
     @Test("String replace")
@@ -1427,7 +1452,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|true|false|true|false|")
+        #expect(rendered == "|True|False|True|False|True|False|")
     }
 
     @Test("Membership negation with not")
@@ -1440,7 +1465,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|true|false|true|false|true|")
+        #expect(rendered == "|False|True|False|True|False|True|")
     }
 
     @Test("Membership negation with not in")
@@ -1474,7 +1499,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|true|false|true|false|true|")
+        #expect(rendered == "|False|True|False|True|False|True|")
     }
 
     @Test("Membership with undefined")
@@ -1485,7 +1510,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|false|false|false|false|false|")
+        #expect(rendered == "|False|False|False|False|False|False|")
     }
 
     @Test("Escaped characters")
@@ -1514,7 +1539,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|true|false|true|false|true|false|")
+        #expect(rendered == "|True|True|False|True|False|True|False|")
     }
 
     @Test("Filter operator")
@@ -1628,7 +1653,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|2|0|0|0|1|1|1|0|false|true|")
+        #expect(rendered == "|2|0|0|0|1|1|1|0|False|True|")
     }
 
     @Test("Boolean operations with strings")
@@ -1639,7 +1664,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|b||||a|a|a||false|true|")
+        #expect(rendered == "|b||||a|a|a||False|True|")
     }
 
     @Test("Boolean operations mixed")
@@ -1650,7 +1675,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|1|0|false|false|true|true|1|0|")
+        #expect(rendered == "|1|0|False|False|True|True|1|0|")
     }
 
     @Test("Boolean operations mixed with strings")
@@ -1661,7 +1686,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "||a||a||true|false|a|")
+        #expect(rendered == "||a||a||True|False|a|")
     }
 
     @Test("Boolean operations in if statements")
@@ -1797,7 +1822,7 @@ struct TemplateTests {
     func integerObjectKeysDistinctFromStrings() throws {
         let string = #"{% set d = {512: "int"} %}{{ d[512] }}|{{ d['512'] is undefined }}"#
         let rendered = try Template(string).render([:])
-        #expect(rendered == "int|true")
+        #expect(rendered == "int|True")
     }
 
     @Test("Object literals nested")
@@ -1896,7 +1921,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|false|true|")
+        #expect(rendered == "|True|False|False|True|")
     }
 
     @Test("Object get method")
@@ -1911,7 +1936,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|true|true|")
+        #expect(rendered == "|True|True|True|")
     }
 
     @Test("Object items method")
@@ -1940,7 +1965,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "found=false")
+        #expect(rendered == "found=False")
     }
 
     @Test("Undefined variables")
@@ -2256,7 +2281,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|hello|false|hello|hello|")
+        #expect(rendered == "|hello|False|hello|hello|")
     }
 
     @Test("Filter operator with unique")
@@ -2279,7 +2304,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|true|true|false|")
+        #expect(rendered == "|False|True|True|False|")
     }
 
     @Test("Is operator with boolean")
@@ -2290,7 +2315,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|false|true|true|false|")
+        #expect(rendered == "|True|False|False|True|True|False|")
     }
 
     @Test("Is operator with odd even")
@@ -2301,7 +2326,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|false|true|true|false|true|false|")
+        #expect(rendered == "|True|False|False|True|True|False|True|False|")
     }
 
     @Test("Is operator with callable")
@@ -2314,7 +2339,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|false|true|")
+        #expect(rendered == "|True|False|False|True|")
     }
 
     @Test("Is operator with case")
@@ -2325,7 +2350,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|false|true|")
+        #expect(rendered == "|True|False|False|True|")
     }
 
     @Test("Is operator with divisibleby")
@@ -2336,7 +2361,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|true|true|")
+        #expect(rendered == "|True|False|True|True|")
     }
 
     @Test("Is operator with divisibleby without parentheses")
@@ -2347,7 +2372,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|true|")
+        #expect(rendered == "|True|False|True|")
     }
 
     @Test("Is operator with fractional numbers even")
@@ -2356,7 +2381,7 @@ struct TemplateTests {
         let context: Context = [:]
 
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|false|false|true|")
+        #expect(rendered == "|False|False|False|True|")
     }
 
     @Test("Is operator with fractional numbers odd")
@@ -2365,7 +2390,7 @@ struct TemplateTests {
         let context: Context = [:]
 
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|false|false|true|")
+        #expect(rendered == "|False|False|False|True|")
     }
 
     @Test("Is operator with mapping")
@@ -2381,7 +2406,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|false|false|false|true|")
+        #expect(rendered == "|False|False|False|True|")
     }
 
     @Test("Short circuit with false and")
@@ -2391,7 +2416,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "false")
+        #expect(rendered == "False")
     }
 
     @Test("Short circuit with true or")
@@ -2401,7 +2426,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "true")
+        #expect(rendered == "True")
     }
 
     @Test("Filter with arguments")
@@ -2435,7 +2460,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|true|false|false|true|")
+        #expect(rendered == "|True|False|False|True|")
     }
 
     @Test("Keyword arguments")
@@ -2590,7 +2615,7 @@ struct TemplateTests {
 
         let template = try Template("{{ items|reject|join(',') }}")
         let result = try template.render(context)
-        #expect(result == ",", "Should reject truthy values, leaving empty string and null")
+        #expect(result == ",None", "Should reject truthy values, leaving empty string and null")
     }
 
     @Test("escape filter HTML entity encoding")
@@ -2622,7 +2647,7 @@ struct TemplateTests {
         ]
 
         let rendered = try Template(template).render(context)
-        #expect(rendered.trimmingCharacters(in: .whitespacesAndNewlines) == "true")
+        #expect(rendered.trimmingCharacters(in: .whitespacesAndNewlines) == "True")
     }
 
     @Test("Simple namespace test")
@@ -2636,7 +2661,7 @@ struct TemplateTests {
             """
 
         let rendered = try Template(template).render([:])
-        #expect(rendered.trimmingCharacters(in: .whitespacesAndNewlines) == "true")
+        #expect(rendered.trimmingCharacters(in: .whitespacesAndNewlines) == "True")
     }
 
     @Test("Namespace vs regular variable scoping difference")
@@ -2651,7 +2676,7 @@ struct TemplateTests {
             """
 
         let regularResult = try Template(regularVarTemplate).render([:])
-        #expect(regularResult.trimmingCharacters(in: .whitespacesAndNewlines) == "false")
+        #expect(regularResult.trimmingCharacters(in: .whitespacesAndNewlines) == "False")
 
         let namespaceTemplate = """
             {% set ns = namespace(found=false) %}
@@ -2662,7 +2687,7 @@ struct TemplateTests {
             """
 
         let namespaceResult = try Template(namespaceTemplate).render([:])
-        #expect(namespaceResult.trimmingCharacters(in: .whitespacesAndNewlines) == "true")
+        #expect(namespaceResult.trimmingCharacters(in: .whitespacesAndNewlines) == "True")
     }
 
     @Test("Generation statements (HuggingFace extension)")
