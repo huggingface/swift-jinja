@@ -39,6 +39,8 @@ struct ArgumentBoundsTests {
         Case(template: "{{ [1, 2, 3]|batch(2)|list }}", expected: "[[1, 2], [3]]"),
         Case(template: "{{ [1, 2, 3]|batch(2, 'x')|list }}", expected: "[[1, 2], [3, 'x']]"),
         Case(template: "{{ [1, 2, 3]|batch(9223372036854775807)|list }}", expected: "[[1, 2, 3]]"),
+        Case(template: "{{ [1, 2, 3]|slice(-1)|list }}", expected: "[]"),
+        Case(template: "{{ []|slice(-2, 'x')|list }}", expected: "[]"),
         Case(template: "{{ [1, 2, 3][:9223372036854775807] }}", expected: "[1, 2, 3]"),
         Case(template: "{{ [1, 2, 3][-9223372036854775807:] }}", expected: "[1, 2, 3]"),
         Case(template: "{{ [1, 2, 3][9223372036854775807::-1] }}", expected: "[3, 2, 1]"),
