@@ -1338,6 +1338,37 @@ struct FiltersTests {
         #expect(slices.count == 2)
     }
 
+    // Expected strings were rendered with jinja2 3.1.6,
+    // which puts consecutive items in each slice,
+    // gives the first slices one extra item each,
+    // and adds `fill_with` only to the other slices, and only when it isn't none.
+    @Test(
+        "slice filter distributes and fills like Jinja2",
+        arguments: [
+            ("{{ ['x']|slice(3)|list }}", "[['x'], [], []]"),
+            ("{{ []|slice(2)|list }}", "[[], []]"),
+            ("{{ []|slice(2, '')|list }}", "[[''], ['']]"),
+            ("{{ [1, 2]|slice(4, false)|list }}", "[[1], [2], [False], [False]]"),
+            ("{{ [1, 2, 3]|slice(2)|list }}", "[[1, 2], [3]]"),
+            ("{{ [1, 2, 3]|slice(2, 'x')|list }}", "[[1, 2], [3, 'x']]"),
+            ("{{ [1, 2, 3, 4]|slice(2, 'x')|list }}", "[[1, 2, 'x'], [3, 4, 'x']]"),
+            ("{{ [1, 2, 3, 4]|slice(3, none)|list }}", "[[1, 2], [3], [4]]"),
+            ("{{ [1, 2, 3, 4, 5, 6, 7]|slice(3)|list }}", "[[1, 2, 3], [4, 5], [6, 7]]"),
+            ("{{ [1, 2, 3, 4, 5, 6, 7]|slice(5, 0)|list }}", "[[1, 2], [3, 4], [5, 0], [6, 0], [7, 0]]"),
+        ]
+    )
+    func sliceFilterMatchesJinja2(template: String, expected: String) throws {
+        #expect(try Template(template).render([:]) == expected)
+    }
+
+    @Test("slice filter with zero slices throws")
+    func sliceFilterZeroSlices() throws {
+        // Jinja2 raises ZeroDivisionError.
+        #expect(throws: JinjaError.self) {
+            try Template("{{ [1, 2, 3]|slice(0)|list }}").render([:])
+        }
+    }
+
     @Test("map filter with non-array")
     func mapFilterNonArray() throws {
         let result = try Filters.map([.int(42)], kwargs: [:], env: env)

@@ -398,23 +398,30 @@ public enum Filters {
             defaults: ["fillWith": .null]
         )
 
-        guard case let .int(numSlices) = arguments["numSlices"], numSlices > 0 else {
-            throw JinjaError.runtime("slice filter requires positive integer numSlices parameter")
+        guard case let .int(numSlices) = arguments["numSlices"], numSlices != 0 else {
+            throw JinjaError.runtime("slice filter requires nonzero integer numSlices parameter")
+        }
+
+        // Like Jinja2, a negative number of slices gives no slices.
+        guard numSlices > 0 else {
+            return .array([])
         }
 
         let fillWith = arguments["fillWith"]!
         var result = try repeatedArray([Value](), count: numSlices)
-        let itemsPerSlice = (items.count + numSlices - 1) / numSlices
 
-        for i in 0 ..< itemsPerSlice {
-            for j in 0 ..< numSlices {
-                let index = i * numSlices + j
-                if index < items.count {
-                    result[j].append(items[index])
-                } else {
-                    result[j].append(fillWith)
-                }
+        // Like Jinja2, put consecutive items in each slice,
+        // give the first `items.count % numSlices` slices one more item than the others,
+        // and add `fill_with` to each of the others when it isn't none.
+        let (itemsPerSlice, slicesWithExtra) = items.count.quotientAndRemainder(dividingBy: numSlices)
+        var start = 0
+        for i in 0 ..< numSlices {
+            let end = start + itemsPerSlice + (i < slicesWithExtra ? 1 : 0)
+            result[i] = Array(items[start ..< end])
+            if i >= slicesWithExtra, fillWith != .null {
+                result[i].append(fillWith)
             }
+            start = end
         }
 
         return .array(result.map { .array($0) })
