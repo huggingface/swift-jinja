@@ -5,7 +5,7 @@ import Foundation
 ///
 /// This provides dot-notation property access functionality for various value types,
 /// such as string methods (`str.upper()`), object properties, and built-in methods.
-public enum PropertyMembers {
+enum PropertyMembers {
     /// Evaluates property member access on a value.
     ///
     /// - Parameters:
@@ -13,7 +13,7 @@ public enum PropertyMembers {
     ///   - propertyName: The name of the property to access
     /// - Returns: The property value or `.undefined` if not found
     /// - Throws: `JinjaError.runtime` for invalid operations
-    public static func evaluate(_ object: Value, _ propertyName: String) throws -> Value {
+    static func evaluate(_ object: Value, _ propertyName: String) throws -> Value {
         switch object {
         case let .string(str):
             return try evaluateStringProperty(str, propertyName)
