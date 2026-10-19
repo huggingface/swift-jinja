@@ -85,14 +85,15 @@ internal func checkedInt(
     return result.partialValue
 }
 
-/// The most bytes that a template can allocate by repeating one value,
+/// The most bytes that a template can allocate at once by repeating one value,
 /// as in `'-' * 80`, the padding of `center` and `batch`,
-/// the indentation of `indent` and `tojson`, or the lists that `slice` makes.
+/// the indentation of `indent` and `tojson`, or the list of slices that `slice` makes.
 ///
 /// Jinja2 has no such limit:
 /// Python raises `MemoryError` when an allocation fails,
 /// but Swift stops the process.
-/// So swift-jinja throws before it allocates more than this.
+/// So swift-jinja throws before it makes one of these allocations larger than this.
+/// The limit applies to each allocation, not to the total memory that a template uses.
 /// 256 MiB is far more than a chat template renders
 /// (a prompt of one million tokens is about 4 MB of text)
 /// and far less than the gigabytes that would exhaust the memory of a phone.
