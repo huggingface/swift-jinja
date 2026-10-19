@@ -39,6 +39,14 @@ struct ConformanceTests {
         }
     }
 
+    @Test("Outputs that differ only by Unicode normalization don't agree")
+    func comparisonDistinguishesCanonicallyEquivalentOutput() {
+        let precomposed = RenderResult(ok: true, output: "\u{e9}")
+        let decomposed = RenderResult(ok: true, output: "e\u{301}")
+        #expect(!precomposed.agrees(with: decomposed))
+        #expect(precomposed.agrees(with: RenderResult(ok: true, output: "\u{e9}")))
+    }
+
     @Test("Renders like Jinja2", arguments: renderableCases)
     func rendersLikeJinja2(_ testCase: Case) throws {
         let corpus = try Self.corpus.get()
@@ -114,8 +122,11 @@ extension ConformanceTests {
         var error: String?
 
         /// True if both have the same output, or both failed.
+        ///
+        /// Outputs are compared by their UTF-8 bytes, not with `String` equality,
+        /// which treats canonically equivalent text such as `"\u{e9}"` and `"e\u{301}"` as equal.
         func agrees(with other: RenderResult) -> Bool {
-            ok == other.ok && (!ok || output == other.output)
+            ok == other.ok && (!ok || output.map { Array($0.utf8) } == other.output.map { Array($0.utf8) })
         }
 
         /// Replaces each "[strftime_now <format>]" marker
@@ -299,13 +310,15 @@ private func describe(expected: ConformanceTests.RenderResult, actual: Conforman
     guard expected.ok, actual.ok, let a = expected.output, let b = actual.output, a.count + b.count > 400 else {
         return "Expected: \(text(expected))\nActual:   \(text(actual))"
     }
-    let common = zip(a, b).prefix { $0 == $1 }.count
+    // Compare Unicode scalars, as `agrees(with:)` does,
+    // so that canonically equivalent characters still show where they differ.
+    let common = zip(a.unicodeScalars, b.unicodeScalars).prefix { $0 == $1 }.count
     let start = max(0, common - 60)
     func excerpt(_ s: String) -> String {
-        String(reflecting: String(s.dropFirst(start).prefix(160)))
+        String(reflecting: String(String.UnicodeScalarView(s.unicodeScalars.dropFirst(start).prefix(160))))
     }
     return """
-        Outputs first differ at character \(common).
+        Outputs first differ at Unicode scalar \(common).
         Expected: …\(excerpt(a))…
         Actual:   …\(excerpt(b))…
         """
