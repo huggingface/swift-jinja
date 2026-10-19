@@ -49,6 +49,7 @@ import oracle  # noqa: E402
 ROOT = HERE.parent.parent
 CORPUS = ROOT / "Tests" / "JinjaTests" / "Conformance"
 MARKER = re.compile(r"\[strftime_now ([^\]]*)\]")
+STRFTIME_CALL = re.compile(r"""strftime_now\(\s*(['"])(.*?)\1\s*\)""")
 
 # Cause labels for new differences.  The first rule whose pattern matches the
 # case ID assigns the label; "py-str" also matches on the output itself.
@@ -197,7 +198,12 @@ def main():
     try:
         for case in cases:
             jr = j.render(request(case))
-            formats = sorted(set(MARKER.findall(jr["output"]))) if jr.get("ok") else []
+            # Formats from Jinja2's markers, and from calls in the template,
+            # because swift-jinja can print a date where Jinja2 fails.
+            formats = {m.group(2) for m in STRFTIME_CALL.finditer(case["template"])}
+            if jr.get("ok"):
+                formats.update(MARKER.findall(jr["output"]))
+            formats = sorted(formats)
             sr = s.render(request(case, formats))
             if str(jr.get("error", "")).startswith(("CRASH", "TIMEOUT", "HARNESS")):
                 raise SystemExit(f"{case['id']}: Jinja2 failed to answer: {jr['error']}")
@@ -205,7 +211,7 @@ def main():
             if formats and sr.get("ok") and set(dates) != set(formats):
                 raise SystemExit(f"{case['id']}: jinja-render did not report strftime_now dates")
             expected = dict(jr)
-            if dates:
+            if dates and jr.get("ok"):
                 expected["output"] = MARKER.sub(lambda m: dates[m.group(1)], jr["output"])
             cls = oracle.classify(expected, sr)
             if cls == "skip":
