@@ -85,6 +85,62 @@ internal func checkedInt(
     return result.partialValue
 }
 
+/// The most bytes that a template can allocate at once by repeating one value,
+/// as in `'-' * 80`, the padding of `center` and `batch`,
+/// the indentation of `indent` and `tojson`, or the list of slices that `slice` makes.
+///
+/// Jinja2 has no such limit:
+/// Python raises `MemoryError` when an allocation fails,
+/// but Swift stops the process.
+/// So swift-jinja throws before it makes one of these allocations larger than this.
+/// The limit applies to each allocation, not to the total memory that a template uses.
+/// 256 MiB is far more than a chat template renders
+/// (a prompt of one million tokens is about 4 MB of text)
+/// and far less than the gigabytes that would exhaust the memory of a phone.
+internal let maximumRepetitionSize = 1 << 28
+
+/// Returns a string repeated `count` times, as Python's `str * int` does.
+///
+/// A count of zero or less gives an empty string.
+///
+/// - Parameters:
+///   - string: The string to repeat.
+///   - count: The number of times to repeat it.
+/// - Returns: The repeated string.
+/// - Throws: `JinjaError.runtime` if the result would be larger than
+///   ``maximumRepetitionSize`` bytes of UTF-8.
+internal func repeatedString(_ string: String, count: Int) throws -> String {
+    guard count > 0, !string.isEmpty else { return "" }
+    let (size, overflow) = string.utf8.count.multipliedReportingOverflow(by: count)
+    guard !overflow, size <= maximumRepetitionSize else {
+        throw JinjaError.runtime(
+            "Repeating a string \(count) times exceeds the limit of \(maximumRepetitionSize) bytes"
+        )
+    }
+    return String(repeating: string, count: count)
+}
+
+/// Returns an array of an element repeated `count` times, as Python's `list * int` does.
+///
+/// A count of zero or less gives an empty array.
+///
+/// - Parameters:
+///   - element: The element to repeat.
+///   - count: The number of times to repeat it.
+/// - Returns: The array of repeated elements.
+/// - Throws: `JinjaError.runtime` if the array's storage would be larger than
+///   ``maximumRepetitionSize`` bytes.
+internal func repeatedArray<Element>(_ element: Element, count: Int) throws -> [Element] {
+    guard count > 0 else { return [] }
+    let (size, overflow) = MemoryLayout<Element>.stride.multipliedReportingOverflow(by: count)
+    guard !overflow, size <= maximumRepetitionSize else {
+        throw JinjaError.runtime(
+            "Repeating a value \(count) times exceeds the limit of \(maximumRepetitionSize) bytes"
+        )
+    }
+    return Array(repeating: element, count: count)
+}
+
 /// Converts a double to an integer, rounding toward zero as Python's `int()` does.
 ///
 /// - Parameter value: The double to convert.
