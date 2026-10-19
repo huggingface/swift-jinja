@@ -3,19 +3,40 @@ import Testing
 
 import Jinja
 
-/// Renders each case in `Conformance/cases/` and compares the result
-/// with the output that Jinja2 recorded in `Conformance/jinja2.jsonl`.
+/// Renders each case in the conformance corpus and compares the result
+/// with the output that Jinja2 recorded for it.
 ///
-/// A case listed in `Conformance/known-differences.json` must give
+/// `uv run Tools/conformance/fetch.py` builds the corpus from the pinned sources
+/// in `Tools/conformance/manifest.json`.
+/// The tests that need it run only when `JINJA_CONFORMANCE_CORPUS`
+/// is set to the corpus directory,
+/// so a plain `swift test` needs no network access or Python.
+///
+/// A case listed in `Tools/conformance/known-differences.json` must give
 /// the swift-jinja result recorded there instead,
 /// so that the test fails both when a case regresses
 /// and when a known difference changes or is fixed.
 /// When both engines fail, the case agrees; error messages are not compared.
 ///
-/// `uv run Tools/conformance/regenerate.py` rewrites both files.
+/// `uv run Tools/conformance/regenerate.py` rewrites the known differences.
 /// See `Tools/conformance/README.md`.
 @Suite("Jinja2 conformance")
 struct ConformanceTests {
+    /// The corpus directory from `JINJA_CONFORMANCE_CORPUS`, or `nil` if the variable is unset.
+    static let corpusDirectory: URL? = {
+        guard let path = ProcessInfo.processInfo.environment["JINJA_CONFORMANCE_CORPUS"], !path.isEmpty else {
+            return nil
+        }
+        return URL(fileURLWithPath: path, isDirectory: true)
+    }()
+
+    /// `Tools/conformance/` in this checkout, found from this file's path.
+    static let toolsDirectory = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()  // JinjaTests
+        .deletingLastPathComponent()  // Tests
+        .deletingLastPathComponent()  // repository root
+        .appendingPathComponent("Tools/conformance", isDirectory: true)
+
     /// The suite's data, or the error that stopped it from loading.
     static let corpus = Result { try Corpus.load() }
 
@@ -25,7 +46,13 @@ struct ConformanceTests {
         return corpus.cases.filter { corpus.known[$0.id]?.isCrashOrHang != true }
     }()
 
-    @Test("The corpus, Jinja2 results, and known differences agree")
+    @Test(
+        "The corpus, Jinja2 results, and known differences agree",
+        .enabled(
+            if: corpusDirectory != nil,
+            "Set JINJA_CONFORMANCE_CORPUS to a corpus built by `uv run Tools/conformance/fetch.py`"
+        )
+    )
     func corpusIsConsistent() throws {
         let corpus = try Self.corpus.get()
         let ids = Set(corpus.cases.map(\.id))
@@ -47,7 +74,14 @@ struct ConformanceTests {
         #expect(precomposed.agrees(with: RenderResult(ok: true, output: "\u{e9}")))
     }
 
-    @Test("Renders like Jinja2", arguments: renderableCases)
+    @Test(
+        "Renders like Jinja2",
+        .enabled(
+            if: corpusDirectory != nil,
+            "Set JINJA_CONFORMANCE_CORPUS to a corpus built by `uv run Tools/conformance/fetch.py`"
+        ),
+        arguments: renderableCases
+    )
     func rendersLikeJinja2(_ testCase: Case) throws {
         let corpus = try Self.corpus.get()
         let jinja2 = try #require(corpus.jinja2[testCase.id]).expandingDates()
@@ -184,8 +218,24 @@ extension ConformanceTests {
         }
 
         static func load() throws -> Corpus {
-            guard let root = Bundle.module.url(forResource: "Conformance", withExtension: nil) else {
-                throw LoadError(description: "The Conformance resource directory is missing")
+            guard let root = ConformanceTests.corpusDirectory else {
+                throw LoadError(description: "JINJA_CONFORMANCE_CORPUS is not set")
+            }
+            let tools = ConformanceTests.toolsDirectory
+
+            // The corpus keeps copies of the inputs it was built from.
+            // If they differ from this checkout's, the corpus is stale.
+            for name in ["manifest.json", "literal.jsonl"] {
+                let source = try Data(contentsOf: tools.appendingPathComponent(name))
+                let copy = try? Data(contentsOf: root.appendingPathComponent("inputs").appendingPathComponent(name))
+                guard copy == source else {
+                    throw LoadError(
+                        description: """
+                            \(root.path) was not built from the current Tools/conformance/\(name). \
+                            Run `uv run Tools/conformance/fetch.py` to rebuild it.
+                            """
+                    )
+                }
             }
 
             var cases: [Case] = []
@@ -212,8 +262,23 @@ extension ConformanceTests {
                 jinja2[recorded.id] = RenderResult(ok: recorded.ok, output: recorded.output, error: recorded.error)
             }
 
-            let knownData = try Data(contentsOf: root.appendingPathComponent("known-differences.json"))
+            let knownData = try Data(contentsOf: tools.appendingPathComponent("known-differences.json"))
             let known = try decoder.decode(KnownDifferences.self, from: knownData)
+            struct Manifest: Decodable {
+                let jinja2: String
+            }
+            let manifest = try decoder.decode(
+                Manifest.self,
+                from: Data(contentsOf: tools.appendingPathComponent("manifest.json"))
+            )
+            guard manifest.jinja2 == known.jinja2 else {
+                throw LoadError(
+                    description: """
+                        known-differences.json was recorded with Jinja2 \(known.jinja2), \
+                        but manifest.json pins \(manifest.jinja2). Run regenerate.py.
+                        """
+                )
+            }
             return Corpus(
                 cases: cases,
                 jinja2: jinja2,

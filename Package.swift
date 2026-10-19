@@ -32,8 +32,7 @@ let package = Package(
         ),
         .testTarget(
             name: "JinjaTests",
-            dependencies: ["Jinja"],
-            resources: [.copy("Conformance")]
+            dependencies: ["Jinja"]
         ),
     ]
 )

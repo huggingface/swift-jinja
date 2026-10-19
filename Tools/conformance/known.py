@@ -1,7 +1,7 @@
 """Known differences and grouping for the differential fuzzer.
 
 label() returns the key of the first rule that matches a case, or None.
-Rules mirror the causes in Tests/JinjaTests/Conformance/known-differences.json
+Rules mirror the causes in Tools/conformance/known-differences.json
 plus causes that this fuzzer found at 434e18e.  Each rule is a predicate over
 the case (template, context, mode, options) and both results.  `fuzz.py check`
 fails on a differing case that no rule matches, so add a rule here when a

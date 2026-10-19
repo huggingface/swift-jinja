@@ -2,10 +2,12 @@
 # requires-python = ">=3.10"
 # dependencies = ["jinja2==3.1.6"]
 # ///
-"""Persistent Jinja2 renderer for regenerate.py and fuzz.py.
+"""Jinja2 renderer for fetch.py and fuzz.py.
 
-Reads one JSON case per line on stdin and writes one JSON result per line
-on stdout.  The dependency above pins the Jinja2 version for both tools.
+As a script, it reads one JSON case per line on stdin and writes one JSON
+result per line on stdout.  fetch.py imports render() instead.
+The dependency above pins the Jinja2 version for the fuzzer;
+fetch.py pins the same version and checks it against manifest.json.
 
 Modes:
   default       jinja2.Environment with the loopcontrols extension (swift-jinja
@@ -92,21 +94,24 @@ def make_env(case):
     return env
 
 
+def render(case):
+    """Render one case and return {"ok": True, "output": ...} or {"ok": False, "error": ...}."""
+    try:
+        env = make_env(case)
+        tmpl = env.from_string(case["template"])
+        text = tmpl.render(**case.get("context", {}))
+        return {"ok": True, "output": text}
+    except Exception as exc:  # noqa: BLE001 - every failure is a result
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+
 def main():
     sys.setrecursionlimit(3000)
     out = sys.stdout
     for line in sys.stdin:
         if not line.strip():
             continue
-        case = json.loads(line)
-        result = {}
-        try:
-            env = make_env(case)
-            tmpl = env.from_string(case["template"])
-            text = tmpl.render(**case.get("context", {}))
-            result = {"ok": True, "output": text}
-        except Exception as exc:  # noqa: BLE001 - every failure is a result
-            result = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+        result = render(json.loads(line))
         try:
             line_out = json.dumps(result, ensure_ascii=False)
         except Exception as exc:  # e.g. lone surrogates
@@ -114,7 +119,6 @@ def main():
         out.write(line_out + "\n")
         out.flush()
     print(f"jinja2 {jinja2.__version__}", file=sys.stderr)
-
 
 if __name__ == "__main__":
     main()

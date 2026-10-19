@@ -1,6 +1,6 @@
 """Render processes for Jinja2 and swift-jinja, and the comparison of their results.
 
-regenerate.py and fuzz.py both use this module.
+fetch.py, regenerate.py, and fuzz.py use this module.
 Each engine runs as a persistent process that reads one JSON case per line
 and writes one JSON result per line:
 jinja2_server.py for Jinja2, and jinja-render/ for swift-jinja.
@@ -20,9 +20,19 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
+MANIFEST = HERE / "manifest.json"
+LITERAL = HERE / "literal.jsonl"
+CORPUS_ENV = "JINJA_CONFORMANCE_CORPUS"
+DEFAULT_CORPUS = ROOT / ".build" / "conformance-corpus"
 RENDER_PACKAGE = HERE / "jinja-render"
 RENDER_BIN = RENDER_PACKAGE / ".build" / "release" / "jinja-render"
 JINJA2_SERVER = HERE / "jinja2_server.py"
+
+
+def corpus_dir(arg=None):
+    """The corpus directory: arg, else $JINJA_CONFORMANCE_CORPUS, else .build/conformance-corpus."""
+    return Path(arg or os.environ.get(CORPUS_ENV) or DEFAULT_CORPUS).resolve()
 
 
 def build_renderer():

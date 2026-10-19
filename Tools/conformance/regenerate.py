@@ -1,20 +1,19 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""Regenerate the Jinja2 results and the known-difference list for ConformanceTests.
+"""Regenerate the known-difference list for ConformanceTests.
 
 Usage (from the repository root):
-  uv run Tools/conformance/regenerate.py [--skip-build]
+  uv run Tools/conformance/oracle.py
+  uv run Tools/conformance/regenerate.py [--corpus DIR] [--skip-build]
 
-Reads the corpus in Tests/JinjaTests/Conformance/cases/ and renders every case
-with Jinja2 (jinja2_server.py, which pins the Jinja2 version) and with
-swift-jinja at the current checkout (jinja-render/, built in release mode).
-Then it rewrites two files next to the corpus:
-
-  jinja2.jsonl                 Jinja2's result for each case.
-  known-differences.json       Each case where swift-jinja's result differs
-                               from Jinja2's, with a cause label and
-                               swift-jinja's result.
+Reads the corpus that oracle.py built (DIR defaults to
+$JINJA_CONFORMANCE_CORPUS, or else .build/conformance-corpus), renders every
+case with swift-jinja at the current checkout (jinja-render/, built in
+release mode), compares each result with Jinja2's result in DIR/jinja2.jsonl,
+and rewrites known-differences.json next to this script: each case where
+swift-jinja's result differs from Jinja2's, with a cause label and
+swift-jinja's result.
 
 A case differs when both render different output, or when only one fails.
 When both fail, the case agrees; error messages are not compared.
@@ -29,7 +28,7 @@ Edit the label by hand if a better one applies; the next run keeps it.
 Jinja2's strftime_now writes a marker, "[strftime_now <format>]".
 Before comparing, this script replaces each marker with the date that
 swift-jinja's strftime_now returns, and it records swift-jinja's output with
-the date replaced by the marker, so that the files do not change from day to day.
+the date replaced by the marker, so that the file does not change from day to day.
 """
 
 from __future__ import annotations
@@ -46,8 +45,7 @@ sys.path.insert(0, str(HERE))
 
 import oracle  # noqa: E402
 
-ROOT = HERE.parent.parent
-CORPUS = ROOT / "Tests" / "JinjaTests" / "Conformance"
+KNOWN = HERE / "known-differences.json"
 MARKER = re.compile(r"\[strftime_now ([^\]]*)\]")
 STRFTIME_CALL = re.compile(r"""strftime_now\(\s*(['"])(.*?)\1\s*\)""")
 
@@ -134,41 +132,26 @@ def default_cause(case_id, cls, jr, sr):
     return "other"
 
 
-def check_manifest(cases):
-    """Refuse chat templates that manifest.json doesn't include, such as excluded repacks."""
-    manifest = json.loads((CORPUS / "manifest.json").read_text(encoding="utf-8"))
-    included = {e["template_file"] for e in manifest["included"]}
-    excluded = {e["model"] for e in manifest["excluded"]}
-    for case in cases:
-        if "template_file" in case and case["template_file"] not in included:
-            raise SystemExit(f"{case['id']}: {case['template_file']} is not in manifest.json's included list")
-        model = case["id"].split(".", 1)[1].rsplit(".", 1)[0] if case["id"].startswith("chat.") else None
-        if model in excluded:
-            raise SystemExit(f"{case['id']}: {model} is in manifest.json's excluded list")
-    unused = included - {c["template_file"] for c in cases if "template_file" in c}
-    if unused:
-        raise SystemExit(f"manifest.json includes templates that no case uses: {sorted(unused)}")
-
-
-def load_cases():
+def load_corpus(corpus):
+    """Return the corpus's cases and Jinja2 results, after checking that it is current."""
+    for name, source in (("manifest.json", oracle.MANIFEST), ("literal.jsonl", oracle.LITERAL)):
+        copy = corpus / "inputs" / name
+        if not copy.exists() or copy.read_bytes() != source.read_bytes():
+            raise SystemExit(f"{corpus} was not built from the current {source.name}; run: uv run Tools/conformance/oracle.py")
     cases = []
-    for path in sorted((CORPUS / "cases").glob("*.jsonl")):
+    for path in sorted((corpus / "cases").glob("*.jsonl")):
         for line in open(path, encoding="utf-8"):
             case = json.loads(line)
             if "template_file" in case:
-                case["template"] = (CORPUS / case["template_file"]).read_text(encoding="utf-8")
+                case["template"] = (corpus / case["template_file"]).read_text(encoding="utf-8")
             cases.append(case)
-    ids = [c["id"] for c in cases]
-    duplicates = [i for i, n in collections.Counter(ids).items() if n > 1]
-    if duplicates:
-        raise SystemExit(f"duplicate case IDs: {duplicates}")
-    check_manifest(cases)
-    return cases
-
-
-def jinja2_version():
-    text = oracle.JINJA2_SERVER.read_text(encoding="utf-8")
-    return re.search(r'"jinja2==([^"]+)"', text).group(1)
+    results = {}
+    for line in open(corpus / "jinja2.jsonl", encoding="utf-8"):
+        row = json.loads(line)
+        results[row.pop("id")] = row
+    if set(results) != {c["id"] for c in cases}:
+        raise SystemExit(f"{corpus}/jinja2.jsonl does not match its cases; run oracle.py again")
+    return cases, results
 
 
 def request(case, formats=None):
@@ -197,24 +180,28 @@ def write_known(path, version, causes, entries):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
+    parser.add_argument("--corpus", help=f"corpus directory (default: ${oracle.CORPUS_ENV} or {oracle.DEFAULT_CORPUS})")
     parser.add_argument("--skip-build", action="store_true", help="use the existing jinja-render build")
     args = parser.parse_args()
+    corpus = oracle.corpus_dir(args.corpus)
+    cases, jinja2_results = load_corpus(corpus)
+    manifest = json.loads(oracle.MANIFEST.read_text(encoding="utf-8"))
     if not args.skip_build:
         oracle.build_renderer()
 
-    known_path = CORPUS / "known-differences.json"
-    old = json.loads(known_path.read_text(encoding="utf-8")) if known_path.exists() else {}
+    old = json.loads(KNOWN.read_text(encoding="utf-8")) if KNOWN.exists() else {}
     old_causes = {e["id"]: e["cause"] for e in old.get("differences", [])}
     causes = {key: desc for key, desc, _ in CAUSES}
     causes.update(old.get("causes", {}))
 
-    cases = load_cases()
-    j, s = oracle.make_servers(swift_timeout=10.0)
-    jinja2_rows, entries = [], []
+    if not oracle.RENDER_BIN.exists():
+        raise SystemExit(f"{oracle.RENDER_BIN} not found; run without --skip-build")
+    s = oracle.Server([str(oracle.RENDER_BIN)], "swift", timeout=10.0)
+    entries = []
     counts = collections.defaultdict(collections.Counter)
     try:
         for case in cases:
-            jr = j.render(request(case))
+            jr = jinja2_results[case["id"]]
             # Formats from Jinja2's markers, and from calls in the template,
             # because swift-jinja can print a date where Jinja2 fails.
             formats = {m.group(2) for m in STRFTIME_CALL.finditer(case["template"])}
@@ -222,8 +209,6 @@ def main():
                 formats.update(MARKER.findall(jr["output"]))
             formats = sorted(formats)
             sr = s.render(request(case, formats))
-            if str(jr.get("error", "")).startswith(("CRASH", "TIMEOUT", "HARNESS")):
-                raise SystemExit(f"{case['id']}: Jinja2 failed to answer: {jr['error']}")
             dates = sr.pop("strftime_now", {}) if sr.get("ok") else {}
             if formats and sr.get("ok") and set(dates) != set(formats):
                 raise SystemExit(f"{case['id']}: jinja-render did not report strftime_now dates")
@@ -235,9 +220,6 @@ def main():
                 raise SystemExit(f"{case['id']}: Jinja2 output is not reproducible: {jr}")
             source = case["id"].split(".", 1)[0]
             counts[source][cls] += 1
-            row = {"id": case["id"], "ok": jr["ok"]}
-            row.update({"output": jr["output"]} if jr["ok"] else {"error": jr["error"]})
-            jinja2_rows.append(row)
             if cls in ("match", "d"):
                 continue
             swift = {"ok": sr["ok"]}
@@ -251,15 +233,11 @@ def main():
             cause = old_causes.get(case["id"]) or default_cause(case["id"], cls, expected, sr)
             entries.append({"id": case["id"], "cause": cause, "class": cls, "swift": swift})
     finally:
-        j.close()
         s.close()
 
-    with open(CORPUS / "jinja2.jsonl", "w", encoding="utf-8") as fh:
-        for row in jinja2_rows:
-            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
     for key in {e["cause"] for e in entries} - set(causes):
         causes[key] = "No description"
-    write_known(known_path, jinja2_version(), causes, entries)
+    write_known(KNOWN, manifest["jinja2"], causes, entries)
 
     print(f"{len(cases)} cases; {len(entries)} known differences")
     for source, counter in sorted(counts.items()):
@@ -267,7 +245,6 @@ def main():
     by_cause = collections.Counter(e["cause"] for e in entries)
     for key, n in by_cause.most_common():
         print(f"  {n:5d} {key}")
-
 
 if __name__ == "__main__":
     main()
