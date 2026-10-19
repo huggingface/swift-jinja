@@ -1,21 +1,7 @@
 {
   "checked": "2026-10-18",
-  "policy": "A template is included only if the model card at the recorded commit declares Apache-2.0 or MIT, any declared base model also declares Apache-2.0 or MIT, and no notice in the repository adds other terms.",
+  "policy": "A template is included only if the model card at the recorded commit declares Apache-2.0 or MIT, any declared base model also declares Apache-2.0 or MIT, and no notice in the repository adds other terms. Templates come only from the original publishers; third-party repacks and fine-tunes are excluded (maintainer decision, 2026-10-19).",
   "included": [
-    {
-      "model": "0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF",
-      "commit": "ab8d7bd81d03117501e4da60cccdff4c80f0eea0",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/0bserverx__Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF.jinja"
-    },
-    {
-      "model": "abenzerps/Apodex-1.1-mini-GGUF",
-      "commit": "e44e0cbd3151d08a9f5a4cbf19cd44560685de04",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/abenzerps__Apodex-1.1-mini-GGUF.jinja"
-    },
     {
       "model": "allenai/OLMo-2-1124-7B-Instruct",
       "commit": "470b1fba1ae01581f270116362ee4aa1b97f4c84",
@@ -29,20 +15,6 @@
       "source": "chat_template.jinja",
       "license": "Apache-2.0",
       "template_file": "templates/allenai__Olmo-3-7B-Think.jinja"
-    },
-    {
-      "model": "Bahushruth/Qwen3.6-35B-A3B-abliterated-v4",
-      "commit": "1c28f5014d7e9c20170af40e5aa028679fb30bfb",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/Bahushruth__Qwen3.6-35B-A3B-abliterated-v4.jinja"
-    },
-    {
-      "model": "cyankiwi/MiniCPM-SALA-AWQ-8bit",
-      "commit": "3505546dc794702515da4556c8383b16c61eb6e2",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/cyankiwi__MiniCPM-SALA-AWQ-8bit.jinja"
     },
     {
       "model": "deepseek-ai/DeepSeek-R1",
@@ -83,13 +55,6 @@
       "license": "MIT",
       "template_file": "templates/deepseek-ai__DeepSeek-V3.1.jinja",
       "license_file": "licenses/deepseek-ai__DeepSeek-V3.1.txt"
-    },
-    {
-      "model": "dphn/dolphin-2.9.1-yi-1.5-34b",
-      "commit": "0141cba238d0faad09bc240ea7af14c9ea5aec44",
-      "source": "tokenizer_config.json:chat_template",
-      "license": "Apache-2.0",
-      "template_file": "templates/dphn__dolphin-2.9.1-yi-1.5-34b.jinja"
     },
     {
       "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
@@ -142,27 +107,6 @@
       "template_file": "templates/mistralai__Mistral-7B-Instruct-v0.3.jinja"
     },
     {
-      "model": "nvidia/Gemma-4-26B-A4B-NVFP4",
-      "commit": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/nvidia__Gemma-4-26B-A4B-NVFP4.jinja"
-    },
-    {
-      "model": "nvidia/Qwen3.5-122B-A10B-NVFP4",
-      "commit": "98915d837c4e7c87ac8296d02e89de19b3207e6d",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/nvidia__Qwen3.5-122B-A10B-NVFP4.jinja"
-    },
-    {
-      "model": "OBLITERATUS/Qwen3.8-27B-OBLITERATED",
-      "commit": "a58c3b53b3ce71551eafde2ed5ec8df48e0f4ff8",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/OBLITERATUS__Qwen3.8-27B-OBLITERATED.jinja"
-    },
-    {
       "model": "openai/gpt-oss-20b",
       "commit": "6cee5e81ee83917806bbde320786a8fb61efebee",
       "source": "chat_template.jinja",
@@ -205,13 +149,6 @@
       "template_file": "templates/ornith-ai__Ornith-1.5-9B-NVFP4.jinja"
     },
     {
-      "model": "peculiar-ragdoll/Sharp-Spark-X2.5-4B-GGUF",
-      "commit": "e797ddf6a57d9ecfddf68394438d2667ecb42dad",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/peculiar-ragdoll__Sharp-Spark-X2.5-4B-GGUF.jinja"
-    },
-    {
       "model": "poolside/Laguna-M.1",
       "commit": "2bf8a4ab6d2e8e1e0d92a41318532a0fee1640d6",
       "source": "chat_template.jinja",
@@ -224,27 +161,6 @@
       "source": "chat_template.jinja",
       "license": "Apache-2.0",
       "template_file": "templates/poolside__Laguna-XS.2.jinja"
-    },
-    {
-      "model": "PrimeIntellect/Qwen3-0.6B",
-      "commit": "15aba67c8ec68aeac96f57ba7e31d373564ee03c",
-      "source": "chat_template.jinja",
-      "license": "Apache-2.0",
-      "template_file": "templates/PrimeIntellect__Qwen3-0.6B.jinja"
-    },
-    {
-      "model": "QuantTrio/GLM-4.7-Flash-AWQ",
-      "commit": "88e3d3d913c0d97c8f505cdc03433c48226bedc3",
-      "source": "chat_template.jinja",
-      "license": "MIT",
-      "template_file": "templates/QuantTrio__GLM-4.7-Flash-AWQ.jinja"
-    },
-    {
-      "model": "QuantTrio/Qwen3-VL-30B-A3B-Instruct-AWQ",
-      "commit": "a5ea10732e2c9330957864ece3ec66d806a4b00d",
-      "source": "tokenizer_config.json:chat_template",
-      "license": "Apache-2.0",
-      "template_file": "templates/QuantTrio__Qwen3-VL-30B-A3B-Instruct-AWQ.jinja"
     },
     {
       "model": "Qwen/Qwen2.5-0.5B",
@@ -342,6 +258,27 @@
   ],
   "excluded": [
     {
+      "model": "0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF",
+      "commit": "ab8d7bd81d03117501e4da60cccdff4c80f0eea0",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "abenzerps/Apodex-1.1-mini-GGUF",
+      "commit": "e44e0cbd3151d08a9f5a4cbf19cd44560685de04",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "Bahushruth/Qwen3.6-35B-A3B-abliterated-v4",
+      "commit": "1c28f5014d7e9c20170af40e5aa028679fb30bfb",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
       "model": "CMSManhattan/JiRackDeltaNet_27b",
       "commit": "775109e25de710a02a7b0febcd1bb0d974ad0c58",
       "source": "chat_template.jinja",
@@ -354,6 +291,13 @@
       "source": "chat_template.jinja",
       "card_license": "mit",
       "reason": "card says MIT, but NOTICE.md lists components under a proprietary \"CMS Manhattan license\" and a patent"
+    },
+    {
+      "model": "cyankiwi/MiniCPM-SALA-AWQ-8bit",
+      "commit": "3505546dc794702515da4556c8383b16c61eb6e2",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
     },
     {
       "model": "deepseek-ai/deepseek-coder-7b-instruct-v1.5",
@@ -375,6 +319,13 @@
       "source": "tokenizer_config.json:chat_template",
       "card_license": null,
       "reason": "no license on the model card; repository has separate LICENSE-CODE (MIT) and LICENSE-MODEL (DeepSeek License) files"
+    },
+    {
+      "model": "dphn/dolphin-2.9.1-yi-1.5-34b",
+      "commit": "0141cba238d0faad09bc240ea7af14c9ea5aec44",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
     },
     {
       "model": "kindlingai/glm-5.3-exlr8-k2-k3-k4",
@@ -433,6 +384,13 @@
       "reason": "Llama 3 Community License (license: llama3), not Apache-2.0 or MIT"
     },
     {
+      "model": "nvidia/Gemma-4-26B-A4B-NVFP4",
+      "commit": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
       "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
       "commit": "bf77c3174f68ad409e1c2aa60daeb46e32d1c606",
       "source": "chat_template.jinja",
@@ -459,6 +417,48 @@
       "source": "chat_template.jinja",
       "card_license": "nvidia-open-model-license",
       "reason": "NVIDIA Open Model License (license_name: nvidia-open-model-license)"
+    },
+    {
+      "model": "nvidia/Qwen3.5-122B-A10B-NVFP4",
+      "commit": "98915d837c4e7c87ac8296d02e89de19b3207e6d",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "OBLITERATUS/Qwen3.8-27B-OBLITERATED",
+      "commit": "a58c3b53b3ce71551eafde2ed5ec8df48e0f4ff8",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "peculiar-ragdoll/Sharp-Spark-X2.5-4B-GGUF",
+      "commit": "e797ddf6a57d9ecfddf68394438d2667ecb42dad",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "PrimeIntellect/Qwen3-0.6B",
+      "commit": "15aba67c8ec68aeac96f57ba7e31d373564ee03c",
+      "source": "chat_template.jinja",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "QuantTrio/GLM-4.7-Flash-AWQ",
+      "commit": "88e3d3d913c0d97c8f505cdc03433c48226bedc3",
+      "source": "chat_template.jinja",
+      "card_license": "mit",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
+    },
+    {
+      "model": "QuantTrio/Qwen3-VL-30B-A3B-Instruct-AWQ",
+      "commit": "a5ea10732e2c9330957864ece3ec66d806a4b00d",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": "apache-2.0",
+      "reason": "third-party repack or fine-tune; original publishers only (maintainer decision)"
     },
     {
       "model": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",

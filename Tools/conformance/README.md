@@ -111,6 +111,10 @@ The corpus has three sources:
   declares Apache-2.0 or MIT,
   any declared base model also declares Apache-2.0 or MIT,
   and no notice in the model repository adds other terms.
+  Templates come only from the original publishers;
+  third-party repacks and fine-tunes are left out.
+  `regenerate.py` stops if a case uses a template
+  that the manifest doesn't include.
   [`manifest.json`](../../Tests/JinjaTests/Conformance/manifest.json)
   lists each included model with its commit and license,
   and each excluded model with the reason.

@@ -134,6 +134,22 @@ def default_cause(case_id, cls, jr, sr):
     return "other"
 
 
+def check_manifest(cases):
+    """Refuse chat templates that manifest.json doesn't include, such as excluded repacks."""
+    manifest = json.loads((CORPUS / "manifest.json").read_text(encoding="utf-8"))
+    included = {e["template_file"] for e in manifest["included"]}
+    excluded = {e["model"] for e in manifest["excluded"]}
+    for case in cases:
+        if "template_file" in case and case["template_file"] not in included:
+            raise SystemExit(f"{case['id']}: {case['template_file']} is not in manifest.json's included list")
+        model = case["id"].split(".", 1)[1].rsplit(".", 1)[0] if case["id"].startswith("chat.") else None
+        if model in excluded:
+            raise SystemExit(f"{case['id']}: {model} is in manifest.json's excluded list")
+    unused = included - {c["template_file"] for c in cases if "template_file" in c}
+    if unused:
+        raise SystemExit(f"manifest.json includes templates that no case uses: {sorted(unused)}")
+
+
 def load_cases():
     cases = []
     for path in sorted((CORPUS / "cases").glob("*.jsonl")):
@@ -146,6 +162,7 @@ def load_cases():
     duplicates = [i for i, n in collections.Counter(ids).items() if n > 1]
     if duplicates:
         raise SystemExit(f"duplicate case IDs: {duplicates}")
+    check_manifest(cases)
     return cases
 
 
