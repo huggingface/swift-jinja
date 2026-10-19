@@ -21,17 +21,6 @@ public final class Environment: @unchecked Sendable {
     /// A child environment starts with the depth of its parent.
     var callDepth: Int
 
-    // Options
-
-    /// Whether leading spaces and tabs are stripped from the start of a line to a block.
-    /// The default value is `false`.
-    public var lstripBlocks: Bool = false
-
-    /// Whether the first newline after a block is removed.
-    /// This applies to block tags, not variable tags.
-    /// The default value is `false`.
-    public var trimBlocks: Bool = false
-
     /// Settings that adjust the behavior of built-in filters.
     public struct Policies: Sendable {
         /// The serializer corresponding to Jinja2's `json.dumps_function` policy.
@@ -80,10 +69,12 @@ public final class Environment: @unchecked Sendable {
 
     /// Creates a new environment with optional parent and initial variables.
     ///
+    /// An environment without a parent starts with the built-in globals,
+    /// such as `range` and `namespace`.
+    ///
     /// - Parameters:
     ///   - parent: The parent environment to inherit variables from
     ///   - initial: The initial variables to set in this environment
-    ///   - includeBuiltIns: Whether to include built-in functions (default: true)
     public init(
         parent: Environment? = nil,
         initial: [String: Value] = [:]
