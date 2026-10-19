@@ -203,7 +203,7 @@ def reproducer(rec, label):
     case, jr, sr = (rec["min"], rec["min_jinja2"], rec["min_swift"]) if "min" in rec else (
         rec["case"], rec["jinja2"], rec["swift"])
     return {
-        "seed": rec["seed"], "class": rec["class"], "label": label, "minimized": "min" in rec,
+        "seed": rec.get("seed"), "class": rec["class"], "label": label, "minimized": "min" in rec,
         "template": case["template"], "context": case["context"], "mode": case["mode"],
         "options": {k: v for k, v in case["options"].items() if v},
         "jinja2": jr.get("output") if jr.get("ok") else "ERROR " + str(jr.get("error")),
@@ -223,6 +223,19 @@ def cmd_check(args):
             reproducers.append(reproducer(rec, label))
         if rec["class"] in ("crash", "timeout") or label is None:
             failures.append(reproducer(rec, label))
+    # The oracle logs every swift-jinja crash or hang, including reduction candidates
+    # that never reach diffs.jsonl, so check that log too.
+    # Its "skip" entries are Jinja2 crashes or hangs, which aren't swift-jinja failures.
+    failed = {(f["class"], f["template"]) for f in failures}
+    crash_log = out / "crashes.jsonl"
+    if crash_log.exists():
+        for line in open(crash_log):
+            rec = json.loads(line)
+            key = (rec["class"], rec["case"]["template"])
+            if rec["class"] not in ("crash", "timeout") or key in failed:
+                continue
+            failed.add(key)
+            failures.append(reproducer(rec, None))
     for name, rows in (("reproducers.jsonl", reproducers), ("failures.jsonl", failures)):
         with open(out / name, "w") as fh:
             for row in rows:
