@@ -2,10 +2,10 @@
 # requires-python = ">=3.10"
 # dependencies = ["jinja2==3.1.6"]
 # ///
-"""Persistent Jinja2 renderer for regenerate.py.
+"""Persistent Jinja2 renderer for regenerate.py and fuzz.py.
 
 Reads one JSON case per line on stdin and writes one JSON result per line
-on stdout.  The dependency above pins the Jinja2 version.
+on stdout.  The dependency above pins the Jinja2 version for both tools.
 
 Modes:
   default       jinja2.Environment with the loopcontrols extension (swift-jinja

@@ -4,10 +4,14 @@ swift-jinja aims to render templates the way
 [Jinja2](https://jinja.palletsprojects.com/) does,
 especially the chat templates that
 [transformers](https://github.com/huggingface/transformers) renders.
-Golden-file tests compare the two engines.
-They run with `swift test` and need no Python:
-`ConformanceTests` renders a fixed corpus of templates
-and compares the results with outputs that Jinja2 recorded.
+Two kinds of tests compare the two engines:
+
+- **Golden-file tests** run with `swift test` and need no Python.
+  `ConformanceTests` renders a fixed corpus of templates
+  and compares the results with outputs that Jinja2 recorded.
+- **A scheduled fuzz job** generates random templates every week,
+  renders them with both engines,
+  and reports crashes, hangs, and differences with new causes.
 
 ## Golden-file tests
 
@@ -113,3 +117,43 @@ The corpus has three sources:
   The license notices that the model repositories include
   (MIT notices, and the copyright notice for `tencent/Hy3`)
   are in `licenses/`.
+
+## Fuzz job
+
+The [Fuzz workflow](../../.github/workflows/fuzz.yml)
+runs every Monday and can be started by hand.
+It generates templates for about 10 minutes,
+renders each one with Jinja2 and swift-jinja,
+minimizes the cases that differ,
+and labels each one with the rules in [`known.py`](known.py).
+
+The job fails if swift-jinja crashes or hangs on a case,
+or if a differing case matches no rule in `known.py`.
+Differences with a known cause don't fail the job.
+The `fuzz-reproducers` artifact holds the run's summary,
+every minimized reproducer (`reproducers.jsonl`),
+the failing cases (`failures.jsonl`),
+and every crash or hang (`crashes.jsonl`).
+
+| File | Purpose |
+| --- | --- |
+| [`fuzz.py`](fuzz.py) | Runs the generator, compares results, minimizes differences, and checks a run. |
+| [`gen.py`](gen.py) | Generates templates and contexts from a seed. |
+| [`reduce.py`](reduce.py) | Minimizes a differing case while its kind of difference stays the same. |
+| [`known.py`](known.py) | Rules that label known causes of differences. |
+| [`oracle.py`](oracle.py) | Starts the two render processes and compares their results. |
+| [`report.py`](report.py) | Summarizes one or more runs by cause. |
+
+To run it locally, from the repository root:
+
+```console
+swift build -c release --package-path Tools/conformance/jinja-render
+uv run Tools/conformance/fuzz.py run --seed-start 0 --minutes 5 --out fuzz-results
+uv run Tools/conformance/fuzz.py check fuzz-results
+```
+
+The same seed generates the same templates,
+so `fuzz.py one '<template>' '<context>' <mode>`
+and the seed in a reproducer are enough to investigate a failure.
+When a difference is accepted, add a rule to `known.py`;
+when it's fixed, remove the rule.

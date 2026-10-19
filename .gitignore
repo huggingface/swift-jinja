@@ -99,3 +99,6 @@ iOSInjectionProject/
 # Specific to this package
 
 *.code-workspace
+
+# Output of Tools/conformance/fuzz.py
+fuzz-results/

@@ -1,6 +1,6 @@
 """Render processes for Jinja2 and swift-jinja, and the comparison of their results.
 
-regenerate.py uses this module.
+regenerate.py and fuzz.py both use this module.
 Each engine runs as a persistent process that reads one JSON case per line
 and writes one JSON result per line:
 jinja2_server.py for Jinja2, and jinja-render/ for swift-jinja.
