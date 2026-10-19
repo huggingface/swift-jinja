@@ -295,9 +295,9 @@ public enum Value: Sendable {
             return .double(a * Double(b))
         // Python repeats a string zero times for a negative count.
         case let (.string(s), .int(n)):
-            return .string(String(repeating: s, count: Swift.max(0, n)))
+            return .string(try repeatedString(s, count: n))
         case let (.int(n), .string(s)):
-            return .string(String(repeating: s, count: Swift.max(0, n)))
+            return .string(try repeatedString(s, count: n))
         default:
             throw JinjaError.runtime("Cannot multiply values of these types (\(self) and \(other))")
         }

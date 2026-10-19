@@ -184,7 +184,8 @@ public enum Tests {
         }
         switch (value, divisor) {
         case let (.int(a), .int(b)):
-            return b != 0 && a % b == 0
+            // `Int.min % -1` overflows in Swift; the remainder is 0.
+            return b != 0 && a.remainderReportingOverflow(dividingBy: b).partialValue == 0
         case let (.double(a), .double(b)):
             return b != 0.0 && a.truncatingRemainder(dividingBy: b) == 0
         case let (.int(a), .double(b)):

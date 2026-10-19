@@ -543,13 +543,20 @@ private func replace(string: String, old: String, new: String, maxReplacements: 
     }
 
     if let count = maxReplacements {
-        // Replace only the first 'count' occurrences
-        var result = string
+        // Replace only the first 'count' occurrences,
+        // searching after each replacement so that `new` isn't searched again.
+        var result = ""
+        var searchStart = string.startIndex
         var replacements = 0
-        while replacements < count, let range = result.range(of: old) {
-            result.replaceSubrange(range, with: new)
+        while replacements < count,
+            let range = string.range(of: old, range: searchStart ..< string.endIndex)
+        {
+            result += string[searchStart ..< range.lowerBound]
+            result += new
+            searchStart = range.upperBound
             replacements += 1
         }
+        result += string[searchStart...]
         return result
     } else {
         return string.replacingOccurrences(of: old, with: new)
