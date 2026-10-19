@@ -1,0 +1,506 @@
+{
+  "checked": "2026-10-18",
+  "policy": "A template is included only if the model card at the recorded commit declares Apache-2.0 or MIT, any declared base model also declares Apache-2.0 or MIT, and no notice in the repository adds other terms.",
+  "included": [
+    {
+      "model": "0bserverx/Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF",
+      "commit": "ab8d7bd81d03117501e4da60cccdff4c80f0eea0",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/0bserverx__Qwen3.8-27B-Heretic-Abliterated-Uncensored-GGUF.jinja"
+    },
+    {
+      "model": "abenzerps/Apodex-1.1-mini-GGUF",
+      "commit": "e44e0cbd3151d08a9f5a4cbf19cd44560685de04",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/abenzerps__Apodex-1.1-mini-GGUF.jinja"
+    },
+    {
+      "model": "allenai/OLMo-2-1124-7B-Instruct",
+      "commit": "470b1fba1ae01581f270116362ee4aa1b97f4c84",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/allenai__OLMo-2-1124-7B-Instruct.jinja"
+    },
+    {
+      "model": "allenai/Olmo-3-7B-Think",
+      "commit": "d97e442d7cc678210054dbcc9b440894d62c89a4",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/allenai__Olmo-3-7B-Think.jinja"
+    },
+    {
+      "model": "Bahushruth/Qwen3.6-35B-A3B-abliterated-v4",
+      "commit": "1c28f5014d7e9c20170af40e5aa028679fb30bfb",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/Bahushruth__Qwen3.6-35B-A3B-abliterated-v4.jinja"
+    },
+    {
+      "model": "cyankiwi/MiniCPM-SALA-AWQ-8bit",
+      "commit": "3505546dc794702515da4556c8383b16c61eb6e2",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/cyankiwi__MiniCPM-SALA-AWQ-8bit.jinja"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-R1",
+      "commit": "56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "MIT",
+      "template_file": "templates/deepseek-ai__DeepSeek-R1.jinja",
+      "license_file": "licenses/deepseek-ai__DeepSeek-R1.txt"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+      "commit": "6e8885a6ff5c1dc5201574c8fd700323f23c25fa",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "MIT",
+      "template_file": "templates/deepseek-ai__DeepSeek-R1-0528-Qwen3-8B.jinja",
+      "license_file": "licenses/deepseek-ai__DeepSeek-R1-0528-Qwen3-8B.txt"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+      "commit": "ad9f0ae0864d7fbcd1cd905e3c6c5b069cc8b562",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "MIT",
+      "template_file": "templates/deepseek-ai__DeepSeek-R1-Distill-Qwen-1.5B.jinja",
+      "license_file": "licenses/deepseek-ai__DeepSeek-R1-Distill-Qwen-1.5B.txt"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3-0324",
+      "commit": "e9b33add76883f293d6bf61f6bd89b497e80e335",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "MIT",
+      "template_file": "templates/deepseek-ai__DeepSeek-V3-0324.jinja",
+      "license_file": "licenses/deepseek-ai__DeepSeek-V3-0324.txt"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3.1",
+      "commit": "c0781d039fb7a1ba2abc4add0bdc293e92d2b8db",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "MIT",
+      "template_file": "templates/deepseek-ai__DeepSeek-V3.1.jinja",
+      "license_file": "licenses/deepseek-ai__DeepSeek-V3.1.txt"
+    },
+    {
+      "model": "dphn/dolphin-2.9.1-yi-1.5-34b",
+      "commit": "0141cba238d0faad09bc240ea7af14c9ea5aec44",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/dphn__dolphin-2.9.1-yi-1.5-34b.jinja"
+    },
+    {
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "commit": "12fd25f77366fa6b3b4b768ec3050bf629380bac",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/HuggingFaceTB__SmolLM2-135M-Instruct.jinja"
+    },
+    {
+      "model": "HuggingFaceTB/SmolLM3-3B",
+      "commit": "a07cc9a04f16550a088caea529712d1d335b0ac1",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/HuggingFaceTB__SmolLM3-3B.jinja"
+    },
+    {
+      "model": "ibm-granite/granite-3.3-2b-instruct",
+      "commit": "707f574c62054322f6b5b04b6d075f0a8f05e0f0",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/ibm-granite__granite-3.3-2b-instruct.jinja"
+    },
+    {
+      "model": "ibm-granite/granite-4.1-3b",
+      "commit": "c0650403e44e78ec0262dab1c90914c65b196c4e",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/ibm-granite__granite-4.1-3b.jinja"
+    },
+    {
+      "model": "microsoft/Phi-4-mini-instruct",
+      "commit": "cfbefacb99257ffa30c83adab238a50856ac3083",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "MIT",
+      "template_file": "templates/microsoft__Phi-4-mini-instruct.jinja",
+      "license_file": "licenses/microsoft__Phi-4-mini-instruct.txt"
+    },
+    {
+      "model": "mistralai/Mistral-7B-Instruct-v0.2",
+      "commit": "63a8b081895390a26e140280378bc85ec8bce07a",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/mistralai__Mistral-7B-Instruct-v0.2.jinja"
+    },
+    {
+      "model": "mistralai/Mistral-7B-Instruct-v0.3",
+      "commit": "c170c708c41dac9275d15a8fff4eca08d52bab71",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/mistralai__Mistral-7B-Instruct-v0.3.jinja"
+    },
+    {
+      "model": "nvidia/Gemma-4-26B-A4B-NVFP4",
+      "commit": "a19cfe00be84568a6867111c9a68c9c44fdcffe6",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/nvidia__Gemma-4-26B-A4B-NVFP4.jinja"
+    },
+    {
+      "model": "nvidia/Qwen3.5-122B-A10B-NVFP4",
+      "commit": "98915d837c4e7c87ac8296d02e89de19b3207e6d",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/nvidia__Qwen3.5-122B-A10B-NVFP4.jinja"
+    },
+    {
+      "model": "OBLITERATUS/Qwen3.8-27B-OBLITERATED",
+      "commit": "a58c3b53b3ce71551eafde2ed5ec8df48e0f4ff8",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/OBLITERATUS__Qwen3.8-27B-OBLITERATED.jinja"
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "commit": "6cee5e81ee83917806bbde320786a8fb61efebee",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/openai__gpt-oss-20b.jinja"
+    },
+    {
+      "model": "openbmb/MiniCPM5-2B",
+      "commit": "f97400052a43d642bbc6e9975e2397e3ae6a6b52",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/openbmb__MiniCPM5-2B.jinja"
+    },
+    {
+      "model": "openbmb/MiniCPM5-2B-MLX",
+      "commit": "8a9ad7539ac86281d0ac2b017ba04a5de53fe9a3",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/openbmb__MiniCPM5-2B-MLX.jinja"
+    },
+    {
+      "model": "ornith-ai/Ornith-1.0-35B",
+      "commit": "5df2ed3f675c7beaa490328cc70bb573b65fb660",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/ornith-ai__Ornith-1.0-35B.jinja"
+    },
+    {
+      "model": "ornith-ai/Ornith-1.0-9B",
+      "commit": "83dc1f5e24ef8527af019a6b3bf66ac0f1c2c999",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/ornith-ai__Ornith-1.0-9B.jinja"
+    },
+    {
+      "model": "ornith-ai/Ornith-1.5-9B-NVFP4",
+      "commit": "155f200d85ad58464571c77d5e1122ea5d419d7b",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/ornith-ai__Ornith-1.5-9B-NVFP4.jinja"
+    },
+    {
+      "model": "peculiar-ragdoll/Sharp-Spark-X2.5-4B-GGUF",
+      "commit": "e797ddf6a57d9ecfddf68394438d2667ecb42dad",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/peculiar-ragdoll__Sharp-Spark-X2.5-4B-GGUF.jinja"
+    },
+    {
+      "model": "poolside/Laguna-M.1",
+      "commit": "2bf8a4ab6d2e8e1e0d92a41318532a0fee1640d6",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/poolside__Laguna-M.1.jinja"
+    },
+    {
+      "model": "poolside/Laguna-XS.2",
+      "commit": "a397bde04501591d0ac3d74a5d9d0a4ec298ffb8",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/poolside__Laguna-XS.2.jinja"
+    },
+    {
+      "model": "PrimeIntellect/Qwen3-0.6B",
+      "commit": "15aba67c8ec68aeac96f57ba7e31d373564ee03c",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/PrimeIntellect__Qwen3-0.6B.jinja"
+    },
+    {
+      "model": "QuantTrio/GLM-4.7-Flash-AWQ",
+      "commit": "88e3d3d913c0d97c8f505cdc03433c48226bedc3",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/QuantTrio__GLM-4.7-Flash-AWQ.jinja"
+    },
+    {
+      "model": "QuantTrio/Qwen3-VL-30B-A3B-Instruct-AWQ",
+      "commit": "a5ea10732e2c9330957864ece3ec66d806a4b00d",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/QuantTrio__Qwen3-VL-30B-A3B-Instruct-AWQ.jinja"
+    },
+    {
+      "model": "Qwen/Qwen2.5-0.5B",
+      "commit": "060db6499f32faf8b98477b0a26969ef7d8b9987",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen2.5-0.5B.jinja"
+    },
+    {
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "commit": "a09a35458c702b33eeacc393d103063234e8bc28",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen2.5-7B-Instruct.jinja"
+    },
+    {
+      "model": "Qwen/Qwen3-0.6B-Base",
+      "commit": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen3-0.6B-Base.jinja"
+    },
+    {
+      "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+      "commit": "0d7cf23991f47feeb3a57ecb4c9cee8ea4a17bfe",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen3-30B-A3B-Instruct-2507.jinja"
+    },
+    {
+      "model": "Qwen/Qwen3-4B-Thinking-2507",
+      "commit": "768f209d9ea81521153ed38c47d515654e938aea",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen3-4B-Thinking-2507.jinja"
+    },
+    {
+      "model": "Qwen/Qwen3-8B",
+      "commit": "b968826d9c46dd6066d109eabc6255188de91218",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen3-8B.jinja"
+    },
+    {
+      "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "commit": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen3-Coder-30B-A3B-Instruct.jinja"
+    },
+    {
+      "model": "Qwen/Qwen3-Coder-Next",
+      "commit": "a7fbcb5c0e12d62a448eaa0e260346bf5dcc0feb",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/Qwen__Qwen3-Coder-Next.jinja"
+    },
+    {
+      "model": "tencent/Hy3",
+      "commit": "a960ebc3da325ba167f069f76c41eb62c9280d22",
+      "source": "chat_template.jinja",
+      "license": "Apache-2.0",
+      "template_file": "templates/tencent__Hy3.jinja",
+      "license_file": "licenses/tencent__Hy3.txt"
+    },
+    {
+      "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "commit": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "source": "tokenizer_config.json:chat_template",
+      "license": "Apache-2.0",
+      "template_file": "templates/TinyLlama__TinyLlama-1.1B-Chat-v1.0.jinja"
+    },
+    {
+      "model": "zai-org/GLM-4.5",
+      "commit": "cbb2c7cfb52fa128a9660cb1a7a78e017899e115",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/zai-org__GLM-4.5.jinja"
+    },
+    {
+      "model": "zai-org/GLM-5",
+      "commit": "c183ef8c61faee82855eca1ed9bb3a9a7ce3b0b2",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/zai-org__GLM-5.jinja"
+    },
+    {
+      "model": "zai-org/GLM-5.1",
+      "commit": "26e1bd6e011feb778d25ae34b09b07074139d92d",
+      "source": "chat_template.jinja",
+      "license": "MIT",
+      "template_file": "templates/zai-org__GLM-5.1.jinja",
+      "license_file": "licenses/zai-org__GLM-5.1.txt"
+    }
+  ],
+  "excluded": [
+    {
+      "model": "CMSManhattan/JiRackDeltaNet_27b",
+      "commit": "775109e25de710a02a7b0febcd1bb0d974ad0c58",
+      "source": "chat_template.jinja",
+      "card_license": "mit",
+      "reason": "card says MIT, but NOTICE.md lists components under a proprietary \"CMS Manhattan license\""
+    },
+    {
+      "model": "CMSManhattan/JiRackUltra_1b",
+      "commit": "65ace7d3c9deb2ca00d5f56928e320d39ee8b4ed",
+      "source": "chat_template.jinja",
+      "card_license": "mit",
+      "reason": "card says MIT, but NOTICE.md lists components under a proprietary \"CMS Manhattan license\" and a patent"
+    },
+    {
+      "model": "deepseek-ai/deepseek-coder-7b-instruct-v1.5",
+      "commit": "2a050a4c59d687a85324d32e147517992117ed30",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": "deepseek",
+      "reason": "DeepSeek License Agreement (license_name: deepseek)"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+      "commit": "e434a23f91ba5b4923cf6c9d9a238eb4a08e3a11",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": "deepseek-license",
+      "reason": "DeepSeek License Agreement (license_name: deepseek-license)"
+    },
+    {
+      "model": "deepseek-ai/DeepSeek-V3",
+      "commit": "e815299b0bcbac849fa540c768ef21845365c9eb",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": null,
+      "reason": "no license on the model card; repository has separate LICENSE-CODE (MIT) and LICENSE-MODEL (DeepSeek License) files"
+    },
+    {
+      "model": "kindlingai/glm-5.3-exlr8-k2-k3-k4",
+      "commit": "a2b599e06c59f2ccb01aaa44e6f182ba21e39f80",
+      "source": "chat_template.jinja",
+      "card_license": "glm-5.3",
+      "reason": "GLM-5.3 license (license_name: glm-5.3)"
+    },
+    {
+      "model": "LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct-AWQ",
+      "commit": "e50260813863d02f6aafb889bb2820d447704c6c",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": "exaone",
+      "reason": "EXAONE AI Model License (license_name: exaone)"
+    },
+    {
+      "model": "llamafactory/tiny-random-Llama-3",
+      "commit": "bf2a2e3bf199ad2ee96f02a3c00246c608db22a8",
+      "source": "tokenizer_config.json:chat_template",
+      "card_license": "apache-2.0",
+      "reason": "card says Apache-2.0, but the template is the chat template of Meta's Llama 3 Instruct models, which are under the Llama 3 Community License"
+    },
+    {
+      "model": "MiniMaxAI/MiniMax-M2.5",
+      "commit": "f710177d938eff80b684d42c5aa84b382612f21f",
+      "source": "chat_template.jinja",
+      "card_license": "modified-mit",
+      "reason": "Modified MIT License (license_name: modified-mit)"
+    },
+    {
+      "model": "MiniMaxAI/MiniMax-M2.7",
+      "commit": "d494266a4affc0d2995ba1fa35c8481cbd84294b",
+      "source": "chat_template.jinja",
+      "card_license": "other",
+      "reason": "custom license (license: other)"
+    },
+    {
+      "model": "moonshotai/Kimi-K2-Instruct",
+      "commit": "fd1984e2b7a3350dbf7305fe73a4ede25c14de50",
+      "source": "chat_template.jinja",
+      "card_license": "modified-mit",
+      "reason": "Modified MIT License with an added attribution condition (license_name: modified-mit)"
+    },
+    {
+      "model": "NousResearch/Hermes-3-Llama-3.1-8B",
+      "commit": "896ea440e5a9e6070e3d8a2774daf2b481ab425b",
+      "source": "tokenizer_config.json:chat_template[default]",
+      "card_license": "llama3",
+      "reason": "Llama 3 Community License (license: llama3), not Apache-2.0 or MIT"
+    },
+    {
+      "model": "NousResearch/Hermes-3-Llama-3.1-8B",
+      "commit": "896ea440e5a9e6070e3d8a2774daf2b481ab425b",
+      "source": "tokenizer_config.json:chat_template[tool_use]",
+      "card_license": "llama3",
+      "reason": "Llama 3 Community License (license: llama3), not Apache-2.0 or MIT"
+    },
+    {
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16",
+      "commit": "bf77c3174f68ad409e1c2aa60daeb46e32d1c606",
+      "source": "chat_template.jinja",
+      "card_license": "nvidia-nemotron-open-model-license",
+      "reason": "NVIDIA Nemotron Open Model License (license_name: nvidia-nemotron-open-model-license)"
+    },
+    {
+      "model": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
+      "commit": "2dc98e2afe4face0e4ce40972a915c45368bd34a",
+      "source": "chat_template.jinja",
+      "card_license": "nvidia-nemotron-open-model-license",
+      "reason": "NVIDIA Nemotron Open Model License (license_name: nvidia-nemotron-open-model-license)"
+    },
+    {
+      "model": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
+      "commit": "77df655d5e9f8362164ed14dd8b48f8bce657498",
+      "source": "chat_template.jinja",
+      "card_license": "openmdw-1.1",
+      "reason": "OpenMDW-1.1 license (license_name: openmdw-1.1); not reviewed"
+    },
+    {
+      "model": "nvidia/Qwen2.5-VL-7B-Instruct-NVFP4",
+      "commit": "d13bb1f2d8fbbd9f16cbb7688c8d6b6932d797d7",
+      "source": "chat_template.jinja",
+      "card_license": "nvidia-open-model-license",
+      "reason": "NVIDIA Open Model License (license_name: nvidia-open-model-license)"
+    },
+    {
+      "model": "RedHatAI/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-FP8",
+      "commit": "bff279eb543e15f7c0e3f922661e66a1b78ac2e0",
+      "source": "chat_template.jinja",
+      "card_license": null,
+      "reason": "no license on the model card; its base model, nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16, declares OpenMDW-1.1 (license_name: openmdw-1.1), which was not reviewed"
+    },
+    {
+      "model": "trl-internal-testing/tiny-Qwen3ForCausalLM",
+      "commit": "25bb9b8963688237e94750f6f3e48f1947d3c7a3",
+      "source": "chat_template.jinja",
+      "card_license": null,
+      "reason": "no license on the model card"
+    },
+    {
+      "model": "unsloth/gemma-3-1b-it",
+      "commit": "5b11413a10db4e486ef16a20101fd028f8f2499c",
+      "source": "chat_template.jinja",
+      "card_license": "gemma",
+      "reason": "Gemma Terms of Use (license: gemma)"
+    },
+    {
+      "model": "unsloth/Llama-3.1-8B-Instruct",
+      "commit": "4699cc75b550f9c6f3173fb80f4703b62d946aa5",
+      "source": "chat_template.jinja",
+      "card_license": "llama3.1",
+      "reason": "Llama 3.1 Community License (license: llama3.1)"
+    },
+    {
+      "model": "unsloth/Llama-3.2-1B-Instruct",
+      "commit": "5a8abab4a5d6f164389b1079fb721cfab8d7126c",
+      "source": "chat_template.jinja",
+      "card_license": "llama3.2",
+      "reason": "Llama 3.2 Community License (license: llama3.2)"
+    },
+    {
+      "model": "zai-org/GLM-5.3",
+      "commit": "ba32f8c19c8738e2c57c71798c601d477a7bf844",
+      "source": "chat_template.jinja",
+      "card_license": "glm-5.3",
+      "reason": "GLM-5.3 license (license_name: glm-5.3)"
+    }
+  ]
+}

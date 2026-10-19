@@ -1,0 +1,171 @@
+{#- Spark Sharp chat template v1.0.0 -#}
+{#- Derived from XHToken/Spark-X2.5-4B's own template ("0826版本"). Spark's control tokens, tool-call
+    argument format and <think> conventions are preserved to the byte; what changes is (1) four
+    defects in the stock render and (2) the Sharp force-appended terseness prompt, ported from
+    sharp-template/chat_template.jinja v22.4.1 with its `terse` and `suppress_tool_instructions`
+    kwargs intact. This is NOT the Qwen Sharp template -- Spark is a different family with different
+    control tokens -- it is the same idea applied to Spark's own template. -#}
+{%- if not messages %}
+    {{- raise_exception('No messages provided.') }}
+{%- endif %}
+{%- set enable_thinking = enable_thinking | default(true) %}
+
+{#- Render a string or a list of text blocks. -#}
+{%- macro render_content(content, context_name) %}
+    {%- if content is string %}
+        {{- content }}
+    {%- elif content is none or content is undefined %}
+        {{- '' }}
+    {%- elif content is iterable and content is not mapping %}
+        {%- for block in content %}
+            {%- if block.type == 'text' %}
+                {{- block.text }}
+            {%- else %}
+                {{- raise_exception('Unsupported ' ~ context_name ~ ' content block type: ' ~ (block.type | string)) }}
+            {%- endif %}
+        {%- endfor %}
+    {%- else %}
+        {{- raise_exception(context_name ~ ' content must be a string or a list of text blocks') }}
+    {%- endif %}
+{%- endmacro %}
+
+{#- Default system prompt -#}
+{%- set default_system = "you are a helpful assistant." %}
+
+{#- The first message-level system is placed in the initial system block. -#}
+{%- set ns = namespace(initial_system='') %}
+{%- if messages[0].role == "system" %}
+    {%- set ns.initial_system = render_content(messages[0].content, 'system') %}
+{%- endif %}
+
+{#- FIX 1 -- the caller's system prompt REPLACES the canned default instead of trailing it.
+    Stock emits "you are a helpful assistant." unconditionally and appends the caller's system
+    content after it, so a served system prompt is always preceded by a generic persona it did not
+    ask for, and any instruction that contradicts it ("you are a terse code reviewer") is read as a
+    correction rather than as the system prompt. The default is a fallback, so it is used only when
+    there is nothing to fall back from. -#}
+{%- set _sc = ns.initial_system | trim %}
+{%- if not _sc %}
+    {%- set _sc = default_system %}
+{%- endif %}
+
+{#- The Sharp terseness prompt, force-appended to whatever system prompt is in play. Text is taken
+    verbatim from sharp-template v22.4.1 so the two families' terseness behaviour stays comparable;
+    only the lead splits on thinking, since "after thinking" is incoherent when thinking is off. -#}
+{%- if enable_thinking %}
+    {%- set _terse_lead = 'Answer directly, after thinking. Lead with the answer, then only what it needs to be correct and usable.' %}
+{%- else %}
+    {%- set _terse_lead = 'Answer directly and concisely. Give the answer with only what it needs to be correct and usable.' %}
+{%- endif %}
+{%- set _terse_core %}
+Never: open with preamble or pleasantries; restate the question; add filler transitions; hedge with niceties; or repeat a point you've already made.
+Always: keep essential steps, caveats, uncertainties, and specifics — never drop correctness or a needed warning for brevity. Keep the final answer lean. Use the least structure that conveys it (plain prose when short; lists or code only when they earn their place). If genuinely uncertain, say so and explain why — never omit uncertainty for the sake of brevity.
+If a user request is genuinely ambiguous, ask a sharp question, don't guess.
+{%- endset %}
+{%- set _terse = _terse_lead ~ '\n' ~ (_terse_core | trim) %}
+{#- `terse` chat-template kwarg: default true, so behaviour is unchanged unless a caller opts out.
+    Pass {"terse": false} via chat_template_kwargs to serve the model with only its own system
+    prompt -- useful for A/B-ing the terseness effect, or when a downstream prompt conflicts. -#}
+{%- set _terse_on = terse if terse is defined else true %}
+{%- if _terse_on %}
+    {%- set _sc = (_sc | trim) ~ '\n\n' ~ (_terse | trim) %}
+{%- endif %}
+
+{#- Some runtimes (LM Studio's MLX backend) have no native tool-call parser and prepend their own
+    protocol into the system content. Emitting ours as well gives the model two contradictory tool
+    protocols and it follows one at random. Detect that marker and stand down; the
+    `suppress_tool_instructions` kwarg overrides either way where a runtime can pass template kwargs. -#}
+{%- set _runtime_tool_protocol = (_sc and '[TOOL_REQUEST]' in _sc) %}
+{%- set _suppress_tools = suppress_tool_instructions if suppress_tool_instructions is defined else _runtime_tool_protocol %}
+{%- set _has_tools = tools is defined and tools %}
+
+{#- System block.
+    FIX 2 -- the tools block is separated and ordered.
+    Stock concatenates '## Tools' straight onto the default system prompt with no separator, so the
+    render reads "you are a helpful assistant.## Tools", and it emits the tool list BEFORE the
+    caller's system content, splitting the system prompt around it. Here the system prompt is one
+    contiguous block and the tool list follows it after a blank line. -#}
+{{- '<｜start▁of▁sentence｜><|System|>' + '\n' + _sc }}
+{%- if _has_tools and not _suppress_tools %}
+    {{- '\n\n' + '## Tools' + '\n' + 'You have access to the following functions:' + '\n' + '<tools>' }}
+    {%- for tool in tools %}
+        {{- '\n' + tool.function | tojson}}
+    {%- endfor %}
+    {{- '\n' + '</tools>' }}
+{%- endif %}
+{{- '<｜end▁of▁sentence｜>'}}
+
+{#- Conversation turns -#}
+{%- for message in messages %}
+    {%- if message.role == "system" %}
+        {#- The first system message was consumed by the initial block. -#}
+        {%- if not loop.first %}
+            {{- '<｜start▁of▁sentence｜><|System|>\n' + render_content(message.content, 'system') + '<｜end▁of▁sentence｜>' }}
+        {%- endif %}
+    {%- elif message.role == "user" %}
+        {{- '<｜start▁of▁sentence｜><|User|>' + render_content(message.content, 'user') + '<｜end▁of▁sentence｜>' }}
+    {%- elif message.role == "assistant" %}
+        {%- set assistant_content = render_content(message.content, 'assistant') %}
+        {#- FIX 3 -- reasoning history is read from `reasoning`/`thinking` as well as
+            `reasoning_content`. vLLM's OpenAI-compatible and Responses-API schemas return the field
+            under the other two names, so replaying such a history through the stock template
+            silently drops every thinking block. (Sharp v22.4 parity.) -#}
+        {%- if message.reasoning_content is defined and message.reasoning_content %}
+            {%- set reasoning_content = message.reasoning_content %}
+        {%- elif message.reasoning is defined and message.reasoning %}
+            {%- set reasoning_content = message.reasoning %}
+        {%- elif message.thinking is defined and message.thinking %}
+            {%- set reasoning_content = message.thinking %}
+        {%- else %}
+            {%- set reasoning_content = '' %}
+        {%- endif %}
+        {{- '<｜start▁of▁sentence｜><|Bot|>'}}
+        {%- if reasoning_content %}
+            {{- '<think>' + reasoning_content + '</think>'}}
+        {%- else %}
+            {{- '</think>' }}
+        {%- endif %}
+        {%- if assistant_content %}
+            {{- assistant_content }}
+        {%- endif %}
+        {%- if message.tool_calls is defined and message.tool_calls is not none %}
+            {%- for tool_call in message.tool_calls %}
+                {%- if tool_call.function.arguments is not mapping %}
+                    {{- raise_exception('tool_call.function.arguments must be a dictionary; normalize JSON strings before apply_chat_template') }}
+                {%- endif %}
+                {%- set args = tool_call.function.arguments %}
+                {{- '<tool_call>' + tool_call.function.name }}
+                {%- for k, v in args.items() %}
+                    {{- '<arg_key>' ~ k ~ '</arg_key><arg_value>' ~ (v if v is string else v | tojson) ~ '</arg_value>' }}
+                {%- endfor %}
+                {{- '</tool_call>' }}
+            {%- endfor %}
+        {%- endif %}
+        {{- '<｜end▁of▁sentence｜>' }}
+    {%- elif message.role == "tool" %}
+        {%- if loop.previtem is undefined or loop.previtem.role != "tool" %}
+            {{- '<｜start▁of▁sentence｜><|Tool|>' }}
+        {%- endif %}
+        {#- FIX 4 -- tool results go through render_content like every other role.
+            Stock interpolates message.content raw, so a tool result given as a list of text blocks
+            (the OpenAI content-parts shape every other role here accepts) renders as a Python repr
+            -- "[{'type': 'text', 'text': ...}]" -- straight into the prompt. -#}
+        {{- '<tool_response>' ~ render_content(message.content, 'tool') ~ '</tool_response>' }}
+        {%- if loop.nextitem is undefined or loop.nextitem.role != "tool" %}
+            {{- '<｜end▁of▁sentence｜>' }}
+        {%- endif %}
+    {%- else %}
+        {{- raise_exception('Unsupported message role: ' ~ message.role) }}
+    {%- endif %}
+{%- endfor %}
+
+{#- Generation prompt -#}
+{%- if add_generation_prompt %}
+    {{- '<｜start▁of▁sentence｜><|Bot|>' }}
+    {%- if enable_thinking is defined and enable_thinking %}
+        {{- '<think>' }}
+    {%- endif %}
+    {%- if enable_thinking is defined and not enable_thinking %}
+        {{- '</think>' }}
+    {%- endif %}
+{%- endif %}
