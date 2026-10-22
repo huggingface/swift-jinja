@@ -609,6 +609,12 @@ Please ensure your code passes the build and test suite
 before submitting a pull request.
 You can run the tests with `swift test`.
 
+Golden-file tests compare swift-jinja with Jinja2.
+They need a corpus that is built from pinned sources,
+so a plain `swift test` skips them; CI runs them on pull requests.
+To run them locally, or to update the known differences after your change,
+see [Tools/conformance/README.md](Tools/conformance/README.md).
+
 [good-first-issues]: https://github.com/huggingface/swift-jinja/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22
 
 ## License

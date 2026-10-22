@@ -1,0 +1,58 @@
+name: Fuzz
+
+# Compares swift-jinja with Jinja2 on generated templates.
+# See Tools/conformance/README.md.
+
+on:
+  schedule:
+    - cron: "23 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Minutes to generate templates"
+        default: "10"
+      seed:
+        description: "First seed (default: derived from the run number)"
+        default: ""
+
+permissions: {}
+
+jobs:
+  fuzz:
+    permissions:
+      contents: read
+    name: Differential fuzzing against Jinja2
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: "/Applications/Xcode_26.6.app/Contents/Developer"
+      MINUTES: ${{ inputs.minutes || '10' }}
+      SEED: ${{ inputs.seed }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Build the swift-jinja renderer
+        run: swift build -c release --package-path Tools/conformance/jinja-render
+
+      - name: Fuzz
+        run: |
+          seed="${SEED:-$((GITHUB_RUN_NUMBER * 10000000))}"
+          uv run Tools/conformance/fuzz.py run --seed-start "$seed" --minutes "$MINUTES" --out fuzz-results
+
+      - name: Check for crashes, hangs, and new causes
+        run: uv run Tools/conformance/fuzz.py check fuzz-results
+
+      - name: Upload reproducers
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-reproducers
+          path: |
+            fuzz-results/summary.json
+            fuzz-results/reproducers.jsonl
+            fuzz-results/failures.jsonl
+            fuzz-results/crashes.jsonl
+          if-no-files-found: ignore
