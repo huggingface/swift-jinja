@@ -157,7 +157,7 @@ enum ControlFlow: Error, Sendable {
 }
 
 /// Executes parsed Jinja template nodes to produce rendered output.
-public enum Interpreter {
+enum Interpreter {
     /// Interprets nodes and renders them to a string using the given environment.
     ///
     /// - Parameters:
@@ -165,7 +165,7 @@ public enum Interpreter {
     ///   - environment: The execution environment containing variables
     /// - Returns: The rendered template output as a string
     /// - Throws: `RuntimeError` if an error occurs during interpretation
-    public static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
+    static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
         // Use the fast path with synchronous environment
         let env = Environment(initial: environment.variables)
         env.policies = environment.policies
