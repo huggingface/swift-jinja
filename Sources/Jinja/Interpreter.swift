@@ -1076,11 +1076,19 @@ public enum Interpreter {
 
             let (startIdx, stopIdx) = sliceIndices(start: startVal, stop: stopVal, step: step, count: count)
 
+            if step == 1 {
+                // A contiguous run of characters; offset each bound once.
+                guard startIdx < stopIdx else { return .string("") }
+                let lower = str.index(str.startIndex, offsetBy: startIdx)
+                let upper = str.index(lower, offsetBy: stopIdx - startIdx)
+                return .string(String(str[lower ..< upper]))
+            }
+            // Index the characters once, instead of offsetting from the start for each.
+            let characters = Array(str)
             var result = ""
             for i in stride(from: startIdx, to: stopIdx, by: step) {
                 if i >= 0 && i < count {
-                    let index = str.index(str.startIndex, offsetBy: i)
-                    result.append(str[index])
+                    result.append(characters[i])
                 }
             }
             return .string(String(result))
