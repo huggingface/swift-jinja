@@ -1,0 +1,526 @@
+{"id": "literal.int.dec", "template": "{{ 42 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.hex", "template": "{{ 0x1F }}", "context": {}, "mode": "default"}
+{"id": "literal.int.hex_upper", "template": "{{ 0X1f }}", "context": {}, "mode": "default"}
+{"id": "literal.int.hex_underscore", "template": "{{ 0x_1F }}", "context": {}, "mode": "default"}
+{"id": "literal.int.oct", "template": "{{ 0o17 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.oct_upper", "template": "{{ 0O17 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.bin", "template": "{{ 0b101 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.bin_upper", "template": "{{ 0B101 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.underscore", "template": "{{ 1_000_000 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.double_underscore", "template": "{{ 1__000 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.trailing_underscore", "template": "{{ 1_ }}", "context": {}, "mode": "default"}
+{"id": "literal.int.leading_zero", "template": "{{ 007 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.zeros", "template": "{{ 00 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.hex_arith", "template": "{{ 0x10 + 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.hex_in_range", "template": "{{ range(0x3)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.int.neg_zero", "template": "{{ -0 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.big", "template": "{{ 12345678901234567890 }}", "context": {}, "mode": "default"}
+{"id": "literal.int.attr_after_hex", "template": "{{ 0x10.real }}", "context": {}, "mode": "default"}
+{"id": "literal.float.simple", "template": "{{ 1.5 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.one", "template": "{{ 1.0 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp", "template": "{{ 1e3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_upper", "template": "{{ 1E3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_frac", "template": "{{ 1.5e3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_neg", "template": "{{ 1e-3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_plus", "template": "{{ 1.5e+3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_upper_neg", "template": "{{ 2.5E-2 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_in_arith", "template": "{{ 2 * 1e3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_compare", "template": "{{ 1000 == 1e3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_set", "template": "{% set x = 1e3 %}{{ x }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_filter", "template": "{{ 1e3|int }}", "context": {}, "mode": "default"}
+{"id": "literal.float.underscore_int_part", "template": "{{ 1_000.5 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.underscore_frac", "template": "{{ 1.0_5 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.leading_dot", "template": "{{ .5 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.trailing_dot", "template": "{{ 5. }}", "context": {}, "mode": "default"}
+{"id": "literal.float.sum_repr", "template": "{{ 0.1 + 0.2 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.large_repr", "template": "{{ 1e20 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.1e16", "template": "{{ 1e16 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.1e15", "template": "{{ 1e15 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.small_repr", "template": "{{ 0.00001 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.0001", "template": "{{ 0.0001 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.neg_zero", "template": "{{ -0.0 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.div_exact", "template": "{{ 10 / 5 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.div", "template": "{{ 10 / 4 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.third", "template": "{{ 1 / 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.ctx", "template": "{{ x }}", "context": {"x": 2.0}, "mode": "default"}
+{"id": "literal.float.ctx_big", "template": "{{ x }}", "context": {"x": 123456789.123}, "mode": "default"}
+{"id": "literal.float.inf", "template": "{{ 1e400 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_concat", "template": "{{ 'v' ~ 1e3 }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_string", "template": "{{ 1e3|string }}", "context": {}, "mode": "default"}
+{"id": "literal.float.exp_frac_string", "template": "{{ 2.5e2|string }}", "context": {}, "mode": "default"}
+{"id": "literal.int.hex_string", "template": "{{ 0x1F|string }}", "context": {}, "mode": "default"}
+{"id": "literal.int.underscore_string", "template": "{{ 1_000|string }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.true", "template": "{{ true }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.True", "template": "{{ True }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.false", "template": "{{ false }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.none", "template": "{{ none }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.None", "template": "{{ None }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.null", "template": "{{ null }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.null_is_none", "template": "{{ null is none }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.TRUE", "template": "{{ TRUE }}", "context": {}, "mode": "default"}
+{"id": "literal.kw.list_repr", "template": "{{ [true, false, none] }}", "context": {}, "mode": "default"}
+{"id": "literal.dot.true", "template": "{{ d.true }}", "context": {"d": {"true": 1}}, "mode": "default"}
+{"id": "literal.dot.false", "template": "{{ d.false }}", "context": {"d": {"false": 1}}, "mode": "default"}
+{"id": "literal.dot.none", "template": "{{ d.none }}", "context": {"d": {"none": 1}}, "mode": "default"}
+{"id": "literal.dot.True", "template": "{{ d.True }}", "context": {"d": {"True": 1}}, "mode": "default"}
+{"id": "literal.dot.None", "template": "{{ d.None }}", "context": {"d": {"None": 1}}, "mode": "default"}
+{"id": "literal.dot.null", "template": "{{ d.null }}", "context": {"d": {"null": 1}}, "mode": "default"}
+{"id": "literal.dot.if", "template": "{{ d.if }}", "context": {"d": {"if": 1}}, "mode": "default"}
+{"id": "literal.dot.filter", "template": "{{ d.filter }}", "context": {"d": {"filter": 1}}, "mode": "default"}
+{"id": "literal.dot.call", "template": "{{ d.call }}", "context": {"d": {"call": 1}}, "mode": "default"}
+{"id": "literal.dot.macro", "template": "{{ d.macro }}", "context": {"d": {"macro": 1}}, "mode": "default"}
+{"id": "literal.dot.generation", "template": "{{ d.generation }}", "context": {"d": {"generation": 1}}, "mode": "default"}
+{"id": "literal.dot.endfor", "template": "{{ d.endfor }}", "context": {"d": {"endfor": 1}}, "mode": "default"}
+{"id": "literal.dot.set", "template": "{{ d.set }}", "context": {"d": {"set": 1}}, "mode": "default"}
+{"id": "literal.name.call_loop_var", "template": "{% for call in calls %}{{ call.name }}{% endfor %}", "context": {"calls": [{"name": "a"}, {"name": "b"}]}, "mode": "default"}
+{"id": "literal.name.filter_var", "template": "{% set filter = 'x' %}{{ filter }}", "context": {}, "mode": "default"}
+{"id": "literal.name.generation_var", "template": "{{ generation }}", "context": {"generation": "g"}, "mode": "default"}
+{"id": "literal.name.macro_param_call", "template": "{% macro m(call) %}{{ call }}{% endmacro %}{{ m(1) }}", "context": {}, "mode": "default"}
+{"id": "literal.name.kwarg_true", "template": "{{ dict(true=1) }}", "context": {}, "mode": "default"}
+{"id": "literal.is.none_kw", "template": "{{ x is none }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.is.true_kw", "template": "{{ x is true }}", "context": {"x": true}, "mode": "default"}
+{"id": "literal.is.false_kw", "template": "{{ x is false }}", "context": {"x": false}, "mode": "default"}
+{"id": "literal.str.newline", "template": "{{ \"a\\nb\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.tab", "template": "{{ \"a\\tb\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.squote", "template": "{{ 'it\\'s' }}", "context": {}, "mode": "default"}
+{"id": "literal.str.dquote", "template": "{{ \"say \\\"hi\\\"\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.backslash", "template": "{{ \"a\\\\b\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.unicode4", "template": "{{ \"\\u00e9\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.unicode8", "template": "{{ \"\\U0001F600\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.hex", "template": "{{ \"\\x41\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.octal", "template": "{{ \"\\101\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.null_char", "template": "{{ \"a\\0b\"|length }}", "context": {}, "mode": "default"}
+{"id": "literal.str.named", "template": "{{ \"\\N{BULLET}\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.unknown_escape", "template": "{{ \"\\q\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.bell", "template": "{{ \"\\a\"|length }}", "context": {}, "mode": "default"}
+{"id": "literal.str.backslash_newline", "template": "{{ \"a\\\nb\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.literal_newline", "template": "{{ \"a\nb\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.adjacent", "template": "{{ \"a\" \"b\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.adjacent_tilde", "template": "{{ 'a' 'b' ~ 'c' }}", "context": {}, "mode": "default"}
+{"id": "literal.str.unicode_in_template", "template": "{{ 'café ☕' }}", "context": {}, "mode": "default"}
+{"id": "literal.str.sp_token", "template": "{{ '\\u2581' }}", "context": {}, "mode": "default"}
+{"id": "literal.str.escaped_braces", "template": "{{ '{{' }}x{{ '}}' }}", "context": {}, "mode": "default"}
+{"id": "literal.str.percent_brace", "template": "{{ '%}' }}", "context": {}, "mode": "default"}
+{"id": "literal.str.dash_close", "template": "{{ \"a -}} b\" }}", "context": {}, "mode": "default"}
+{"id": "literal.str.dash_close_stmt", "template": "{% set x = 'a -%} b' %}{{ x }}", "context": {}, "mode": "default"}
+{"id": "literal.str.trim_inside_string", "template": "{% set x = 'p%}\nq' %}[{{ x }}]", "context": {}, "mode": "default"}
+{"id": "literal.concat.ints", "template": "{{ 1 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.concat.names", "template": "{{ a b }}", "context": {"a": "x", "b": "y"}, "mode": "default"}
+{"id": "literal.concat.str_name", "template": "{{ 'a' b }}", "context": {"b": "y"}, "mode": "default"}
+{"id": "literal.concat.name_str", "template": "{{ a 'b' }}", "context": {"a": "x"}, "mode": "default"}
+{"id": "literal.op.mul_add", "template": "{{ 1 + 2 * 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.paren", "template": "{{ (1 + 2) * 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.pow_assoc", "template": "{{ 2 ** 3 ** 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.neg_pow", "template": "{{ -2 ** 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.pow_neg", "template": "{{ 2 ** -1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.pow_float", "template": "{{ 2 ** 0.5 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.pow_big", "template": "{{ 2 ** 64 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.pow_63", "template": "{{ 2 ** 62 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.floordiv", "template": "{{ 7 // 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.floordiv_neg", "template": "{{ -7 // 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.floordiv_float", "template": "{{ 7.5 // 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.mod", "template": "{{ 7 % 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.mod_neg", "template": "{{ -7 % 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.mod_float", "template": "{{ 7.5 % 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.mod_loop", "template": "{% for i in range(5) %}{{ (i - 2) % 2 }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.op.str_format_mod", "template": "{{ '%s!' % 'hi' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.str_format_mod_tuple", "template": "{{ '%s-%s' % (1, 2) }}", "context": {}, "mode": "default"}
+{"id": "literal.op.div", "template": "{{ 7 / 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.div_zero", "template": "{{ 1 / 0 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.sub_chain", "template": "{{ 10 - 2 - 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.concat_vs_add", "template": "{{ 'a' ~ 1 + 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.add_vs_concat", "template": "{{ 1 + 2 ~ 'a' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.concat_vs_mul", "template": "{{ 'a' ~ 2 * 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.str_plus_int", "template": "{{ 'a' + 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.int_plus_str", "template": "{{ 1 + 'a' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.str_plus_none", "template": "{{ 'a' + x }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.op.str_plus_undefined", "template": "{{ 'a' + x }}", "context": {}, "mode": "default"}
+{"id": "literal.op.str_times", "template": "{{ 'ab' * 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.str_times_neg", "template": "{{ 'ab' * -1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.list_times", "template": "{{ [1] * 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.list_plus", "template": "{{ [1, 2] + [3] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.bool_plus", "template": "{{ true + 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.not_eq", "template": "{{ not 1 == 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.not_and", "template": "{{ not true and false }}", "context": {}, "mode": "default"}
+{"id": "literal.op.chain_lt", "template": "{{ 1 < 2 < 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.chain_gt", "template": "{{ 3 > 2 > 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.chain_lt_false", "template": "{{ 1 < 3 < 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.chain_eq", "template": "{{ 1 == 1 == 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.in_list", "template": "{{ 1 in [1, 2] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.not_in", "template": "{{ 3 not in [1, 2] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.not_x_in", "template": "{{ not 3 in [1, 2] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.in_str", "template": "{{ 'b' in 'abc' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.in_dict", "template": "{{ 'a' in {'a': 1} }}", "context": {}, "mode": "default"}
+{"id": "literal.op.in_undefined", "template": "{{ 'a' in x }}", "context": {}, "mode": "default"}
+{"id": "literal.op.int_in_floats", "template": "{{ 1 in [1.0] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.ternary", "template": "{{ 1 if true else 2 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.ternary_no_else", "template": "[{{ 1 if false }}]", "context": {}, "mode": "default"}
+{"id": "literal.op.ternary_no_else_defined", "template": "{{ (1 if false) is defined }}", "context": {}, "mode": "default"}
+{"id": "literal.op.ternary_chain", "template": "{{ 'x' if 0 else 'y' if 1 else 'z' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.ternary_filter", "template": "{{ 'a' if true else 'b'|upper }}", "context": {}, "mode": "default"}
+{"id": "literal.op.is_binds_tight", "template": "{{ 1 + 2 is odd }}", "context": {}, "mode": "default"}
+{"id": "literal.op.is_vs_eq", "template": "{{ 2 == 2 is odd }}", "context": {}, "mode": "default"}
+{"id": "literal.op.not_is", "template": "{{ not x is defined }}", "context": {}, "mode": "default"}
+{"id": "literal.op.is_not", "template": "{{ x is not none }}", "context": {"x": 1}, "mode": "default"}
+{"id": "literal.op.neg_filter", "template": "{{ -1|abs }}", "context": {}, "mode": "default"}
+{"id": "literal.op.neg_filter_round", "template": "{{ -1.5|round }}", "context": {}, "mode": "default"}
+{"id": "literal.op.mul_filter", "template": "{{ 2 * 3|string }}", "context": {}, "mode": "default"}
+{"id": "literal.op.sub_filter", "template": "{{ 10 - 3|abs }}", "context": {}, "mode": "default"}
+{"id": "literal.op.filter_concat", "template": "{{ 'abc'|upper ~ 'd' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.default_add", "template": "{{ x|default(1) + 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.filter_neg_arg", "template": "{{ x|default(-1) }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_int_float", "template": "{{ 1 == 1.0 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_int_bool", "template": "{{ 1 == true }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_zero_false", "template": "{{ 0 == false }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_list", "template": "{{ [1, 2] == [1, 2] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_tuple_list", "template": "{{ (1, 2) == [1, 2] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_dict", "template": "{{ {'a': 1} == {'a': 1} }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_dict_order", "template": "{{ {'a': 1, 'b': 2} == {'b': 2, 'a': 1} }}", "context": {}, "mode": "default"}
+{"id": "literal.op.lt_str", "template": "{{ 'a' < 'b' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.lt_list", "template": "{{ [1, 2] < [1, 3] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.lt_bool_int", "template": "{{ false < 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.op.eq_none", "template": "{{ x == none }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.op.eq_undefined_none", "template": "{{ x == none }}", "context": {}, "mode": "default"}
+{"id": "literal.op.and_value", "template": "{{ 0 and 'x' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.or_value", "template": "{{ '' or 'x' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.or_none", "template": "{{ none or [] }}", "context": {}, "mode": "default"}
+{"id": "literal.op.unary_plus_str", "template": "{{ +'a' }}", "context": {}, "mode": "default"}
+{"id": "literal.op.neg_str", "template": "{{ -'a' }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.true", "template": "{{ x }}", "context": {"x": true}, "mode": "default"}
+{"id": "literal.fmt.none", "template": "{{ x }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.fmt.list_mixed", "template": "{{ [true, none, 1.0, 'a'] }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.dict", "template": "{{ {'a': 'b', 'c': [1]} }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.dict_ctx", "template": "{{ x }}", "context": {"x": {"role": "user", "content": "hi"}}, "mode": "default"}
+{"id": "literal.fmt.nested_list_str", "template": "{{ [['a']] }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.dict_in_list", "template": "{{ [{'a': 'b'}] }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.str_with_quote", "template": "{{ [\"it's\"] }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.str_with_both_quotes", "template": "{{ x }}", "context": {"x": ["a'b\"c"]}, "mode": "default"}
+{"id": "literal.fmt.str_with_newline", "template": "{{ x }}", "context": {"x": ["a\nb"]}, "mode": "default"}
+{"id": "literal.fmt.tuple", "template": "{{ (1, 2) }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.tuple1", "template": "{{ (1,) }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.range", "template": "{{ range(3) }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.range_list", "template": "{{ range(3)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.unicode_list", "template": "{{ ['é'] }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.bool_in_dict", "template": "{{ {'a': true} }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.none_in_list", "template": "{{ [none] }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.multimodal_content", "template": "{{ m.content }}", "context": {"m": {"content": [{"type": "text", "text": "hi"}]}}, "mode": "default"}
+{"id": "literal.fmt.int_key_dict", "template": "{{ {1: 'a'} }}", "context": {}, "mode": "default"}
+{"id": "literal.fmt.float_list", "template": "{{ [0.5, 2.0] }}", "context": {}, "mode": "default"}
+{"id": "literal.ws.dash_both", "template": "a  {%- if true %} b {% endif -%}  c", "context": {}, "mode": "default"}
+{"id": "literal.ws.expr_dash", "template": "x  {{- 'y' -}}  z", "context": {}, "mode": "default"}
+{"id": "literal.ws.comment_dash", "template": "x  {#- c -#}  z", "context": {}, "mode": "default"}
+{"id": "literal.ws.newline_dash", "template": "a\n\n{%- if true -%}\n\nb\n\n{%- endif -%}\n\nc", "context": {}, "mode": "default"}
+{"id": "literal.ws.plus", "template": "  {%+ if true %}x{% endif %}", "context": {}, "mode": "default", "options": {"lstrip_blocks": true}}
+{"id": "literal.ws.trailing_newline", "template": "abc\n", "context": {}, "mode": "default"}
+{"id": "literal.ws.trailing_newline_expr", "template": "{{ 'a' }}\n", "context": {}, "mode": "default"}
+{"id": "literal.ws.trailing_two_newlines", "template": "abc\n\n", "context": {}, "mode": "default"}
+{"id": "literal.ws.trailing_crlf", "template": "abc\r\n", "context": {}, "mode": "default"}
+{"id": "literal.ws.trim", "template": "{% if true %}\nx\n{% endif %}\ny", "context": {}, "mode": "default", "options": {"trim_blocks": true}}
+{"id": "literal.ws.trim_comment", "template": "{# c #}\nx", "context": {}, "mode": "default", "options": {"trim_blocks": true}}
+{"id": "literal.ws.trim_expr", "template": "{{ 'a' }}\nb", "context": {}, "mode": "default", "options": {"trim_blocks": true}}
+{"id": "literal.ws.trim_crlf", "template": "{% if true %}\r\nx{% endif %}", "context": {}, "mode": "default", "options": {"trim_blocks": true}}
+{"id": "literal.ws.lstrip", "template": "  {% if true %}\n  x\n  {% endif %}\n", "context": {}, "mode": "default", "options": {"lstrip_blocks": true}}
+{"id": "literal.ws.lstrip_trim", "template": "  {% if true %}\n  x\n  {% endif %}\ny", "context": {}, "mode": "default", "options": {"lstrip_blocks": true, "trim_blocks": true}}
+{"id": "literal.ws.lstrip_expr", "template": "  {{ 'x' }}", "context": {}, "mode": "default", "options": {"lstrip_blocks": true}}
+{"id": "literal.ws.lstrip_comment", "template": "  {# c #}x", "context": {}, "mode": "default", "options": {"lstrip_blocks": true}}
+{"id": "literal.ws.lstrip_crlf", "template": "a\r\n  {% if true %}b{% endif %}\r\nc", "context": {}, "mode": "default", "options": {"lstrip_blocks": true}}
+{"id": "literal.ws.lstrip_midline", "template": "a  {% if true %}b{% endif %}", "context": {}, "mode": "default", "options": {"lstrip_blocks": true}}
+{"id": "literal.ws.brace_before_dash", "template": "{\n{%- if true %}x{% endif %}", "context": {}, "mode": "default"}
+{"id": "literal.ws.brace_before_expr_dash", "template": "{ {{- 'x' }}", "context": {}, "mode": "default"}
+{"id": "literal.ws.raw", "template": "{% raw %}{{ x }}{% endraw %}", "context": {}, "mode": "default"}
+{"id": "literal.ws.raw_dash", "template": "a {%- raw -%} {{ x }} {%- endraw -%} b", "context": {}, "mode": "default"}
+{"id": "literal.ws.trim_dash_mix", "template": "{% for i in [1,2] -%}\n  {{ i }}\n{%- endfor %}", "context": {}, "mode": "default", "options": {"trim_blocks": true, "lstrip_blocks": true}}
+{"id": "literal.ws.text_percent_brace", "template": "100%}\nok", "context": {}, "mode": "default", "options": {"trim_blocks": true}}
+{"id": "literal.ws.text_close_braces", "template": "a }} b %} c #}", "context": {}, "mode": "default"}
+{"id": "literal.for.filter_index", "template": "{% for m in msgs if m.role != 'system' %}{{ loop.index }}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.filter_first", "template": "{% for m in msgs if m.role != 'system' %}{% if loop.first %}F{% endif %}{{ m.role[0] }}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.filter_last", "template": "{% for m in msgs if m.role == 'user' %}{{ m.content }}{% if not loop.last %},{% endif %}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.filter_length", "template": "{% for m in msgs if m.role == 'user' %}{{ loop.length }}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.filter_else", "template": "{% for m in msgs if m.role == 'tool' %}x{% else %}empty{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.filter_revindex", "template": "{% for i in range(6) if i is even %}{{ loop.revindex }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.undefined", "template": "[{% for x in nothing %}{{ x }}{% endfor %}]", "context": {}, "mode": "default"}
+{"id": "literal.for.undefined_attr", "template": "[{% for x in m.tool_calls %}{{ x }}{% endfor %}]", "context": {"m": {"role": "user"}}, "mode": "default"}
+{"id": "literal.for.none", "template": "[{% for x in none %}{{ x }}{% endfor %}]", "context": {}, "mode": "default"}
+{"id": "literal.for.int", "template": "[{% for x in 3 %}{{ x }}{% endfor %}]", "context": {}, "mode": "default"}
+{"id": "literal.for.dict_break", "template": "{% for k in d %}{{ k }}{% break %}{% endfor %}", "context": {"d": {"a": 1, "b": 2}}, "mode": "default"}
+{"id": "literal.for.dict_continue", "template": "{% for k, v in d.items() %}{% if v == 1 %}{% continue %}{% endif %}{{ k }}{% endfor %}", "context": {"d": {"a": 1, "b": 2}}, "mode": "default"}
+{"id": "literal.for.dict_direct_continue", "template": "{% for k in d %}{% if k == 'a' %}{% continue %}{% endif %}{{ k }}{% endfor %}", "context": {"d": {"a": 1, "b": 2}}, "mode": "default"}
+{"id": "literal.for.str_break", "template": "{% for c in 'abc' %}{{ c }}{% if c == 'b' %}{% break %}{% endif %}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.dict_tuple_unpack", "template": "{% for k, v in d %}{{ k }}{{ v }}{% endfor %}", "context": {"d": {"ab": 1, "cd": 2}}, "mode": "default"}
+{"id": "literal.for.tuple_unpack", "template": "{% for a, b in [(1, 2), (3, 4)] %}{{ a }}{{ b }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.tuple_unpack_mismatch", "template": "{% for a, b in [1, 2] %}{{ a }}{{ b }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.scope", "template": "{% set x = 1 %}{% for i in [1] %}{% set x = 2 %}{% endfor %}{{ x }}", "context": {}, "mode": "default"}
+{"id": "literal.for.loop_var_leak", "template": "{% for i in [1, 2] %}{% endfor %}[{{ i }}]", "context": {}, "mode": "default"}
+{"id": "literal.for.cycle", "template": "{% for i in range(4) %}{{ loop.cycle('a', 'b') }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.changed", "template": "{% for i in [1, 1, 2] %}{% if loop.changed(i) %}{{ i }}{% endif %}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.depth", "template": "{% for i in [1] %}{{ loop.depth }}{{ loop.depth0 }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.recursive", "template": "{% for i in tree recursive %}{{ i.n }}{% if i.c %}({{ loop(i.c) }}){% endif %}{% endfor %}", "context": {"tree": [{"n": "a", "c": [{"n": "b"}]}]}, "mode": "default"}
+{"id": "literal.for.previtem", "template": "{% for i in [1, 2, 3] %}{{ loop.previtem }}-{{ loop.nextitem }};{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.nested_loop_outer", "template": "{% for a in [1, 2] %}{% set outer = loop %}{% for b in [1] %}{{ outer.index }}{% endfor %}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.for.loop_after_loop", "template": "{% for a in [1] %}{% endfor %}[{{ loop }}]", "context": {}, "mode": "default"}
+{"id": "literal.for.ns_accumulate", "template": "{% set ns = namespace(n=0) %}{% for i in range(4) %}{% set ns.n = ns.n + i %}{% endfor %}{{ ns.n }}", "context": {}, "mode": "default"}
+{"id": "literal.for.ns_in_if_in_for", "template": "{% set ns = namespace(found=false) %}{% for m in msgs %}{% if m.role == 'assistant' %}{% set ns.found = true %}{% endif %}{% endfor %}{{ ns.found }}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.reverse", "template": "{% for m in msgs|reverse %}{{ m.content }}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.slice_neg", "template": "{% for m in msgs[-2:] %}{{ m.content }}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.for.slice_step_neg", "template": "{% for m in msgs[::-1] %}{{ m.content }}{% endfor %}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.if.elif", "template": "{% if x == 1 %}a{% elif x == 2 %}b{% else %}c{% endif %}", "context": {"x": 2}, "mode": "default"}
+{"id": "literal.if.undefined_attr_chain", "template": "{% if m.a.b %}y{% else %}n{% endif %}", "context": {"m": {}}, "mode": "default"}
+{"id": "literal.if.empty_index", "template": "{% if msgs[0]['role'] == 'system' %}y{% else %}n{% endif %}", "context": {"msgs": []}, "mode": "default"}
+{"id": "literal.if.empty_index_attr", "template": "{% if msgs[0].role == 'system' %}y{% else %}n{% endif %}", "context": {"msgs": []}, "mode": "default"}
+{"id": "literal.if.in_unreached_unknown_filter", "template": "{% if false %}{{ x|nosuchfilter }}{% endif %}ok", "context": {}, "mode": "default"}
+{"id": "literal.if.in_unreached_unknown_test", "template": "{% if false %}{{ x is nosuchtest }}{% endif %}ok", "context": {}, "mode": "default"}
+{"id": "literal.set.tuple", "template": "{% set a, b = 1, 2 %}{{ a }}{{ b }}", "context": {}, "mode": "default"}
+{"id": "literal.set.block", "template": "{% set x %}a{{ 1 }}{% endset %}[{{ x }}]", "context": {}, "mode": "default"}
+{"id": "literal.set.block_filter", "template": "{% set x | upper %}abc{% endset %}{{ x }}", "context": {}, "mode": "default"}
+{"id": "literal.set.list_append_concat", "template": "{% set x = [1] %}{% set x = x + [2] %}{{ x }}", "context": {}, "mode": "default"}
+{"id": "literal.set.ns_in_macro", "template": "{% set ns = namespace(v=0) %}{% macro inc() %}{% set ns.v = ns.v + 1 %}{% endmacro %}{{ inc() }}{{ ns.v }}", "context": {}, "mode": "default"}
+{"id": "literal.set.ns_passed_to_macro", "template": "{% set ns = namespace(v=0) %}{% macro inc(n) %}{% set n.v = n.v + 1 %}{% endmacro %}{{ inc(ns) }}{{ ns.v }}", "context": {}, "mode": "default"}
+{"id": "literal.set.dict_attr_not_ns", "template": "{% set d = {'a': 1} %}{% set d.a = 2 %}{{ d.a }}", "context": {}, "mode": "default"}
+{"id": "literal.set.in_if_visible", "template": "{% if true %}{% set x = 1 %}{% endif %}{{ x }}", "context": {}, "mode": "default"}
+{"id": "literal.dict.identifier_key", "template": "{% set k = 'a' %}{{ {k: 1} }}", "context": {}, "mode": "default"}
+{"id": "literal.dict.bool_key", "template": "{{ {true: 1}[true] }}", "context": {}, "mode": "default"}
+{"id": "literal.dict.float_key", "template": "{{ {1.5: 'x'}[1.5] }}", "context": {}, "mode": "default"}
+{"id": "literal.dict.expr_key", "template": "{{ {'a' ~ 'b': 1} }}", "context": {}, "mode": "default"}
+{"id": "literal.dict.none_key", "template": "{{ {none: 1} }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.defaults", "template": "{% macro m(a, b=2) %}{{ a }}{{ b }}{% endmacro %}{{ m(1) }}|{{ m(1, b=3) }}|{{ m(b=4, a=5) }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.missing_arg", "template": "{% macro m(a) %}[{{ a }}]{% endmacro %}{{ m() }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.too_many_args", "template": "{% macro m(a) %}{{ a }}{% endmacro %}{{ m(1, 2) }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.unknown_kwarg", "template": "{% macro m(a) %}{{ a }}{% endmacro %}{{ m(1, z=2) }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.varargs", "template": "{% macro m() %}{{ varargs }}{% endmacro %}{{ m(1, 2) }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.kwargs", "template": "{% macro m() %}{{ kwargs }}{% endmacro %}{{ m(a=1) }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.default_refs_param", "template": "{% macro m(a, b=a) %}{{ b }}{% endmacro %}{{ m(3) }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.sees_loop_var", "template": "{% macro m() %}[{{ item }}]{% endmacro %}{% for item in [1] %}{{ m() }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.macro.sees_global_set_later", "template": "{% macro m() %}[{{ g }}]{% endmacro %}{% set g = 1 %}{{ m() }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.caller_args", "template": "{% macro m() %}{{ caller(1) }}{% endmacro %}{% call(x) m() %}<{{ x }}>{% endcall %}", "context": {}, "mode": "default"}
+{"id": "literal.macro.returns_string_concat", "template": "{% macro m() %}a{% endmacro %}{{ m() ~ 'b' }}", "context": {}, "mode": "default"}
+{"id": "literal.macro.name_attr", "template": "{% macro m() %}{% endmacro %}{{ m.name }}", "context": {}, "mode": "default"}
+{"id": "literal.filter.block_kwarg", "template": "{% filter indent(width=2, first=true) %}a\nb{% endfilter %}", "context": {}, "mode": "default"}
+{"id": "literal.filter.block_chain", "template": "{% filter upper|replace('A', 'x') %}abc{% endfilter %}", "context": {}, "mode": "default"}
+{"id": "literal.with.basic", "template": "{% with a = 1 %}{{ a }}{% endwith %}", "context": {}, "mode": "default"}
+{"id": "literal.stmt.do", "template": "{% do x %}", "context": {}, "mode": "default"}
+{"id": "literal.stmt.include", "template": "{% include 'x' %}", "context": {}, "mode": "default"}
+{"id": "literal.stmt.unknown_tag", "template": "{% frobnicate %}", "context": {}, "mode": "default"}
+{"id": "literal.stmt.unclosed_if", "template": "{% if true %}x", "context": {}, "mode": "default"}
+{"id": "literal.stmt.endfor_mismatch", "template": "{% if true %}x{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.undef.print", "template": "[{{ x }}]", "context": {}, "mode": "default"}
+{"id": "literal.undef.attr", "template": "[{{ x.y }}]", "context": {}, "mode": "default"}
+{"id": "literal.undef.item", "template": "[{{ x['y'] }}]", "context": {}, "mode": "default"}
+{"id": "literal.undef.add", "template": "{{ x + 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.undef.concat", "template": "{{ x ~ 'a' }}", "context": {}, "mode": "default"}
+{"id": "literal.undef.length", "template": "{{ x|length }}", "context": {}, "mode": "default"}
+{"id": "literal.undef.string", "template": "[{{ x|string }}]", "context": {}, "mode": "default"}
+{"id": "literal.undef.iter_join", "template": "[{{ x|join(',') }}]", "context": {}, "mode": "default"}
+{"id": "literal.undef.call", "template": "{{ x() }}", "context": {}, "mode": "default"}
+{"id": "literal.undef.is_none", "template": "{{ x is none }}", "context": {}, "mode": "default"}
+{"id": "literal.undef.not", "template": "{{ not x }}", "context": {}, "mode": "default"}
+{"id": "literal.undef.tojson", "template": "{{ x|tojson }}", "context": {}, "mode": "default"}
+{"id": "literal.none.attr", "template": "[{{ x.y }}]", "context": {"x": null}, "mode": "default"}
+{"id": "literal.none.item", "template": "[{{ x['y'] }}]", "context": {"x": null}, "mode": "default"}
+{"id": "literal.none.add", "template": "{{ x + 1 }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.none.length", "template": "{{ x|length }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.missing_key.attr", "template": "[{{ m.content }}]", "context": {"m": {"role": "user"}}, "mode": "default"}
+{"id": "literal.missing_key.nested", "template": "[{{ m.content.text }}]", "context": {"m": {"role": "user"}}, "mode": "default"}
+{"id": "literal.index.out_of_range", "template": "[{{ x[5] }}]", "context": {"x": [1]}, "mode": "default"}
+{"id": "literal.index.neg_out_of_range", "template": "[{{ x[-5] }}]", "context": {"x": [1]}, "mode": "default"}
+{"id": "literal.index.float", "template": "[{{ x[1.0] }}]", "context": {"x": [1, 2]}, "mode": "default"}
+{"id": "literal.index.bool", "template": "[{{ x[true] }}]", "context": {"x": [1, 2]}, "mode": "default"}
+{"id": "literal.index.str_on_list", "template": "[{{ x['a'] }}]", "context": {"x": [1, 2]}, "mode": "default"}
+{"id": "literal.index.method_via_subscript", "template": "{{ d['items']()|list }}", "context": {"d": {"a": 1}}, "mode": "default"}
+{"id": "literal.index.dict_int_key_str", "template": "[{{ d[1] }}]", "context": {"d": {"1": "a"}}, "mode": "default"}
+{"id": "literal.attr.list_length", "template": "[{{ x.length }}]", "context": {"x": [1]}, "mode": "default"}
+{"id": "literal.attr.str_index", "template": "{{ 'abc'.0 }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.split_ws", "template": "{{ s.split() }}", "context": {"s": " a  b\tc\nd "}, "mode": "default"}
+{"id": "literal.strm.split_sep", "template": "{{ 'a,b,,c'.split(',') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.split_max", "template": "{{ 'a,b,c'.split(',', 1) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.split_neg_index", "template": "{{ 'x</think>y'.split('</think>')[-1] }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.rsplit", "template": "{{ 'a,b,c'.rsplit(',', 1) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.strip_chars", "template": "{{ 'xxaxx'.strip('x') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.strip_unicode_ws", "template": "[{{ s.strip() }}]", "context": {"s": " a　"}, "mode": "default"}
+{"id": "literal.strm.lstrip_newline", "template": "[{{ s.lstrip('\\n') }}]", "context": {"s": "\n\nab\n"}, "mode": "default"}
+{"id": "literal.strm.rstrip", "template": "[{{ s.rstrip() }}]", "context": {"s": "ab \n\t"}, "mode": "default"}
+{"id": "literal.strm.startswith_tuple", "template": "{{ 'abc'.startswith(('x', 'a')) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.endswith_tuple", "template": "{{ 'abc'.endswith(('c', 'x')) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.startswith_start", "template": "{{ 'abc'.startswith('b', 1) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.title", "template": "{{ \"they're bill's friends\".title() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.title_digits", "template": "{{ 'hello 2nd world'.title() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.capitalize", "template": "{{ 'hELLO'.capitalize() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.upper", "template": "{{ 'straße'.upper() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.count", "template": "{{ 'banana'.count('a') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.find", "template": "{{ 'banana'.find('n') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.index", "template": "{{ 'banana'.index('n') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.join", "template": "{{ ', '.join(['a', 'b']) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.format", "template": "{{ '{} and {}'.format('a', 'b') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.format_named", "template": "{{ '{x}'.format(x=1) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.replace", "template": "{{ 'aaa'.replace('a', 'b', 2) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.splitlines", "template": "{{ 'a\\nb\\r\\nc'.splitlines() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.isdigit", "template": "{{ '123'.isdigit() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.isspace", "template": "{{ ' '.isspace() }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.lower_method_on_none", "template": "{{ x.lower() }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.strm.removeprefix", "template": "{{ 'abc'.removeprefix('a') }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.zfill", "template": "{{ '7'.zfill(3) }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.encode_len", "template": "{{ 'é'|length }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.slice_rev", "template": "{{ 'abc'[::-1] }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.slice", "template": "{{ 'abcdef'[1:4] }}", "context": {}, "mode": "default"}
+{"id": "literal.strm.emoji_len", "template": "{{ s|length }}", "context": {"s": "👍🏽"}, "mode": "default"}
+{"id": "literal.strm.emoji_index", "template": "{{ s[0] }}", "context": {"s": "éx"}, "mode": "default"}
+{"id": "literal.listm.index", "template": "{{ [1, 2, 3].index(2) }}", "context": {}, "mode": "default"}
+{"id": "literal.listm.count", "template": "{{ [1, 1, 2].count(1) }}", "context": {}, "mode": "default"}
+{"id": "literal.dictm.get_default", "template": "{{ d.get('x', 'dflt') }}", "context": {"d": {}}, "mode": "default"}
+{"id": "literal.dictm.get_none", "template": "[{{ d.get('x') }}]", "context": {"d": {}}, "mode": "default"}
+{"id": "literal.dictm.keys", "template": "{{ d.keys()|list }}", "context": {"d": {"b": 1, "a": 2}}, "mode": "default"}
+{"id": "literal.dictm.items_print", "template": "{{ d.items() }}", "context": {"d": {"a": 1}}, "mode": "default"}
+{"id": "literal.dictm.values", "template": "{{ d.values()|list }}", "context": {"d": {"b": 1, "a": 2}}, "mode": "default"}
+{"id": "literal.dictm.key_named_items", "template": "{{ d['items'] }}", "context": {"d": {"items": [1]}}, "mode": "default"}
+{"id": "literal.dictm.attr_named_items", "template": "{{ d.items is callable }}", "context": {"d": {"items": [1]}}, "mode": "default"}
+{"id": "literal.f.sort_case", "template": "{{ ['b', 'A', 'c']|sort }}", "context": {}, "mode": "default"}
+{"id": "literal.f.sort_case_sensitive", "template": "{{ ['b', 'A', 'c']|sort(case_sensitive=true) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.sort_attr", "template": "{{ x|sort(attribute='a')|map(attribute='a')|list }}", "context": {"x": [{"a": 2}, {"a": 1}]}, "mode": "default"}
+{"id": "literal.f.sort_mixed", "template": "{{ [1, 'a']|sort }}", "context": {}, "mode": "default"}
+{"id": "literal.f.sum", "template": "{{ [1, 2, 3]|sum }}", "context": {}, "mode": "default"}
+{"id": "literal.f.sum_attr", "template": "{{ x|sum(attribute='n') }}", "context": {"x": [{"n": 1}, {"n": 2}]}, "mode": "default"}
+{"id": "literal.f.join_mixed", "template": "{{ [1, 'a', none]|join(',') }}", "context": {}, "mode": "default"}
+{"id": "literal.f.join_attr", "template": "{{ x|join(', ', attribute='n') }}", "context": {"x": [{"n": 1}, {"n": 2}]}, "mode": "default"}
+{"id": "literal.f.dictsort", "template": "{{ d|dictsort }}", "context": {"d": {"b": 1, "a": 2}}, "mode": "default"}
+{"id": "literal.f.items", "template": "{{ d|items|list }}", "context": {"d": {"b": 1, "a": 2}}, "mode": "default"}
+{"id": "literal.f.items_none", "template": "{{ x|items|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.tojson_default", "template": "{{ x|tojson }}", "context": {"x": {"b": "<é>", "a": [1, 2.5, null, true]}}, "mode": "default"}
+{"id": "literal.f.tojson_indent", "template": "{{ x|tojson(indent=2) }}", "context": {"x": {"b": 1, "a": [1]}}, "mode": "default"}
+{"id": "literal.f.tojson_float", "template": "{{ [1.0, 1e20, 0.1]|tojson }}", "context": {}, "mode": "default"}
+{"id": "literal.f.tojson_str", "template": "{{ 'it\\'s'|tojson }}", "context": {}, "mode": "default"}
+{"id": "literal.f.string_list", "template": "{{ [1, 'a']|string }}", "context": {}, "mode": "default"}
+{"id": "literal.f.string_bool", "template": "{{ true|string }}", "context": {}, "mode": "default"}
+{"id": "literal.f.string_none", "template": "{{ none|string }}", "context": {}, "mode": "default"}
+{"id": "literal.f.int_str", "template": "{{ '3'|int + 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.f.int_float_str", "template": "{{ '3.7'|int }}", "context": {}, "mode": "default"}
+{"id": "literal.f.int_bad", "template": "{{ 'abc'|int }}", "context": {}, "mode": "default"}
+{"id": "literal.f.int_base", "template": "{{ '0x1A'|int(base=16) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.int_underscore", "template": "{{ '1_000'|int }}", "context": {}, "mode": "default"}
+{"id": "literal.f.int_float", "template": "{{ 3.9|int }}", "context": {}, "mode": "default"}
+{"id": "literal.f.float_str", "template": "{{ '1e3'|float }}", "context": {}, "mode": "default"}
+{"id": "literal.f.float_int", "template": "{{ 3|float }}", "context": {}, "mode": "default"}
+{"id": "literal.f.round", "template": "{{ 2.5|round }}", "context": {}, "mode": "default"}
+{"id": "literal.f.round_prec", "template": "{{ 1.2345|round(2) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.round_floor", "template": "{{ 1.5|round(0, 'floor') }}", "context": {}, "mode": "default"}
+{"id": "literal.f.round_int", "template": "{{ 3|round }}", "context": {}, "mode": "default"}
+{"id": "literal.f.wordcount", "template": "{{ 'a b  c'|wordcount }}", "context": {}, "mode": "default"}
+{"id": "literal.f.first_str", "template": "{{ 'abc'|first }}", "context": {}, "mode": "default"}
+{"id": "literal.f.last", "template": "{{ [1, 2]|last }}", "context": {}, "mode": "default"}
+{"id": "literal.f.first_empty", "template": "[{{ []|first }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.reverse_str", "template": "{{ 'Hello'|reverse }}", "context": {}, "mode": "default"}
+{"id": "literal.f.reverse_list", "template": "{{ [1, 2]|reverse|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.center", "template": "[{{ 'x'|center(5) }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.indent", "template": "{{ 'a\\nb'|indent(2) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.indent_first", "template": "{{ 'a\\nb'|indent(2, true) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.indent_blank", "template": "{{ 'a\\n\\nb'|indent(2) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.indent_blank_true", "template": "{{ 'a\\n\\nb'|indent(2, blank=true) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.indent_str", "template": "{{ 'a\\nb'|indent('> ') }}", "context": {}, "mode": "default"}
+{"id": "literal.f.indent_trailing_nl", "template": "[{{ 'a\\nb\\n'|indent(2) }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.selectattr_eq", "template": "{{ msgs|selectattr('role', 'equalto', 'user')|list|length }}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.f.selectattr_truthy", "template": "{{ x|selectattr('a')|list }}", "context": {"x": [{"a": 1}, {"a": 0}, {}]}, "mode": "default"}
+{"id": "literal.f.selectattr_missing", "template": "{{ x|selectattr('a', 'defined')|list|length }}", "context": {"x": [{"a": 1}, {}]}, "mode": "default"}
+{"id": "literal.f.rejectattr", "template": "{{ msgs|rejectattr('role', 'eq', 'system')|map(attribute='content')|join(',') }}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.f.map_attr", "template": "{{ msgs|map(attribute='role')|join(',') }}", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "default"}
+{"id": "literal.f.map_attr_default", "template": "{{ x|map(attribute='a', default='z')|join }}", "context": {"x": [{"a": "y"}, {}]}, "mode": "default"}
+{"id": "literal.f.map_attr_dotted", "template": "{{ x|map(attribute='a.b')|join }}", "context": {"x": [{"a": {"b": "q"}}]}, "mode": "default"}
+{"id": "literal.f.map_attr_index", "template": "{{ x|map(attribute='0')|join }}", "context": {"x": [["p"], ["q"]]}, "mode": "default"}
+{"id": "literal.f.map_filter", "template": "{{ ['a', 'b']|map('upper')|join }}", "context": {}, "mode": "default"}
+{"id": "literal.f.select_odd", "template": "{{ [1, 2, 3]|select('odd')|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.select_truthy", "template": "{{ [0, 1, '', 'a']|select|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.reject_odd", "template": "{{ [1, 2, 3]|reject('odd')|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.select_gt", "template": "{{ [1, 5, 3]|select('gt', 2)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.default_empty", "template": "[{{ ''|default('d') }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.default_empty_true", "template": "[{{ ''|default('d', true) }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.default_none", "template": "[{{ none|default('d') }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.default_false", "template": "[{{ false|default('d') }}]", "context": {}, "mode": "default"}
+{"id": "literal.f.replace_count", "template": "{{ 'aaa'|replace('a', 'b', 2) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.truncate", "template": "{{ 'hello world foo'|truncate(9) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.striptags", "template": "{{ '<b>x</b>  y'|striptags }}", "context": {}, "mode": "default"}
+{"id": "literal.f.escape", "template": "{{ '<a & \"b\">'|e }}", "context": {}, "mode": "default"}
+{"id": "literal.f.unique", "template": "{{ ['a', 'A', 'b']|unique|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.batch", "template": "{{ [1, 2, 3]|batch(2)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.max", "template": "{{ [3, 1, 5]|max }}", "context": {}, "mode": "default"}
+{"id": "literal.f.min_str", "template": "{{ ['b', 'A']|min }}", "context": {}, "mode": "default"}
+{"id": "literal.f.groupby", "template": "{% for g in x|groupby('k') %}{{ g.grouper }}:{{ g.list|length }};{% endfor %}", "context": {"x": [{"k": "a"}, {"k": "b"}, {"k": "a"}]}, "mode": "default"}
+{"id": "literal.f.groupby_tuple", "template": "{% for k, items in x|groupby('k') %}{{ k }}{{ items|length }}{% endfor %}", "context": {"x": [{"k": "a"}, {"k": "a"}]}, "mode": "default"}
+{"id": "literal.f.list_str", "template": "{{ 'abc'|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.list_dict", "template": "{{ {'a': 1, 'b': 2}|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.length_dict", "template": "{{ {'a': 1}|length }}", "context": {}, "mode": "default"}
+{"id": "literal.f.abs_float", "template": "{{ -1.5|abs }}", "context": {}, "mode": "default"}
+{"id": "literal.f.capitalize", "template": "{{ 'hello WORLD'|capitalize }}", "context": {}, "mode": "default"}
+{"id": "literal.f.title", "template": "{{ \"they're bill's\"|title }}", "context": {}, "mode": "default"}
+{"id": "literal.f.title_hyphen", "template": "{{ 'foo-bar baz'|title }}", "context": {}, "mode": "default"}
+{"id": "literal.f.lower_none", "template": "{{ none|lower }}", "context": {}, "mode": "default"}
+{"id": "literal.f.upper_int", "template": "{{ 1|upper }}", "context": {}, "mode": "default"}
+{"id": "literal.f.trim_chars", "template": "{{ 'xxaxx'|trim('x') }}", "context": {}, "mode": "default"}
+{"id": "literal.f.format", "template": "{{ '%s and %s'|format('a', 'b') }}", "context": {}, "mode": "default"}
+{"id": "literal.f.format_float", "template": "{{ '%.2f'|format(1.234) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.format_named", "template": "{{ '%(a)s'|format(a=1) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.format_d", "template": "{{ '%d items'|format(3) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.attr", "template": "{{ d|attr('a') }}", "context": {"d": {"a": 1}}, "mode": "default"}
+{"id": "literal.f.pprint", "template": "{{ {'a': [1]}|pprint }}", "context": {}, "mode": "default"}
+{"id": "literal.f.wordwrap", "template": "{{ 'a b c d e'|wordwrap(3) }}", "context": {}, "mode": "default"}
+{"id": "literal.f.filesizeformat", "template": "{{ 1000000|filesizeformat }}", "context": {}, "mode": "default"}
+{"id": "literal.f.urlencode", "template": "{{ 'a b&c'|urlencode }}", "context": {}, "mode": "default"}
+{"id": "literal.f.xmlattr", "template": "{{ {'a': 1}|xmlattr }}", "context": {}, "mode": "default"}
+{"id": "literal.f.unknown", "template": "{{ 1|nosuchfilter }}", "context": {}, "mode": "default"}
+{"id": "literal.f.slice", "template": "{{ [1, 2, 3, 4]|slice(2)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.f.safe", "template": "{{ '<b>'|safe }}", "context": {}, "mode": "default"}
+{"id": "literal.f.forceescape", "template": "{{ '<b>'|forceescape }}", "context": {}, "mode": "default"}
+{"id": "literal.f.random_single", "template": "{{ [7]|random }}", "context": {}, "mode": "default"}
+{"id": "literal.f.length_str", "template": "{{ 'héllo'|length }}", "context": {}, "mode": "default"}
+{"id": "literal.f.count", "template": "{{ [1, 2]|count }}", "context": {}, "mode": "default"}
+{"id": "literal.t.bool_is_number", "template": "{{ true is number }}", "context": {}, "mode": "default"}
+{"id": "literal.t.bool_is_integer", "template": "{{ true is integer }}", "context": {}, "mode": "default"}
+{"id": "literal.t.float_is_integer", "template": "{{ 1.0 is integer }}", "context": {}, "mode": "default"}
+{"id": "literal.t.str_is_iterable", "template": "{{ 'abc' is iterable }}", "context": {}, "mode": "default"}
+{"id": "literal.t.str_is_sequence", "template": "{{ 'abc' is sequence }}", "context": {}, "mode": "default"}
+{"id": "literal.t.dict_is_sequence", "template": "{{ {} is sequence }}", "context": {}, "mode": "default"}
+{"id": "literal.t.dict_is_mapping", "template": "{{ {} is mapping }}", "context": {}, "mode": "default"}
+{"id": "literal.t.list_is_mapping", "template": "{{ [] is mapping }}", "context": {}, "mode": "default"}
+{"id": "literal.t.none_is_none", "template": "{{ none is none }}", "context": {}, "mode": "default"}
+{"id": "literal.t.undefined_is_defined", "template": "{{ x is defined }}", "context": {}, "mode": "default"}
+{"id": "literal.t.none_is_defined", "template": "{{ x is defined }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.t.divisibleby_noparen", "template": "{{ 9 is divisibleby 3 }}", "context": {}, "mode": "default"}
+{"id": "literal.t.divisibleby_paren", "template": "{{ 9 is divisibleby(3) }}", "context": {}, "mode": "default"}
+{"id": "literal.t.eq_noparen", "template": "{{ 1 is eq 1 }}", "context": {}, "mode": "default"}
+{"id": "literal.t.in", "template": "{{ 1 is in [1, 2] }}", "context": {}, "mode": "default"}
+{"id": "literal.t.sameas_none", "template": "{{ x is sameas none }}", "context": {"x": null}, "mode": "default"}
+{"id": "literal.t.sameas_true", "template": "{{ 1 is sameas true }}", "context": {}, "mode": "default"}
+{"id": "literal.t.lower", "template": "{{ 'abc' is lower }}", "context": {}, "mode": "default"}
+{"id": "literal.t.upper", "template": "{{ 'ABC' is upper }}", "context": {}, "mode": "default"}
+{"id": "literal.t.callable_macro", "template": "{% macro m() %}{% endmacro %}{{ m is callable }}", "context": {}, "mode": "default"}
+{"id": "literal.t.callable_method", "template": "{{ 'a'.upper is callable }}", "context": {}, "mode": "default"}
+{"id": "literal.t.filter", "template": "{{ 'upper' is filter }}", "context": {}, "mode": "default"}
+{"id": "literal.t.test", "template": "{{ 'odd' is test }}", "context": {}, "mode": "default"}
+{"id": "literal.t.escaped", "template": "{{ 'a' is escaped }}", "context": {}, "mode": "default"}
+{"id": "literal.t.float", "template": "{{ 1.5 is float }}", "context": {}, "mode": "default"}
+{"id": "literal.t.string_and_len", "template": "{{ x is string and x|length > 0 }}", "context": {"x": "a"}, "mode": "default"}
+{"id": "literal.t.even_float", "template": "{{ 2.0 is even }}", "context": {}, "mode": "default"}
+{"id": "literal.t.not_none_test_arg", "template": "{{ x is not none and x }}", "context": {"x": "q"}, "mode": "default"}
+{"id": "literal.t.unknown", "template": "{{ 1 is nosuchtest }}", "context": {}, "mode": "default"}
+{"id": "literal.t.boolean", "template": "{{ 1 is boolean }}", "context": {}, "mode": "default"}
+{"id": "literal.t.true_int", "template": "{{ 1 is true }}", "context": {}, "mode": "default"}
+{"id": "literal.g.range_neg_step", "template": "{{ range(5, 0, -2)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.g.range_empty", "template": "{{ range(-1)|list }}", "context": {}, "mode": "default"}
+{"id": "literal.g.range_length", "template": "{{ range(3)|length }}", "context": {}, "mode": "default"}
+{"id": "literal.g.range_index", "template": "{{ range(3)[1] }}", "context": {}, "mode": "default"}
+{"id": "literal.g.dict", "template": "{{ dict(a=1, b=2) }}", "context": {}, "mode": "default"}
+{"id": "literal.g.dict_positional", "template": "{{ dict([('a', 1)]) }}", "context": {}, "mode": "default"}
+{"id": "literal.g.namespace", "template": "{{ namespace(a=1).a }}", "context": {}, "mode": "default"}
+{"id": "literal.g.namespace_dict", "template": "{% set ns = namespace({'a': 1}) %}{{ ns.a }}", "context": {}, "mode": "default"}
+{"id": "literal.g.cycler", "template": "{% set c = cycler('a', 'b') %}{{ c.next() }}{{ c.next() }}{{ c.next() }}", "context": {}, "mode": "default"}
+{"id": "literal.g.joiner", "template": "{% set j = joiner(',') %}{% for i in [1, 2] %}{{ j() }}{{ i }}{% endfor %}", "context": {}, "mode": "default"}
+{"id": "literal.g.raise_exception_default_env", "template": "{{ raise_exception('x') }}", "context": {}, "mode": "default"}
+{"id": "literal.tf.tojson_unicode", "template": "{{ x|tojson }}", "context": {"x": {"b": "café <&>", "a": 1}}, "mode": "transformers"}
+{"id": "literal.tf.tojson_indent", "template": "{{ x|tojson(indent=4) }}", "context": {"x": {"b": [1, {"c": null}], "a": "é"}}, "mode": "transformers"}
+{"id": "literal.tf.tojson_sort", "template": "{{ x|tojson(sort_keys=true) }}", "context": {"x": {"b": 1, "a": 2}}, "mode": "transformers"}
+{"id": "literal.tf.tojson_separators", "template": "{{ x|tojson(separators=(',', ':')) }}", "context": {"x": {"b": 1, "a": [1, 2]}}, "mode": "transformers"}
+{"id": "literal.tf.tojson_ensure_ascii", "template": "{{ x|tojson(ensure_ascii=true) }}", "context": {"x": "é"}, "mode": "transformers"}
+{"id": "literal.tf.tojson_float", "template": "{{ x|tojson }}", "context": {"x": [1.0, 2.5, 1e-07]}, "mode": "transformers"}
+{"id": "literal.tf.raise_exception", "template": "{{ raise_exception('boom') }}", "context": {}, "mode": "transformers"}
+{"id": "literal.tf.list_append_sandbox", "template": "{% set x = [] %}{{ x.append(1) }}{{ x }}", "context": {}, "mode": "transformers"}
+{"id": "literal.tf.dict_update_sandbox", "template": "{% set d = {} %}{{ d.update({'a': 1}) }}{{ d }}", "context": {}, "mode": "transformers"}
+{"id": "literal.tf.trailing_newline", "template": "{{ 'a' }}\n", "context": {}, "mode": "transformers"}
+{"id": "literal.tf.lstrip_trim_message_loop", "template": "{% for m in msgs %}\n  {{ m.role }}\n{% endfor %}\n", "context": {"msgs": [{"role": "system", "content": "sys"}, {"role": "user", "content": "u1"}, {"role": "assistant", "content": "a1"}, {"role": "user", "content": "u2"}]}, "mode": "transformers"}
+{"id": "literal.tf.generation_tag", "template": "{% generation %}x{% endgeneration %}", "context": {}, "mode": "transformers"}
+{"id": "literal.tf.strftime_type", "template": "{{ strftime_now('%Y') is string }}", "context": {}, "mode": "transformers"}

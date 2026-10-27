@@ -47,3 +47,33 @@ jobs:
 
       - name: Run tests
         run: swift test -v
+
+  conformance:
+    permissions:
+      contents: read
+    name: Jinja2 conformance
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: "/Applications/Xcode_27.0.app/Contents/Developer"
+      JINJA_CONFORMANCE_CORPUS: ${{ github.workspace }}/.build/conformance-corpus
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      # The corpus depends only on the pinned sources, the hand-written cases,
+      # and the scripts that build it, which pin the Jinja2 version.
+      - name: Restore the conformance corpus
+        id: corpus
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .build/conformance-corpus
+          key: conformance-corpus-${{ hashFiles('Tools/conformance/manifest.json', 'Tools/conformance/literal.jsonl', 'Tools/conformance/fetch.py', 'Tools/conformance/extract_pallets.py', 'Tools/conformance/jinja2_server.py', 'Tools/conformance/oracle.py') }}
+
+      - name: Build the conformance corpus
+        if: steps.corpus.outputs.cache-hit != 'true'
+        run: uv run Tools/conformance/fetch.py
+
+      - name: Run the conformance tests
+        run: swift test --filter ConformanceTests
