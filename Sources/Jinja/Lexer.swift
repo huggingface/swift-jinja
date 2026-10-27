@@ -1,5 +1,5 @@
 /// Tokenizes Jinja template source code into a sequence of tokens.
-public enum Lexer: Sendable {
+enum Lexer: Sendable {
     private static let keywords: [String: Token.Kind] = [
         "if": .`if`, "else": .`else`, "elif": .elif, "endif": .endif,
         "for": .`for`, "endfor": .endfor, "in": .`in`, "not": .not,
@@ -29,7 +29,7 @@ public enum Lexer: Sendable {
     /// - Parameter source: The Jinja template source code to tokenize
     /// - Returns: An array of tokens representing the lexical structure
     /// - Throws: `JinjaError.lexer` if the source contains invalid syntax
-    public static func tokenize(_ source: String) throws
+    static func tokenize(_ source: String) throws
         -> [Token]
     {
         var tokens: [Token] = []

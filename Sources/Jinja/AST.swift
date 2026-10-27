@@ -2,7 +2,7 @@ import Foundation
 import OrderedCollections
 
 /// A node in the abstract syntax tree representing template content.
-public indirect enum Node: Hashable, Codable, Sendable {
+indirect enum Node: Hashable, Codable, Sendable {
     /// Plain text content to be output directly.
     case text(String)
 
@@ -17,7 +17,7 @@ public indirect enum Node: Hashable, Codable, Sendable {
 }
 
 /// An expression that can be evaluated to produce a value.
-public indirect enum Expression: Hashable, Codable, Sendable {
+indirect enum Expression: Hashable, Codable, Sendable {
     /// String literal value.
     case string(String)
 
@@ -46,7 +46,7 @@ public indirect enum Expression: Hashable, Codable, Sendable {
     case identifier(String)
 
     /// Unary operators for expressions.
-    public enum UnaryOp: String, Hashable, CaseIterable, Codable, Sendable {
+    enum UnaryOp: String, Hashable, CaseIterable, Codable, Sendable {
         /// Logical negation operator.
         case not = "not"
         /// Numeric negation operator.
@@ -60,7 +60,7 @@ public indirect enum Expression: Hashable, Codable, Sendable {
     case unary(UnaryOp, Expression)
 
     /// Binary operators for expressions.
-    public enum BinaryOp: String, Hashable, CaseIterable, Codable, Sendable {
+    enum BinaryOp: String, Hashable, CaseIterable, Codable, Sendable {
         // MARK: Arithmetic Operators
 
         /// Addition operator (`+`)
@@ -150,7 +150,7 @@ public indirect enum Expression: Hashable, Codable, Sendable {
 }
 
 /// A control flow statement that affects template execution.
-public enum Statement: Hashable, Codable, Sendable {
+enum Statement: Hashable, Codable, Sendable {
     /// Block of nodes to execute sequentially.
     case program([Node])
 
@@ -161,7 +161,7 @@ public enum Statement: Hashable, Codable, Sendable {
     case `if`(Expression, [Node], [Node])
 
     /// Loop variable specification for for-loops.
-    public enum LoopVar: Hashable, Codable, Sendable {
+    enum LoopVar: Hashable, Codable, Sendable {
         /// Single loop variable.
         case single(String)
         /// Multiple loop variables for unpacking.

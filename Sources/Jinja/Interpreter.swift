@@ -157,7 +157,7 @@ enum ControlFlow: Error, Sendable {
 }
 
 /// Executes parsed Jinja template nodes to produce rendered output.
-public enum Interpreter {
+enum Interpreter {
     /// Interprets nodes and renders them to a string using the given environment.
     ///
     /// The nodes render in a new child scope of `environment`
@@ -169,7 +169,7 @@ public enum Interpreter {
     ///   - environment: The execution environment containing variables
     /// - Returns: The rendered template output as a string
     /// - Throws: `RuntimeError` if an error occurs during interpretation
-    public static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
+    static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
         try interpret(nodes, context: [:], environment: environment)
     }
 
