@@ -398,23 +398,30 @@ public enum Filters {
             defaults: ["fillWith": .null]
         )
 
-        guard case let .int(numSlices) = arguments["numSlices"], numSlices > 0 else {
-            throw JinjaError.runtime("slice filter requires positive integer numSlices parameter")
+        guard case let .int(numSlices) = arguments["numSlices"], numSlices != 0 else {
+            throw JinjaError.runtime("slice filter requires nonzero integer numSlices parameter")
+        }
+
+        // Like Jinja2, a negative number of slices gives no slices.
+        guard numSlices > 0 else {
+            return .array([])
         }
 
         let fillWith = arguments["fillWith"]!
-        var result = Array(repeating: [Value](), count: numSlices)
-        let itemsPerSlice = (items.count + numSlices - 1) / numSlices
+        var result = try repeatedArray([Value](), count: numSlices)
 
-        for i in 0 ..< itemsPerSlice {
-            for j in 0 ..< numSlices {
-                let index = i * numSlices + j
-                if index < items.count {
-                    result[j].append(items[index])
-                } else {
-                    result[j].append(fillWith)
-                }
+        // Like Jinja2, put consecutive items in each slice,
+        // give the first `items.count % numSlices` slices one more item than the others,
+        // and add `fill_with` to each of the others when it isn't none.
+        let (itemsPerSlice, slicesWithExtra) = items.count.quotientAndRemainder(dividingBy: numSlices)
+        var start = 0
+        for i in 0 ..< numSlices {
+            let end = start + itemsPerSlice + (i < slicesWithExtra ? 1 : 0)
+            result[i] = Array(items[start ..< end])
+            if i >= slicesWithExtra, fillWith != .null {
+                result[i].append(fillWith)
             }
+            start = end
         }
 
         return .array(result.map { .array($0) })
@@ -823,6 +830,10 @@ public enum Filters {
         } else {
             width = 79
         }
+        // Python's `textwrap` raises for a width below 1 when there is a line to wrap.
+        if width <= 0, !str.isEmpty {
+            throw JinjaError.runtime("invalid width \(width) (must be > 0)")
+        }
         let breakLongWords = arguments["break_long_words"]!.isTruthy
         let breakOnHyphens = arguments["break_on_hyphens"]!.isTruthy
 
@@ -1134,6 +1145,9 @@ public enum Filters {
 
         switch value {
         case let .int(i):
+            guard i != .min else {
+                throw JinjaError.runtime("Integer overflow in abs(\(i))")
+            }
             return .int(Swift.abs(i))
         case let .double(n):
             return .double(Swift.abs(n))
@@ -1177,13 +1191,13 @@ public enum Filters {
         }
 
         let str = softString(args.first)
-        let padCount = width - str.count
-        if padCount <= 0 {
+        // Compare before subtracting, which overflows for the most negative width.
+        if width <= str.count {
             return .string(str)
         }
-        let leftPad = String(repeating: " ", count: padCount / 2)
-        let rightPad = String(repeating: " ", count: padCount - (padCount / 2))
-        return .string(leftPad + str + rightPad)
+        let padCount = width - str.count
+        let padding = try repeatedString(" ", count: padCount)
+        return .string(String(padding.prefix(padCount / 2)) + str + padding.dropFirst(padCount / 2))
     }
 
     /// Converts a value to float.
@@ -1481,8 +1495,9 @@ public enum Filters {
         let new = softString(arguments["new"])
 
         // Handle count parameter - can be positional (3rd arg) or named (count=)
+        // Like Python's `str.replace`, a negative count replaces every occurrence.
         let count: Int?
-        if case let .int(c) = arguments["count"] {
+        if case let .int(c) = arguments["count"], c >= 0 {
             count = c
         } else {
             count = nil
@@ -1594,8 +1609,9 @@ public enum Filters {
             }
         }
         if !batch.isEmpty {
-            while batch.count < batchSize {
-                batch.append(fillWith)
+            // Like Jinja2, fill the last batch only when `fill_with` isn't none.
+            if fillWith != .null {
+                batch += try repeatedArray(fillWith, count: batchSize - batch.count)
             }
             result.append(.array(batch))
         }
@@ -1681,7 +1697,14 @@ public enum Filters {
             end = "..."
         }
 
-        if str.count <= length + leeway {
+        // Jinja2 asserts this before it truncates.
+        guard length >= end.count else {
+            throw JinjaError.runtime("expected length >= \(end.count), got \(length)")
+        }
+
+        // Both are nonnegative, so an overflow means that the string fits.
+        let (maximumLength, overflow) = length.addingReportingOverflow(leeway)
+        if overflow || str.count <= maximumLength {
             return .string(str)
         }
 
@@ -1761,7 +1784,7 @@ public enum Filters {
         let widthString: String
         switch arguments["width"] {
         case .int(let n):
-            widthString = String(repeating: " ", count: n)
+            widthString = try repeatedString(" ", count: n)
         case .string(let s):
             widthString = s
         default:
@@ -1974,9 +1997,14 @@ public enum Filters {
                         url = core
                     }
 
-                    let displayUrl =
-                        trimUrlLimit != nil && core.count > trimUrlLimit!
-                        ? String(core.prefix(trimUrlLimit!)) + "..." : core
+                    let displayUrl: String
+                    if let limit = trimUrlLimit, core.count > limit {
+                        // Like Python's `url[:limit]`, a negative limit counts from the end.
+                        let length = limit >= 0 ? limit : Swift.max(0, core.count + limit)
+                        displayUrl = String(core.prefix(length)) + "..."
+                    } else {
+                        displayUrl = core
+                    }
                     let escapedUrl = htmlEscape(url)
                     let escapedDisplayUrl = htmlEscape(displayUrl)
                     replacement =
