@@ -30,7 +30,11 @@ and grouped by the shape of the minimized template.
 
 `check` reads a run's diffs.jsonl, writes reproducers.jsonl (every minimized
 case) and failures.jsonl, and exits with status 1 if any case crashed,
-timed out, or matches no rule in known.py.
+timed out, or matches no rule in known.py.  It also exits with status 1 if
+the run did not finish, compared no template with Jinja2, or had the Jinja2
+process crash or hang on more than 1% of renders, because a case that Jinja2
+can't render is skipped.  `run` stops at once if either engine can't render
+a simple template.
 """
 
 from __future__ import annotations
@@ -113,11 +117,28 @@ class Oracle:
 # Commands
 # ---------------------------------------------------------------------------
 
+PROBE = {"template": "{{ 1 }}", "context": {}, "mode": "default", "options": {}}
+
+# check fails if the Jinja2 process crashed or hung on more than this share of renders.
+# A Jinja2 failure makes a case "skip", so persistent failures would otherwise hide every case.
+MAX_JINJA2_RESTART_SHARE = 0.01
+
+
+def check_engines(engines):
+    """Exit unless both engines render a simple template, so that a run can't skip every case."""
+    for name, server in (("Jinja2", engines.j), ("swift-jinja", engines.s)):
+        result = server.render(PROBE)
+        if not (result.get("ok") and result.get("output") == "1"):
+            engines.close()
+            raise SystemExit(f"fuzz.py: {name} did not render {PROBE['template']!r}: {result}")
+
+
 def cmd_run(args):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     avoid = frozenset(a for a in (args.avoid or "").split(",") if a)
     engines = Oracle(log_path=out / "crashes.jsonl", swift_bin=args.swift_bin)
+    check_engines(engines)
     counts = collections.Counter()
     seen_shapes = collections.Counter()
     deadline = time.monotonic() + args.minutes * 60
@@ -211,8 +232,26 @@ def reproducer(rec, label):
     }
 
 
+def run_problems(summary):
+    """Reasons that a run's comparisons can't be trusted, from its summary."""
+    problems = []
+    skipped = summary.get("counts", {}).get("skip", 0)
+    if summary.get("templates", 0) - skipped <= 0:
+        problems.append("no template was compared with Jinja2")
+    restarts, renders = summary.get("jinja2_restarts", 0), summary.get("renders", 0)
+    if restarts > MAX_JINJA2_RESTART_SHARE * max(renders, 1):
+        problems.append(f"the Jinja2 process crashed or hung {restarts} times in {renders} renders")
+    return problems
+
+
 def cmd_check(args):
     out = Path(args.out)
+    summary_path = out / "summary.json"
+    if not summary_path.exists():
+        print(f"{summary_path} not found; the run did not finish.")
+        return 1
+    summary_text = summary_path.read_text().strip()
+    problems = run_problems(json.loads(summary_text))
     reproducers, failures = [], []
     causes = collections.Counter()
     for line in open(out / "diffs.jsonl"):
@@ -240,16 +279,18 @@ def cmd_check(args):
         with open(out / name, "w") as fh:
             for row in rows:
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
-    summary_path = out / "summary.json"
-    if summary_path.exists():
-        print(summary_path.read_text().strip())
+    print(summary_text)
     print("Differing cases by cause:")
     for label, count in causes.most_common():
         print(f"  {count:6d} {label}")
     kinds = collections.Counter("crash" if f["class"] == "crash" else "timeout" if f["class"] == "timeout"
                                 else "new cause" for f in failures)
     print(f"{len(reproducers)} minimized reproducers in {out / 'reproducers.jsonl'}")
+    for problem in problems:
+        print(f"The run is not usable: {problem}.")
     if not failures:
+        if problems:
+            return 1
         print("No crashes, hangs, or new causes.")
         return 0
     print(f"{len(failures)} failing cases ({dict(kinds)}) in {out / 'failures.jsonl'}")

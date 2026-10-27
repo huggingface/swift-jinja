@@ -179,6 +179,10 @@ and labels each one with the rules in [`known.py`](known.py).
 
 The job fails if swift-jinja crashes or hangs on a case,
 or if a differing case matches no rule in `known.py`.
+A case is skipped when Jinja2 can't render it,
+so the job also fails if either engine can't render a simple template at the start,
+if no template was compared,
+or if the Jinja2 process crashes or hangs on more than 1% of renders.
 Differences with a known cause don't fail the job.
 The `fuzz-reproducers` artifact holds the run's summary,
 every minimized reproducer (`reproducers.jsonl`),
