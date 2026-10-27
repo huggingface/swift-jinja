@@ -1,5 +1,5 @@
 /// Tokenizes Jinja template source code into a sequence of tokens.
-public enum Lexer: Sendable {
+enum Lexer: Sendable {
     private static let keywords: [String: Token.Kind] = [
         "if": .`if`, "else": .`else`, "elif": .elif, "endif": .endif,
         "for": .`for`, "endfor": .endfor, "in": .`in`, "not": .not,
@@ -29,15 +29,26 @@ public enum Lexer: Sendable {
     /// - Parameter source: The Jinja template source code to tokenize
     /// - Returns: An array of tokens representing the lexical structure
     /// - Throws: `JinjaError.lexer` if the source contains invalid syntax
-    public static func tokenize(_ source: String) throws
+    static func tokenize(_ source: String) throws
         -> [Token]
     {
         var tokens: [Token] = []
-        tokens.reserveCapacity(source.count / 4)
+        tokens.reserveCapacity(source.utf8.count / 4)
 
         var position = source.startIndex
         var inTag = false
         var curlyBracketDepth = 0
+
+        // Token positions count characters from the start of the source.
+        // Tokens start in order, so count only the characters since the previous token
+        // instead of counting from the start for each token.
+        var offsetIndex = source.startIndex
+        var offset = 0
+        func characterOffset(of index: String.Index) -> Int {
+            offset += source.distance(from: offsetIndex, to: index)
+            offsetIndex = index
+            return offset
+        }
 
         while position < source.endIndex {
             if inTag {
@@ -50,6 +61,7 @@ public enum Lexer: Sendable {
             let (token, newPosition) = try extractToken(
                 from: source,
                 at: position,
+                charPosition: characterOffset(of: position),
                 inTag: inTag,
                 curlyBracketDepth: curlyBracketDepth
             )
@@ -94,8 +106,7 @@ public enum Lexer: Sendable {
         }
 
         if tokens.isEmpty || tokens.last?.kind != .eof {
-            let charPosition = source.distance(from: source.startIndex, to: position)
-            tokens.append(Token(kind: .eof, value: "", position: charPosition))
+            tokens.append(Token(kind: .eof, value: "", position: characterOffset(of: position)))
         }
 
         return tokens
@@ -147,16 +158,15 @@ public enum Lexer: Sendable {
     private static func extractToken(
         from source: String,
         at position: String.Index,
+        charPosition: Int,
         inTag: Bool,
         curlyBracketDepth: Int = 0
     ) throws -> (Token, String.Index) {
         guard position < source.endIndex else {
-            let charPosition = source.distance(from: source.startIndex, to: position)
             return (Token(kind: .eof, value: "", position: charPosition), position)
         }
 
         let char = source[position]
-        let charPosition = source.distance(from: source.startIndex, to: position)
 
         // Template delimiters - check for {{, {%, and {#
         if char == "{" {
@@ -182,7 +192,7 @@ public enum Lexer: Sendable {
                         ), endIndex
                     )
                 } else if nextChar == "#" {  // "{#"
-                    return try extractCommentToken(from: source, at: position)
+                    return try extractCommentToken(from: source, at: position, charPosition: charPosition)
                 }
             }
         }
@@ -232,7 +242,7 @@ public enum Lexer: Sendable {
                 }
             }
         } else {
-            return extractTextToken(from: source, at: position)
+            return extractTextToken(from: source, at: position, charPosition: charPosition)
         }
 
         // Single character tokens
@@ -337,7 +347,7 @@ public enum Lexer: Sendable {
 
         // String literals
         if char == "'" || char == "\"" {
-            return try extractStringToken(from: source, at: position, delimiter: char)
+            return try extractStringToken(from: source, at: position, charPosition: charPosition, delimiter: char)
         }
 
         // Numbers
@@ -345,12 +355,17 @@ public enum Lexer: Sendable {
             // As in Jinja2, a number right after a dot has no fraction,
             // so `foo.0.1` is `foo[0][1]`, not `foo` and `0.1`.
             let followsDot = position > source.startIndex && source[source.index(before: position)] == "."
-            return extractNumberToken(from: source, at: position, allowsFraction: !followsDot)
+            return extractNumberToken(
+                from: source,
+                at: position,
+                charPosition: charPosition,
+                allowsFraction: !followsDot
+            )
         }
 
         // Identifiers and keywords
         if char.isLetter || char == "_" {
-            return extractIdentifierToken(from: source, at: position)
+            return extractIdentifierToken(from: source, at: position, charPosition: charPosition)
         }
 
         throw JinjaError.lexer(
@@ -360,7 +375,8 @@ public enum Lexer: Sendable {
 
     private static func extractTextToken(
         from source: String,
-        at position: String.Index
+        at position: String.Index,
+        charPosition: Int
     ) -> (Token, String.Index) {
         var pos = position
         let startPos = position
@@ -379,18 +395,17 @@ public enum Lexer: Sendable {
             pos = nextIndex
         }
 
-        let charPosition = source.distance(from: source.startIndex, to: position)
         return (Token(kind: .text, value: source[startPos ..< pos], position: charPosition), pos)
     }
 
     private static func extractStringToken(
         from source: String,
         at position: String.Index,
+        charPosition: Int,
         delimiter: Character
     ) throws -> (Token, String.Index) {
         var pos = source.index(after: position)
         var value = ""
-        let charPosition = source.distance(from: source.startIndex, to: position)
 
         while pos < source.endIndex {
             let char = source[pos]
@@ -431,6 +446,7 @@ public enum Lexer: Sendable {
     private static func extractNumberToken(
         from source: String,
         at position: String.Index,
+        charPosition: Int,
         allowsFraction: Bool
     ) -> (Token, String.Index) {
         var pos = position
@@ -449,13 +465,13 @@ public enum Lexer: Sendable {
             }
         }
 
-        let charPosition = source.distance(from: source.startIndex, to: position)
         return (Token(kind: .number, value: source[startPos ..< pos], position: charPosition), pos)
     }
 
     private static func extractIdentifierToken(
         from source: String,
-        at position: String.Index
+        at position: String.Index,
+        charPosition: Int
     ) -> (Token, String.Index) {
         var pos = position
         let startPos = position
@@ -471,18 +487,17 @@ public enum Lexer: Sendable {
 
         let value = String(source[startPos ..< pos])
         let tokenKind = keywords[value] ?? .identifier
-        let charPosition = source.distance(from: source.startIndex, to: position)
         return (Token(kind: tokenKind, value: source[startPos ..< pos], position: charPosition), pos)
     }
 
     private static func extractCommentToken(
         from source: String,
-        at position: String.Index
+        at position: String.Index,
+        charPosition: Int
     ) throws -> (Token, String.Index) {
         // Skip the opening {# or {#-
         var pos = indexAfterDash(in: source, at: source.index(position, offsetBy: 2))
         var value = ""
-        let charPosition = source.distance(from: source.startIndex, to: position)
 
         while pos < source.endIndex {
             let char = source[pos]

@@ -12,6 +12,15 @@ public typealias Context = [String: Value]
 ///
 /// The environment maintains the variable scope during template execution and provides
 /// configuration options that affect rendering behavior.
+///
+/// Rendering reads the environment that you pass but doesn't change it,
+/// so you can render templates with one environment from many threads at the same time.
+/// The environment doesn't synchronize access to its variables or policies:
+/// don't set a variable or a policy on it, or on its parents,
+/// while a render that uses it is in progress.
+/// A value in the environment that keeps its own state,
+/// such as a `cycler` or `joiner` object,
+/// shares that state with every render that uses it.
 public final class Environment: @unchecked Sendable {
     private let parent: Environment?
     private(set) var variables: [String: Value] = [:]
@@ -21,16 +30,10 @@ public final class Environment: @unchecked Sendable {
     /// A child environment starts with the depth of its parent.
     var callDepth: Int
 
-    // Options
-
-    /// Whether leading spaces and tabs are stripped from the start of a line to a block.
-    /// The default value is `false`.
-    public var lstripBlocks: Bool = false
-
-    /// Whether the first newline after a block is removed.
-    /// This applies to block tags, not variable tags.
-    /// The default value is `false`.
-    public var trimBlocks: Bool = false
+    /// Whether this environment is the scope of a render.
+    /// Assignments from the template stop here,
+    /// so that rendering doesn't change the environment that the caller passed.
+    var isRenderScope = false
 
     /// Settings that adjust the behavior of built-in filters.
     public struct Policies: Sendable {
@@ -80,10 +83,12 @@ public final class Environment: @unchecked Sendable {
 
     /// Creates a new environment with optional parent and initial variables.
     ///
+    /// An environment without a parent starts with the built-in globals,
+    /// such as `range` and `namespace`.
+    ///
     /// - Parameters:
     ///   - parent: The parent environment to inherit variables from
     ///   - initial: The initial variables to set in this environment
-    ///   - includeBuiltIns: Whether to include built-in functions (default: true)
     public init(
         parent: Environment? = nil,
         initial: [String: Value] = [:]
@@ -128,21 +133,16 @@ public final class Environment: @unchecked Sendable {
     /// Sets a variable in the environment where it was originally defined.
     /// This searches up the environment chain to find where the variable exists
     /// and updates it there, ensuring namespace mutations persist across scopes.
+    ///
+    /// The search stops at the scope of the render.
+    /// A variable defined above that scope gets the new value in that scope,
+    /// so rendering doesn't change the environment that the caller passed.
     func setInChain(name: String, value: Value) {
-        // Check if the variable exists in the current environment's variables
-        if variables[name] != nil {
+        guard variables[name] == nil, !isRenderScope, let parent else {
             self[name] = value
             return
         }
-
-        // Search up the parent chain to find where the variable is defined
-        if let parentEnv = parent {
-            parentEnv.setInChain(name: name, value: value)
-            return
-        }
-
-        // Fallback to setting in the current environment
-        self[name] = value
+        parent.setInChain(name: name, value: value)
     }
 }
 
@@ -157,18 +157,31 @@ enum ControlFlow: Error, Sendable {
 }
 
 /// Executes parsed Jinja template nodes to produce rendered output.
-public enum Interpreter {
+enum Interpreter {
     /// Interprets nodes and renders them to a string using the given environment.
+    ///
+    /// The nodes render in a new child scope of `environment`
+    /// that holds the variables the nodes set,
+    /// so rendering doesn't change `environment`.
     ///
     /// - Parameters:
     ///   - nodes: The AST nodes to interpret and render
     ///   - environment: The execution environment containing variables
     /// - Returns: The rendered template output as a string
     /// - Throws: `RuntimeError` if an error occurs during interpretation
-    public static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
-        // Use the fast path with synchronous environment
-        let env = Environment(initial: environment.variables)
-        env.policies = environment.policies
+    static func interpret(_ nodes: [Node], environment: Environment) throws -> String {
+        try interpret(nodes, context: [:], environment: environment)
+    }
+
+    /// Renders nodes in a new child scope of `environment`
+    /// that holds `context` and the variables the nodes set.
+    static func interpret(
+        _ nodes: [Node],
+        context: [String: Value],
+        environment: Environment
+    ) throws -> String {
+        let env = Environment(parent: environment, initial: context)
+        env.isRenderScope = true
         var buffer = ""
         buffer.reserveCapacity(1024)
         try interpret(nodes, env: env, into: &buffer)
@@ -1076,11 +1089,19 @@ public enum Interpreter {
 
             let (startIdx, stopIdx) = sliceIndices(start: startVal, stop: stopVal, step: step, count: count)
 
+            if step == 1 {
+                // A contiguous run of characters; offset each bound once.
+                guard startIdx < stopIdx else { return .string("") }
+                let lower = str.index(str.startIndex, offsetBy: startIdx)
+                let upper = str.index(lower, offsetBy: stopIdx - startIdx)
+                return .string(String(str[lower ..< upper]))
+            }
+            // Index the characters once, instead of offsetting from the start for each.
+            let characters = Array(str)
             var result = ""
             for i in stride(from: startIdx, to: stopIdx, by: step) {
                 if i >= 0 && i < count {
-                    let index = str.index(str.startIndex, offsetBy: i)
-                    result.append(str[index])
+                    result.append(characters[i])
                 }
             }
             return .string(String(result))
