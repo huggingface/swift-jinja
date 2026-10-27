@@ -547,7 +547,8 @@ public struct Parser: Sendable {
                 } else if let index = start {
                     expr = .member(expr, index, computed: true)
                 } else {
-                    throw JinjaError.parser("Invalid subscript")
+                    // As in Jinja2, `x[]` is `x[()]`.
+                    expr = .member(expr, .tuple([]), computed: true)
                 }
                 try consume(.closeBracket, message: "Expected ']' after index.")
             } else if match(.openParen) {

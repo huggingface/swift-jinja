@@ -82,9 +82,22 @@ struct FilterPrecedenceTests {
             ("{% for i in items if i is odd %}{{ i }}{% endfor %}", "13"),
             ("{% if n is odd and n > 2 %}yes{% endif %}", "yes"),
             ("{% if n is not none and n|string == '5' %}yes{% endif %}", "yes"),
+            ("{% if false %}{{ n is even in [] }}{% endif %}", ""),
         ]
     )
     func tests(template: String, expected: String) throws {
+        #expect(try Template(template).render(Self.context) == expected)
+    }
+
+    @Test(
+        "An empty subscript is a subscript by the empty tuple",
+        arguments: [
+            ("{{ items[] }}", ""),
+            ("{{ items[] is defined }}", "False"),
+            ("{{ x[]|default('none') }}", "none"),
+        ]
+    )
+    func emptySubscript(template: String, expected: String) throws {
         #expect(try Template(template).render(Self.context) == expected)
     }
 
