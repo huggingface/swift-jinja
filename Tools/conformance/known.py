@@ -44,7 +44,7 @@ PRECISE = {
     "crash", "timeout", "plus-ws", "concat-nonstr", "bool-arith", "float-mod", "bigint",
     "format-spec", "lenient-undefined", "lenient-str-plus", "ns-attr", "loopctl-outside", "condexpr-in-tag",
     "filter-on-undefined", "slice-nonseq", "chained-condexpr", "lenient-filter-types",
-    "lenient-other", "markup-repr", "callable-repr",
+    "lenient-other", "markup-repr", "callable-repr", "tuple-subscript", "sort-none",
 }
 
 
@@ -453,3 +453,43 @@ def _(case, jr, sr, cls):
 @rule("groupby-repr", "groupby items print as {'grouper': ..., 'list': ...} instead of (grouper, list) tuples", "harness:filters")
 def _(case, jr, sr, cls):
     return cls == "a" and "groupby" in T(case)
+
+
+# ---------------------------------------------------------------------------
+# Causes that the fuzzer found at the batch for 3.0.0 (#95, #96, #97, #98).
+# Each predates the batch.  Most change a value in a condition,
+# so swift-jinja takes another branch and fails in it (class "b").
+@rule("bool-number-branch", "`true is number` is false, so a condition takes another branch", "new (harness:operators has `true is number`)")
+def _(case, jr, sr, cls):
+    return cls in ("b", "c") and re.search(r"\b(?:true|false|True|False)\s+is\s+(?:not\s+)?(?:number|integer)\b", T(case)) is not None
+
+
+@rule("bool-eq-zero-branch", "a boolean compared with 0 or 1 (`0 != false`) differs from Python, so a condition takes another branch", "new (harness:operators)")
+def _(case, jr, sr, cls):
+    return cls in ("b", "c") and re.search(
+        r"\b[01]\s*[=!]=\s*(?:true|false|True|False)\b|\b(?:true|false|True|False)\s*[=!]=\s*[01]\b", T(case)) is not None
+
+
+@rule("undefined-iterable", "a missing attribute or item is not `iterable`; Jinja2's Undefined is iterable", "new (minor)")
+def _(case, jr, sr, cls):
+    return cls in ("a", "b", "c") and re.search(r"(?:\.\w+|\])\s+is\s+(?:not\s+)?iterable\b", T(case)) is not None
+
+
+@rule("tuple-subscript", "a subscript with a tuple key (`x[a, b]`) fails to parse", "new (minor)")
+def _(case, jr, sr, cls):
+    return cls == "b" and re.search(r"Expected \\?'\]\\?' after index\. Got \\?',\\?' \(comma\)", SE(sr)) is not None
+
+
+@rule("loop-set-scope", "a `set` in a loop body keeps its value in the next iteration; Jinja2 starts each iteration with the outer value", "harness:loop-other")
+def _(case, jr, sr, cls):
+    return re.search(r"\{%-?\s*for\b(?:(?!\{%-?\s*endfor).)*?\{%-?\s*set\s+(\w+)\s*=(?:(?!%\}).)*\b\1\b", T(case), re.S) is not None
+
+
+@rule("split-ws-index", "str.split() without arguments doesn't split on newlines or tabs, so a later part is undefined", "harness:str-methods")
+def _(case, jr, sr, cls):
+    return cls == "b" and re.search(r"\.split\(\s*\)\[\s*-?[1-9]", T(case)) is not None
+
+
+@rule("sort-none", "sort raises when it compares none with none", "new (minor)")
+def _(case, jr, sr, cls):
+    return cls == "b" and "sort" in T(case) and "Cannot compare values of different types (None and None)" in SE(sr)
