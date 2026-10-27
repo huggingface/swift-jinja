@@ -13,12 +13,13 @@ struct MacroRecursionTests {
     func render(
         _ source: String,
         _ context: [String: Value] = [:],
+        environment: Environment? = nil,
         stackSize: Int = 512 * 1024
     ) async throws -> String {
         let template = try Template(source)
         let result: Result<String, any Error> = await withCheckedContinuation { continuation in
             let thread = Thread {
-                continuation.resume(returning: Result { try template.render(context) })
+                continuation.resume(returning: Result { try template.render(context, environment: environment) })
             }
             thread.stackSize = stackSize
             thread.start()
@@ -106,5 +107,125 @@ struct MacroRecursionTests {
         } catch JinjaError.runtime(let message) {
             #expect(message == "Maximum recursion depth of 16 exceeded")
         }
+    }
+
+    /// Renders `source` and expects it to exceed a call depth limit of `limit`.
+    func expectLimitExceeded(
+        _ source: String,
+        limit: Int,
+        environment: Environment? = nil,
+        stackSize: Int = 512 * 1024
+    ) async throws {
+        do {
+            let rendered = try await render(source, environment: environment, stackSize: stackSize)
+            Issue.record("Expected a runtime error; rendered \(rendered)")
+        } catch JinjaError.runtime(let message) {
+            #expect(message == "Maximum recursion depth of \(limit) exceeded")
+        }
+    }
+
+    /// Makes `n + 1` nested calls, from `r(n)` to `r(0)`, and prints each `n`.
+    static func countdown(_ n: Int) -> String {
+        "{% macro r(n) %}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{{ n }}{% endmacro %}{{ r(\(n)) }}"
+    }
+
+    @Test("The default limit is 16 calls")
+    func defaultLimit() async throws {
+        #expect(Environment().maximumCallDepth == 16)
+        try await expectLimitExceeded(Self.countdown(16), limit: 16, environment: Environment())
+    }
+
+    @Test("A raised limit renders recursion that the default limit rejects")
+    func raisedLimit() async throws {
+        let environment = Environment()
+        environment.maximumCallDepth = 32
+        // A raised limit needs a larger stack than the 512 KB of a secondary thread,
+        // so this test uses the 8 MB stack of a main thread.
+        let stackSize = 8 * 1024 * 1024
+        let rendered = try await render(Self.countdown(16), environment: environment, stackSize: stackSize)
+        #expect(rendered == "012345678910111213141516")
+        try await expectLimitExceeded(Self.countdown(32), limit: 32, environment: environment, stackSize: stackSize)
+    }
+
+    @Test("A lowered limit throws earlier")
+    func loweredLimit() async throws {
+        let environment = Environment()
+        environment.maximumCallDepth = 4
+        #expect(try await render(Self.countdown(3), environment: environment) == "0123")
+        try await expectLimitExceeded(Self.countdown(4), limit: 4, environment: environment)
+    }
+
+    @Test("The limit counts caller invocations")
+    func limitCountsCaller() async throws {
+        // Calling m and then caller makes two nested calls.
+        let source = "{% macro m() %}{{ caller() }}{% endmacro %}{% call m() %}x{% endcall %}"
+        let environment = Environment()
+        environment.maximumCallDepth = 1
+        try await expectLimitExceeded(source, limit: 1, environment: environment)
+        environment.maximumCallDepth = 2
+        #expect(try await render(source, environment: environment) == "x")
+    }
+
+    @Test("A child environment inherits the limit of its parent")
+    func childInheritsLimit() async throws {
+        let parent = Environment()
+        parent.maximumCallDepth = 4
+        let child = Environment(parent: parent)
+        #expect(child.maximumCallDepth == 4)
+        try await expectLimitExceeded(Self.countdown(4), limit: 4, environment: child)
+
+        child.maximumCallDepth = 8
+        #expect(child.maximumCallDepth == 8)
+        #expect(parent.maximumCallDepth == 4)
+    }
+
+    @Test("A limit less than 1 is stored as 1", arguments: [0, -1, Int.min])
+    func limitBelowOne(limit: Int) {
+        let environment = Environment()
+        environment.maximumCallDepth = limit
+        #expect(environment.maximumCallDepth == 1)
+    }
+
+    final class SavedValue: @unchecked Sendable {
+        var value: Value = .undefined
+    }
+
+    /// Renders a call block whose macro saves `caller` without calling it,
+    /// with the given limit, and returns the saved `caller`.
+    /// The caller body calls the macro `x`.
+    func saveCaller(limit: Int) async throws -> Value {
+        let saved = SavedValue()
+        let environment = Environment()
+        environment.maximumCallDepth = limit
+        environment["save"] = .function { _, _, env in
+            saved.value = env["caller"]
+            return .string("")
+        }
+        let source = """
+            {% macro x() %}x{% endmacro %}\
+            {% macro m() %}{{ save() }}{% endmacro %}\
+            {% call m() %}{{ x() }}{% endcall %}
+            """
+        #expect(try await render(source, environment: environment) == "")
+        return saved.value
+    }
+
+    @Test("A saved caller uses the lower limit of the render that calls it")
+    func savedCallerUsesLowerLimit() async throws {
+        let caller = try await saveCaller(limit: 2)
+        // Calling the caller and then x makes two nested calls.
+        let environment = Environment()
+        environment["saved"] = caller
+        environment.maximumCallDepth = 1
+        try await expectLimitExceeded("{{ saved() }}", limit: 1, environment: environment)
+    }
+
+    @Test("A saved caller uses the higher limit of the render that calls it")
+    func savedCallerUsesHigherLimit() async throws {
+        let caller = try await saveCaller(limit: 1)
+        let environment = Environment()
+        environment["saved"] = caller
+        environment.maximumCallDepth = 2
+        #expect(try await render("{{ saved() }}", environment: environment) == "x")
     }
 }

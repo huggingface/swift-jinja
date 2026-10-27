@@ -15,8 +15,8 @@ public typealias Context = [String: Value]
 ///
 /// Rendering reads the environment that you pass but doesn't change it,
 /// so you can render templates with one environment from many threads at the same time.
-/// The environment doesn't synchronize access to its variables or policies:
-/// don't set a variable or a policy on it, or on its parents,
+/// The environment doesn't synchronize access to its variables, policies, or call depth limit:
+/// don't set a variable, a policy, or ``maximumCallDepth`` on it, or on its parents,
 /// while a render that uses it is in progress.
 /// A value in the environment that keeps its own state,
 /// such as a `cycler` or `joiner` object,
@@ -78,6 +78,56 @@ public final class Environment: @unchecked Sendable {
 
     /// The policies a root environment starts with.
     public static let defaultPolicies: Policies = .transformers
+
+    /// The maximum number of nested macro and `caller` invocations in a render.
+    ///
+    /// A render that exceeds the limit throws `JinjaError.runtime`.
+    /// The limit exists because Swift can't recover from a stack overflow,
+    /// so a template that recurses without end would crash the process,
+    /// where Jinja2 raises `RecursionError`.
+    ///
+    /// The stack that each nested call takes grows with how deeply the macro body nests blocks.
+    /// Measured on a thread with a 512 KB stack in a release build on arm64,
+    /// a call takes about 3 KB for `{{ r() }}`,
+    /// 6 KB for `{% if n %}{{ r(n - 1) }}{% endif %}`,
+    /// and 19 KB for the type macro of the Hermes 3 tool-use template,
+    /// which recurses from an `elif` branch inside a `for` loop.
+    /// At 20 calls, that macro used 377 KB of the 512 KB,
+    /// so the default of 16 calls takes about 300 KB,
+    /// which leaves room for the frames of the code that renders the template.
+    /// 32 calls of that macro would overflow a 512 KB stack.
+    /// Debug builds take about 2.7 times as much stack per call.
+    ///
+    /// Threads other than the main thread get a 512 KB stack by default on Apple platforms.
+    /// Raise the limit only when the render runs on a thread with a larger stack,
+    /// such as a `Thread` with a larger `stackSize`,
+    /// and allow for the larger frames of debug builds.
+    /// Jinja2 has no limit of its own;
+    /// it allows about 250 nested macro calls under Python's default recursion limit.
+    ///
+    /// A child environment uses its parent's limit until you set its own,
+    /// and a render reads the limit from the environment that you pass.
+    /// A value less than 1 is stored as 1.
+    /// The default value is 16.
+    public var maximumCallDepth: Int {
+        get {
+            // Walk the chain without recursion,
+            // because the depth check runs at the deepest point of a recursive render.
+            var environment: Environment? = self
+            while let current = environment {
+                if let limit = current.maximumCallDepthStorage {
+                    return limit
+                }
+                environment = current.parent
+            }
+            return Environment.defaultMaximumCallDepth
+        }
+        set { maximumCallDepthStorage = Swift.max(1, newValue) }
+    }
+    private var maximumCallDepthStorage: Int?
+
+    /// The call depth limit of an environment whose chain sets none.
+    static let defaultMaximumCallDepth = 16
 
     // MARK: -
 
@@ -501,8 +551,12 @@ enum Interpreter {
 
             let callTimeEnv = Environment(parent: env)
             callTimeEnv["caller"] = .function { callerArgs, _, callerEnv in
+                // The body looks up variables where the call block is,
+                // but takes its depth and limit from the invocation,
+                // which can be in a later render that saved `caller`.
                 let bodyEnv = Environment(parent: env)
                 bodyEnv.callDepth = try nextCallDepth(after: callerEnv)
+                bodyEnv.maximumCallDepth = callerEnv.maximumCallDepth
                 for (paramName, value) in zip(callerParameters ?? [], callerArgs) {
                     guard case let .identifier(paramName) = paramName else {
                         throw JinjaError.runtime("Caller parameter must be an identifier")
@@ -658,31 +712,14 @@ enum Interpreter {
         )
     }
 
-    /// The maximum number of nested macro and `caller` invocations.
-    ///
-    /// Swift can't recover from a stack overflow, so a template that recurses without end
-    /// would crash the process, where Jinja2 raises `RecursionError`.
-    /// The stack that each nested call takes grows with how deeply the macro body nests blocks.
-    /// Measured on a thread with a 512 KB stack in a release build on arm64,
-    /// a call takes about 3 KB for `{{ r() }}`,
-    /// 6 KB for `{% if n %}{{ r(n - 1) }}{% endif %}`,
-    /// and 19 KB for the type macro of the Hermes 3 tool-use template,
-    /// which recurses from an `elif` branch inside a `for` loop.
-    /// At 20 calls, that macro used 377 KB of the 512 KB,
-    /// so 16 calls take about 300 KB,
-    /// which leaves room for the frames of the code that renders the template.
-    /// 32 calls of that macro would overflow a 512 KB stack.
-    /// Debug builds take about 2.7 times as much stack per call.
-    /// Jinja2 has no limit of its own;
-    /// it allows about 250 nested macro calls under Python's default recursion limit.
-    static let maximumCallDepth = 16
-
     /// Returns the call depth for an invocation from the given environment.
     ///
-    /// - Throws: `JinjaError.runtime` if the invocation would exceed ``maximumCallDepth``.
+    /// - Throws: `JinjaError.runtime` if the invocation would exceed
+    ///   the environment's ``Environment/maximumCallDepth``.
     static func nextCallDepth(after env: Environment) throws -> Int {
-        guard env.callDepth < maximumCallDepth else {
-            throw JinjaError.runtime("Maximum recursion depth of \(maximumCallDepth) exceeded")
+        let limit = env.maximumCallDepth
+        guard env.callDepth < limit else {
+            throw JinjaError.runtime("Maximum recursion depth of \(limit) exceeded")
         }
         return env.callDepth + 1
     }

@@ -88,6 +88,17 @@ struct PublicAPITests {
         #expect(try template.render([:], environment: environment) == "greet(name, punctuation)")
     }
 
+    @Test("Limit nested macro calls")
+    func maximumCallDepth() throws {
+        let environment = Environment()
+        environment.maximumCallDepth = 2
+        let source = "{% macro r(n) %}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{{ n }}{% endmacro %}"
+        #expect(try Template(source + "{{ r(1) }}").render([:], environment: environment) == "01")
+        #expect(throws: JinjaError.self) {
+            try Template(source + "{{ r(2) }}").render([:], environment: environment)
+        }
+    }
+
     @Test("Serialize JSON with the Jinja2 policies")
     func jinja2Policies() throws {
         let environment = Environment()
