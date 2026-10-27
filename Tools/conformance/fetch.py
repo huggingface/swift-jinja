@@ -235,7 +235,7 @@ def pallets_cases(manifest, out):
              *pallets["tests"]],
             cwd=tmp, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         )
-        if not records_path.exists():
+        if result.returncode != 0 or not records_path.exists():
             fail(f"extract_pallets.py failed:\n{result.stdout[-2000:]}\n{result.stderr[-2000:]}")
         records = [json.loads(line) for line in records_path.read_text(encoding="utf-8").splitlines()]
 

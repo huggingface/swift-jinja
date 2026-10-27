@@ -162,10 +162,13 @@ class Plugin:
 def main():
     checkout, out, *files = sys.argv[1:]
     paths = [str(Path(checkout) / "tests" / f) for f in files]
-    pytest.main(
+    status = pytest.main(
         ["-q", "-p", "no:cacheprovider", "-W", "ignore", "--rootdir", checkout, *paths],
         plugins=[Plugin()],
     )
+    # A run that fails, stops, or collects only some tests records only some cases.
+    if status != 0:
+        raise SystemExit(f"extract_pallets.py: pytest exited with status {int(status)}")
     with open(out, "w") as fh:
         for rec in RECORDS:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
