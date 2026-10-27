@@ -166,8 +166,10 @@ def main():
         ["-q", "-p", "no:cacheprovider", "-W", "ignore", "--rootdir", checkout, *paths],
         plugins=[Plugin()],
     )
-    # A run that fails, stops, or collects only some tests records only some cases.
-    if status != 0:
+    # Statuses 2 to 5 mean that pytest stopped, failed internally, got bad arguments,
+    # or collected no tests, so the run recorded only some cases or none.
+    # Status 1 means only that some tests failed; their cases are still recorded.
+    if status not in (pytest.ExitCode.OK, pytest.ExitCode.TESTS_FAILED):
         raise SystemExit(f"extract_pallets.py: pytest exited with status {int(status)}")
     with open(out, "w") as fh:
         for rec in RECORDS:
