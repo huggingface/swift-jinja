@@ -551,8 +551,12 @@ enum Interpreter {
 
             let callTimeEnv = Environment(parent: env)
             callTimeEnv["caller"] = .function { callerArgs, _, callerEnv in
+                // The body looks up variables where the call block is,
+                // but takes its depth and limit from the invocation,
+                // which can be in a later render that saved `caller`.
                 let bodyEnv = Environment(parent: env)
                 bodyEnv.callDepth = try nextCallDepth(after: callerEnv)
+                bodyEnv.maximumCallDepth = callerEnv.maximumCallDepth
                 for (paramName, value) in zip(callerParameters ?? [], callerArgs) {
                     guard case let .identifier(paramName) = paramName else {
                         throw JinjaError.runtime("Caller parameter must be an identifier")

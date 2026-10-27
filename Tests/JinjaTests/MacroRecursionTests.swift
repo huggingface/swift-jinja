@@ -185,4 +185,47 @@ struct MacroRecursionTests {
         environment.maximumCallDepth = limit
         #expect(environment.maximumCallDepth == 1)
     }
+
+    final class SavedValue: @unchecked Sendable {
+        var value: Value = .undefined
+    }
+
+    /// Renders a call block whose macro saves `caller` without calling it,
+    /// with the given limit, and returns the saved `caller`.
+    /// The caller body calls the macro `x`.
+    func saveCaller(limit: Int) async throws -> Value {
+        let saved = SavedValue()
+        let environment = Environment()
+        environment.maximumCallDepth = limit
+        environment["save"] = .function { _, _, env in
+            saved.value = env["caller"]
+            return .string("")
+        }
+        let source = """
+            {% macro x() %}x{% endmacro %}\
+            {% macro m() %}{{ save() }}{% endmacro %}\
+            {% call m() %}{{ x() }}{% endcall %}
+            """
+        #expect(try await render(source, environment: environment) == "")
+        return saved.value
+    }
+
+    @Test("A saved caller uses the lower limit of the render that calls it")
+    func savedCallerUsesLowerLimit() async throws {
+        let caller = try await saveCaller(limit: 2)
+        // Calling the caller and then x makes two nested calls.
+        let environment = Environment()
+        environment["saved"] = caller
+        environment.maximumCallDepth = 1
+        try await expectLimitExceeded("{{ saved() }}", limit: 1, environment: environment)
+    }
+
+    @Test("A saved caller uses the higher limit of the render that calls it")
+    func savedCallerUsesHigherLimit() async throws {
+        let caller = try await saveCaller(limit: 1)
+        let environment = Environment()
+        environment["saved"] = caller
+        environment.maximumCallDepth = 2
+        #expect(try await render("{{ saved() }}", environment: environment) == "x")
+    }
 }
