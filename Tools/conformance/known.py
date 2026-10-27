@@ -41,9 +41,9 @@ RULES: list = []
 
 
 PRECISE = {
-    "crash", "timeout", "plus-ws", "filter-precedence", "concat-nonstr", "bool-arith", "float-mod", "bigint",
+    "crash", "timeout", "plus-ws", "concat-nonstr", "bool-arith", "float-mod", "bigint",
     "format-spec", "lenient-undefined", "lenient-str-plus", "ns-attr", "loopctl-outside", "condexpr-in-tag",
-    "is-in-test", "filter-on-undefined", "slice-nonseq", "chained-condexpr", "lenient-filter-types",
+    "filter-on-undefined", "slice-nonseq", "chained-condexpr", "lenient-filter-types",
     "lenient-other", "markup-repr", "callable-repr",
 }
 
@@ -146,11 +146,6 @@ def _(case, jr, sr, cls):
     return re.search(r"\{[%#{]\+|\+[%#}]\}", T(case)) is not None
 
 
-@rule("filter-precedence", "a filter binds looser than * / // %, so `x|length * 2` fails to parse", "new (harness:operators has `2 * 3|string`)")
-def _(case, jr, sr, cls):
-    return re.search(r"Got \\?'(\*|/|//|%|\*\*)\\?' \((multiply|divide|floorDivide|modulo|power)\)", SE(sr)) is not None
-
-
 @rule("concat-nonstr", "`~` fails unless one operand is a string (`1 ~ 2`, `none ~ 1`)", "new")
 def _(case, jr, sr, cls):
     return cls == "b" and "Cannot concatenate values of different types" in SE(sr) and "~" in T(case)
@@ -211,11 +206,6 @@ def _(case, jr, sr, cls):
 @rule("condexpr-in-tag", "`{% if a if b %}` (an inline if without parentheses in a statement) is accepted", "new (minor)")
 def _(case, jr, sr, cls):
     return cls == "c" and "expected token 'end of statement block', got 'if'" in JE(jr)
-
-
-@rule("is-in-test", "`is in` and other keyword test names fail to parse", "harness:parser-names")
-def _(case, jr, sr, cls):
-    return "Expected test name but found" in SE(sr)
 
 
 @rule("safe-nonstr", "`safe` returns a non-string unchanged instead of a Markup string", "new")
@@ -382,19 +372,9 @@ def _(case, jr, sr, cls):
     return cls == "a" and {JO(jr).strip(), SO(sr).strip()} == {"True", "False"} and re.search(r"is (not )?(iterable|sequence|callable)", T(case)) is not None
 
 
-@rule("is-precedence", "`is` binds looser than comparison and arithmetic operators", "harness:operators")
-def _(case, jr, sr, cls):
-    return cls == "a" and re.search(r"(==|!=|<|>|\+|-|\*|~)[^|()]*\bis\b", T(case)) is not None
-
-
 @rule("chained-compare", "chained comparisons (a < b < c, a <= b != c)", "harness:operators")
 def _(case, jr, sr, cls):
     return re.search(r"(<|>|==|!=|<=|>=|\bin\b)[^()]*(<|>|==|!=|<=|>=|\bnot in\b)", T(case).replace("{{", "").replace("}}", "")) is not None and cls in ("a", "b")
-
-
-@rule("filter-precedence-a", "a filter binds looser than * / // %, so `'' * 0|int` filters the product", "harness:operators")
-def _(case, jr, sr, cls):
-    return cls == "a" and re.search(r"(\*|/|%)\s*[\w.'\"]+\|", T(case)) is not None
 
 
 @rule("bool-eq-zero", "a comparison result compared with 0 or 1 (False == 0 is true in Python)", "harness:operators")
@@ -463,11 +443,6 @@ def _(case, jr, sr, cls):
 @rule("in-mixed-types", "`in` (and the 'in' test) raises when the container holds values of other types (`2 in ['a', 2]`)", "new")
 def _(case, jr, sr, cls):
     return cls == "b" and "Cannot compare values of different types" in SE(sr) and re.search(r"\bin\b", T(case)) is not None
-
-
-@rule("filter-precedence-b", "a filter binds looser than * and /, so `x * 'a'|float` multiplies before filtering and fails", "harness:operators")
-def _(case, jr, sr, cls):
-    return cls == "b" and "Cannot multiply values of these types" in SE(sr) and re.search(r"\*\s*(?:(?!\}\}|%\}|\*)[^|])+\|\s*\w", T(case)) is not None
 
 
 @rule("dict-kwargs-order", "dict() with keyword arguments sorts its keys instead of keeping call order", "new")
