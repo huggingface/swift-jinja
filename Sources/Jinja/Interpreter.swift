@@ -1024,6 +1024,20 @@ public enum Interpreter {
         }
     }
 
+    /// Returns the start and stop indices of a slice of a sequence of `count` items,
+    /// clamped as Python's `slice.indices` clamps them,
+    /// so that a slice like `[:9223372036854775807]` visits only the items.
+    private static func sliceIndices(start: Value?, stop: Value?, step: Int, count: Int) -> (Int, Int) {
+        func index(_ value: Value?, default defaultIndex: Int) -> Int {
+            guard case let .int(index)? = value else { return defaultIndex }
+            if index < 0 {
+                return Swift.max(count + index, step > 0 ? 0 : -1)
+            }
+            return Swift.min(index, step > 0 ? count : count - 1)
+        }
+        return (index(start, default: step > 0 ? 0 : count - 1), index(stop, default: step > 0 ? count : -1))
+    }
+
     private static func evaluateSlice(
         value: Value,
         start: Expression?,
@@ -1047,19 +1061,7 @@ public enum Interpreter {
         case .array(let items):
             let count = items.count
 
-            let startIdx: Int
-            if let s = startVal, case let .int(val) = s {
-                startIdx = val >= 0 ? val : count + val
-            } else {
-                startIdx = step > 0 ? 0 : count - 1
-            }
-
-            let stopIdx: Int
-            if let s = stopVal, case let .int(val) = s {
-                stopIdx = val >= 0 ? val : count + val
-            } else {
-                stopIdx = step > 0 ? count : -1
-            }
+            let (startIdx, stopIdx) = sliceIndices(start: startVal, stop: stopVal, step: step, count: count)
 
             var result: [Value] = []
             for i in stride(from: startIdx, to: stopIdx, by: step) {
@@ -1072,25 +1074,21 @@ public enum Interpreter {
         case .string(let str):
             let count = str.count
 
-            let startIdx: Int
-            if let s = startVal, case let .int(val) = s {
-                startIdx = val >= 0 ? val : count + val
-            } else {
-                startIdx = step > 0 ? 0 : count - 1
-            }
+            let (startIdx, stopIdx) = sliceIndices(start: startVal, stop: stopVal, step: step, count: count)
 
-            let stopIdx: Int
-            if let s = stopVal, case let .int(val) = s {
-                stopIdx = val >= 0 ? val : count + val
-            } else {
-                stopIdx = step > 0 ? count : -1
+            if step == 1 {
+                // A contiguous run of characters; offset each bound once.
+                guard startIdx < stopIdx else { return .string("") }
+                let lower = str.index(str.startIndex, offsetBy: startIdx)
+                let upper = str.index(lower, offsetBy: stopIdx - startIdx)
+                return .string(String(str[lower ..< upper]))
             }
-
+            // Index the characters once, instead of offsetting from the start for each.
+            let characters = Array(str)
             var result = ""
             for i in stride(from: startIdx, to: stopIdx, by: step) {
                 if i >= 0 && i < count {
-                    let index = str.index(str.startIndex, offsetBy: i)
-                    result.append(str[index])
+                    result.append(characters[i])
                 }
             }
             return .string(String(result))

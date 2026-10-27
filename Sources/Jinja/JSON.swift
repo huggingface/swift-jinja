@@ -127,10 +127,10 @@ extension JSON {
                 output += "["
                 for (index, item) in items.enumerated() {
                     if index > 0 { output += itemSeparator }
-                    newline(depth: depth + 1)
+                    try newline(depth: depth + 1)
                     try write(item, depth: depth + 1)
                 }
-                newline(depth: depth)
+                try newline(depth: depth)
                 output += "]"
             case let .object(members):
                 guard !members.isEmpty else {
@@ -153,12 +153,12 @@ extension JSON {
                 output += "{"
                 for (index, entry) in entries.enumerated() {
                     if index > 0 { output += itemSeparator }
-                    newline(depth: depth + 1)
+                    try newline(depth: depth + 1)
                     writeString(entry.key.stringValue)
                     output += keySeparator
                     try write(entry.value, depth: depth + 1)
                 }
-                newline(depth: depth)
+                try newline(depth: depth)
                 output += "}"
             case .function:
                 throw JinjaError.runtime("Object of type function is not JSON serializable")
@@ -167,10 +167,11 @@ extension JSON {
             }
         }
 
-        private mutating func newline(depth: Int) {
+        private mutating func newline(depth: Int) throws {
             guard let indent = options.indent else { return }
+            let (count, overflow) = Swift.max(0, indent).multipliedReportingOverflow(by: depth)
             output += "\n"
-            output += String(repeating: " ", count: Swift.max(0, indent) * depth)
+            output += try repeatedString(" ", count: overflow ? .max : count)
         }
 
         private mutating func writeString(_ string: String) {
