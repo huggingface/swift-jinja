@@ -84,6 +84,13 @@ public struct Template: Hashable, Sendable {
 
     /// Renders the template with the given context variables.
     ///
+    /// The template renders in a new child scope of `environment`
+    /// that holds the context and the variables the template sets,
+    /// so rendering doesn't change `environment`,
+    /// and no variable carries over from one render to the next.
+    /// A context value hides a variable with the same name in `environment`,
+    /// including a built-in global such as `range`.
+    ///
     /// - Parameters:
     ///   - context: Variables and values to use during template rendering
     ///   - environment: Optional environment containing additional variables and settings
@@ -93,13 +100,6 @@ public struct Template: Hashable, Sendable {
         _ context: [String: Value],
         environment: Environment? = nil
     ) throws -> String {
-        let env = environment ?? Environment()
-
-        // Set context values directly
-        for (key, value) in context {
-            env[key] = value
-        }
-
-        return try Interpreter.interpret(nodes, environment: env)
+        try Interpreter.interpret(nodes, context: context, environment: environment ?? Environment())
     }
 }
