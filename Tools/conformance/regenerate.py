@@ -4,10 +4,10 @@
 """Regenerate the known-difference list for ConformanceTests.
 
 Usage (from the repository root):
-  uv run Tools/conformance/oracle.py
+  uv run Tools/conformance/fetch.py
   uv run Tools/conformance/regenerate.py [--corpus DIR] [--skip-build]
 
-Reads the corpus that oracle.py built (DIR defaults to
+Reads the corpus that fetch.py built (DIR defaults to
 $JINJA_CONFORMANCE_CORPUS, or else .build/conformance-corpus), renders every
 case with swift-jinja at the current checkout (jinja-render/, built in
 release mode), compares each result with Jinja2's result in DIR/jinja2.jsonl,
@@ -57,7 +57,7 @@ CAUSES = [
     ("crash", "swift-jinja crashes or hangs (integer overflow, negative repeat count, deep recursion)", None),
     ("bigint", "No arbitrary-precision integers: results beyond the range of Int raise an overflow error",
      r"literal\.(int\.big|op\.pow_big)|10 \*\* 100"),
-    ("numlit", "Numeric literals (hex, octal, binary, underscores, exponents) and implicit concatenation of non-strings",
+    ("numlit", "Numeric literals (hex, octal, binary, underscores, exponents)",
      r"literal\.(int\.|float\.(exp|underscore|large_repr|1e1|inf|trailing_dot)|concat\.)|test_numeric_literal"
      r"|test_name\[1a|f\.tojson_float"),
     ("trailing-nl", "Trailing newline handling at the end of the template",
@@ -83,11 +83,11 @@ CAUSES = [
      r"literal\.(f\.|filter\.|set\.block_filter|tf\.tojson|dictm\.items_print)|TestFilter::|test_bytefallback"
      r"|TestSet::test_block_filtered|Kimi-K2-Instruct\.tools"),
     ("operators", "Operator semantics: chained comparisons, floor division and modulo, % formatting, list * int, "
-     "booleans as numbers, precedence of is and filters",
+     "booleans as numbers",
      r"literal\.op\.(?!str_plus|int_plus|add_vs|concat_vs)|test_compare_compound|test_compare_parens"
      r"|literal\.t\.bool_is_number|test_types\[(true|false) is number|literal\.t\.dict_is_sequence"
      r"|test_types\[\{\} is sequence"),
-    ("parser-names", "Parser: keywords as names, dict literal keys, test names (is in, is filter), sameas",
+    ("parser-names", "Parser: keywords as names, dict literal keys, test names (is filter), sameas",
      r"literal\.(dot\.|name\.|dict\.|t\.(filter|in|sameas))|TestTestsCase::(test_in|test_no_paren_for_arg1"
      r"|test_sameas)|kw\.null"),
     ("macros", "Macro semantics: varargs, kwargs, defaults that use earlier parameters, caller scope, namespaces "
@@ -137,7 +137,7 @@ def load_corpus(corpus):
     for name, source in (("manifest.json", oracle.MANIFEST), ("literal.jsonl", oracle.LITERAL)):
         copy = corpus / "inputs" / name
         if not copy.exists() or copy.read_bytes() != source.read_bytes():
-            raise SystemExit(f"{corpus} was not built from the current {source.name}; run: uv run Tools/conformance/oracle.py")
+            raise SystemExit(f"{corpus} was not built from the current {source.name}; run: uv run Tools/conformance/fetch.py")
     cases = []
     for path in sorted((corpus / "cases").glob("*.jsonl")):
         for line in open(path, encoding="utf-8"):
@@ -150,7 +150,7 @@ def load_corpus(corpus):
         row = json.loads(line)
         results[row.pop("id")] = row
     if set(results) != {c["id"] for c in cases}:
-        raise SystemExit(f"{corpus}/jinja2.jsonl does not match its cases; run oracle.py again")
+        raise SystemExit(f"{corpus}/jinja2.jsonl does not match its cases; run fetch.py again")
     return cases, results
 
 
