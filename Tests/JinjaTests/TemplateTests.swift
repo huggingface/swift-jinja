@@ -1013,13 +1013,7 @@ struct TemplateTests {
         let nodes = try Parser.parse(tokens)
         #expect(
             nodes == [
-                .expression(
-                    .binary(
-                        .add,
-                        .string("a"),
-                        .binary(.concat, .string("b"), .string("c"))
-                    )
-                )
+                .expression(.binary(.add, .string("a"), .string("bc")))
             ]
         )
 

@@ -335,23 +335,6 @@ struct Parser: Sendable {
         return expr
     }
 
-    private mutating func parseFilter() throws -> Expression {
-        var expr = try parseFactor()
-        while match(.pipe) {
-            let filterName = try consumeIdentifier()
-            var args: [Expression] = []
-            var kwargs: [String: Expression] = [:]
-
-            if match(.openParen) {
-                (args, kwargs) = try parseArguments()
-                try consume(.closeParen, message: "Expected ')' after filter arguments.")
-            }
-
-            expr = .filter(expr, filterName, args, kwargs)
-        }
-        return expr
-    }
-
     private mutating func parseOr() throws -> Expression {
         var expr = try parseAnd()
         while match(.or) {
@@ -405,32 +388,6 @@ struct Parser: Sendable {
             } else if match(.not), match(.in) {
                 let right = try parseTerm()
                 expr = .binary(.notIn, expr, right)
-            } else if match(.is) {
-                let negated = match(.not)
-                let testName: String
-                let token = peek()
-                if token.kind == .identifier {
-                    testName = try consumeIdentifier()
-                } else if token.kind == .boolean || token.kind == .null {
-                    testName = String(token.value)
-                    advance()
-                } else {
-                    throw JinjaError.parser("Expected test name but found \(token.kind).")
-                }
-                var args: [Expression] = []
-                if match(.openParen) {
-                    (args, _) = try parseArguments()
-                    try consume(.closeParen, message: "Expected ')' after test arguments.")
-                } else {
-                    // Check if the next token can be parsed as an argument (for tests that expect one)
-                    let nextToken = peek()
-                    if nextToken.kind == .identifier || nextToken.kind == .null || nextToken.kind == .boolean
-                        || nextToken.kind == .number || nextToken.kind == .string
-                    {
-                        args = [try parseConcat()]
-                    }
-                }
-                expr = .test(expr, testName, args, negated: negated)
             } else {
                 break
             }
@@ -455,18 +412,10 @@ struct Parser: Sendable {
     }
 
     private mutating func parseConcat() throws -> Expression {
-        var expr = try parseFilter()
-        while true {
-            if match(.concat) {
-                let right = try parseFilter()
-                expr = .binary(.concat, expr, right)
-            } else if check(anyOf: Token.Kind.primaryExpressionStarters) {
-                // Implicit string concatenation - if we see another primary expression, concatenate it
-                let right = try parseFilter()
-                expr = .binary(.concat, expr, right)
-            } else {
-                break
-            }
+        var expr = try parseFactor()
+        while match(.concat) {
+            let right = try parseFactor()
+            expr = .binary(.concat, expr, right)
         }
         return expr
     }
@@ -502,16 +451,75 @@ struct Parser: Sendable {
         return expr
     }
 
-    private mutating func parseUnary() throws -> Expression {
+    /// As in Jinja2, filters and tests bind tighter than the binary operators,
+    /// and apply to the result of a unary minus or plus,
+    /// so `-x|abs` is `(-x)|abs` and `2 * x|length` is `2 * (x|length)`.
+    private mutating func parseUnary(withFilters: Bool = true) throws -> Expression {
+        var expr: Expression
         if match(.minus) {
-            let expr = try parseUnary()
-            return .unary(.minus, expr)
+            expr = .unary(.minus, try parseUnary(withFilters: false))
+        } else if match(.plus) {
+            expr = .unary(.plus, try parseUnary(withFilters: false))
+        } else {
+            expr = try parseAccess()
         }
-        if match(.plus) {
-            let expr = try parseUnary()
-            return .unary(.plus, expr)
+        return withFilters ? try parseFiltersAndTests(expr) : expr
+    }
+
+    private mutating func parseFiltersAndTests(_ operand: Expression) throws -> Expression {
+        var expr = operand
+        while true {
+            if match(.pipe) {
+                let filterName = try consumeIdentifier()
+                var args: [Expression] = []
+                var kwargs: [String: Expression] = [:]
+
+                if match(.openParen) {
+                    (args, kwargs) = try parseArguments()
+                    try consume(.closeParen, message: "Expected ')' after filter arguments.")
+                }
+
+                expr = .filter(expr, filterName, args, kwargs)
+            } else if match(.is) {
+                expr = try parseTest(expr)
+            } else if match(.openParen) {
+                // As in Jinja2, the result of a filter or test can be called.
+                let (args, kwargs) = try parseArguments()
+                try consume(.closeParen, message: "Expected ')' after arguments.")
+                expr = .call(expr, args, kwargs)
+            } else {
+                break
+            }
         }
-        return try parseAccess()
+        return expr
+    }
+
+    private mutating func parseTest(_ operand: Expression) throws -> Expression {
+        let negated = match(.not)
+        let testName: String
+        let token = peek()
+        if check(anyOf: Token.Kind.allowedAsIdentifier) {
+            testName = try consumeIdentifier()
+        } else if token.kind == .boolean || token.kind == .null {
+            testName = String(token.value)
+            advance()
+        } else {
+            throw JinjaError.parser("Expected test name but found \(token.kind).")
+        }
+        var args: [Expression] = []
+        if match(.openParen) {
+            (args, _) = try parseArguments()
+            try consume(.closeParen, message: "Expected ')' after test arguments.")
+        } else if check(anyOf: Token.Kind.testArgumentStarters) {
+            // As in Jinja2, a test takes one argument without parentheses,
+            // such as `x is divisibleby 3`, but filters and operators after it
+            // apply to the result of the test.
+            if check(.is) {
+                throw JinjaError.parser("Multiple tests can't be chained with 'is'.")
+            }
+            args = [try parseAccess()]
+        }
+        return .test(operand, testName, args, negated: negated)
     }
 
     private mutating func parseAccess() throws -> Expression {
@@ -539,7 +547,8 @@ struct Parser: Sendable {
                 } else if let index = start {
                     expr = .member(expr, index, computed: true)
                 } else {
-                    throw JinjaError.parser("Invalid subscript")
+                    // As in Jinja2, `x[]` is `x[()]`.
+                    expr = .member(expr, .tuple([]), computed: true)
                 }
                 try consume(.closeBracket, message: "Expected ']' after index.")
             } else if match(.openParen) {
@@ -559,7 +568,12 @@ struct Parser: Sendable {
         switch token.kind {
         case .string:
             advance()
-            return .string(String(token.value))
+            // As in Jinja2, adjacent string literals are joined, as in `'a' 'b'`.
+            var value = String(token.value)
+            while check(.string) {
+                value += advance().value
+            }
+            return .string(value)
         case .number:
             advance()
             if token.value.contains(".") {
@@ -822,8 +836,13 @@ extension Token.Kind {
         .string, .identifier, .number, .boolean, .openParen, .openBracket, .openBrace,
     ]
 
+    /// Tokens that start the argument of a test without parentheses, as in Jinja2.
+    /// A name starts an argument unless it is `else`, `or`, or `and`.
+    fileprivate static let testArgumentStarters = allowedAsIdentifier.subtracting([.else, .or, .and])
+        .union([.boolean, .null, .string, .number, .openBracket, .openBrace])
+
     /// Tokens that can't follow an integer attribute such as `foo.0`,
-    /// because implicit concatenation would join them, as in `foo.0abc`.
+    /// as in `foo.0abc` and `foo.1e2`.
     /// Calls and subscripts, such as `foo.0()` and `foo.0[1]`, still parse.
     fileprivate static let invalidAfterIntegerAttribute = primaryExpressionStarters.subtracting([
         .openParen, .openBracket,
