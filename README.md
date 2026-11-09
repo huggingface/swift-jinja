@@ -373,7 +373,7 @@ The serializer is also available directly as `JSON.dumps(_:options:)`.
 ### Tests
 
 Jinja provides
-[built-in tests](<(https://jinja.palletsprojects.com/en/stable/templates/#list-of-builtin-tests)>)
+[built-in tests](https://jinja.palletsprojects.com/en/stable/templates/#list-of-builtin-tests)
 for conditional logic and type checking.
 Tests are used with the `is` operator to evaluate conditions in templates.
 These tests help you make decisions based on the
@@ -493,8 +493,8 @@ let htmlTemplate = try Template("""
     <body>
         <h1>{{ page.heading }}</h1>
         <ul>
-        {% for item in page.items %}
-            <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+        {% for link in page.links %}
+            <li><a href="{{ link.url }}">{{ link.title }}</a></li>
         {% endfor %}
         </ul>
     </body>
@@ -505,8 +505,8 @@ let context: [String: Value] = [
     "page": [
         "title": "My Website",
         "heading": "Welcome",
-        "items": .array([
-            ["title": "Home", "url": "/"),
+        "links": [
+            ["title": "Home", "url": "/"],
             ["title": "About", "url": "/about"],
             ["title": "Contact", "url": "/contact"]
         ]
