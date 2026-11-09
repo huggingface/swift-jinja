@@ -94,7 +94,7 @@ struct RenderEnvironmentTests {
         for _ in 0 ..< 3 {
             #expect(try template.render([:], environment: env) == "1")
         }
-        #expect(env["ns"] == ["n": 0])
+        #expect(try PropertyMembers.evaluate(env["ns"], "n") == .int(0))
     }
 
     @Test("A cycler in the environment shares its position across renders")

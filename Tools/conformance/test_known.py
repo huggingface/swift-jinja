@@ -1,4 +1,4 @@
-"""Focused checks for boolean-as-number difference classification."""
+"""Focused checks for known-difference classification."""
 
 import unittest
 
@@ -78,6 +78,35 @@ class FixedDifferenceTests(unittest.TestCase):
         self.assertIsNone(self.label("{{ missing in [1] }}", "False", error, cls="b"))
         self.assertEqual(self.label("{{ missing is in([1]) }}", "False", error, cls="b"),
                          "in-undefined")
+
+    def test_namespace_regressions_are_unlabeled(self):
+        for expression, jinja, swift in [
+            ("n is sequence", "False", "True"),
+            ("n is mapping", "False", "True"),
+            ("n is iterable", "False", "True"),
+            ("n is not iterable", "True", "False"),
+            ("n.items is callable", "False", "True"),
+            ("n.items is not callable", "True", "False"),
+            ("n.items", "[]", "[Function]"),
+        ]:
+            expression = expression.replace("n.", "namespace(items=[]).").replace("n is", "namespace(items=[]) is")
+            template = "{{ " + expression + " }}"
+            with self.subTest(expression=expression):
+                self.assertIsNone(self.label(template, jinja, swift))
+
+    def test_undefined_iterability_difference_remains_labeled(self):
+        self.assertEqual(self.label("{{ missing is iterable }}", "True", "False"),
+                         "undefined-tests")
+        self.assertEqual(self.label("{{ missing is not iterable }}", "False", "True"),
+                         "undefined-tests")
+        self.assertIsNone(self.label("{{ missing is callable }}", "False", "True"))
+
+    def test_non_namespace_assignment_remains_labeled(self):
+        case = {"template": "{% set x = {} %}{% set x.a = 1 %}{{ x.a }}",
+                "context": {}, "mode": "default", "options": {}}
+        jinja = {"ok": False, "error": "TemplateRuntimeError: cannot assign attribute on non-namespace object"}
+        self.assertEqual(known.label(case, jinja, {"ok": True, "output": "1"}, "c"),
+                         "ns-attr")
 
     def test_in_test_difference_remains_labeled(self):
         self.assertEqual(self.label("{{ 2 is in(['a', 2]) }}", "True",

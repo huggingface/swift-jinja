@@ -4,6 +4,10 @@
 /// and generate dynamic content. They're useful for creating template components
 /// and reducing code duplication.
 public struct Macro: Hashable, Sendable {
+    // Only an internal object marker carries namespace metadata.
+    // Decoding an ordinary macro never creates this payload.
+    var namespace: Namespace? = nil
+
     /// The name of the macro.
     public let name: String
 

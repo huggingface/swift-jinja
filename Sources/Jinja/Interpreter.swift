@@ -430,6 +430,7 @@ enum Interpreter {
             case let .array(values):
                 items = values
             case let .object(dict):
+                try Namespace.requireMapping(dict)
                 // Keys for a single loop variable,
                 // and `[key, value]` pairs for tuple unpacking (`for k, v in d`),
                 // where Jinja2 would unpack each key instead.
@@ -666,31 +667,32 @@ enum Interpreter {
                 try assign(target: expr, value: val, env: env)
             }
         case .member(let objectExpr, let propertyExpr, let computed):
-            // Handle property assignment like ns.foo = 'bar'
             let objectValue = try evaluateExpression(objectExpr, env: env)
-
+            let key: ObjectKey
             if computed {
                 let propertyValue = try evaluateExpression(propertyExpr, env: env)
-                guard let key = ObjectKey(propertyValue) else {
+                guard let propertyKey = ObjectKey(propertyValue) else {
                     throw JinjaError.runtime("Computed property key must be a string or integer")
                 }
-                if case var .object(dict) = objectValue {
-                    dict[key] = value
-                    // Update the object in the environment
-                    if case let .identifier(name) = objectExpr {
-                        env.setInChain(name: name, value: .object(dict))
-                    }
-                }
+                key = propertyKey
             } else {
                 guard case let .identifier(propertyName) = propertyExpr else {
                     throw JinjaError.runtime("Property assignment requires identifier")
                 }
-                if case var .object(dict) = objectValue {
-                    dict[.string(propertyName)] = value
-                    // Update the object in the environment
-                    if case let .identifier(name) = objectExpr {
-                        env.setInChain(name: name, value: .object(dict))
-                    }
+                key = .string(propertyName)
+            }
+
+            if case var .object(dict) = objectValue {
+                let updated: Value
+                if var namespace = Namespace.get(dict) {
+                    namespace.attributes[key] = value
+                    updated = namespace.value
+                } else {
+                    dict[key] = value
+                    updated = .object(dict)
+                }
+                if case let .identifier(name) = objectExpr {
+                    env.setInChain(name: name, value: updated)
                 }
             }
         default:
@@ -845,10 +847,10 @@ enum Interpreter {
             return arr[safeIndex]
 
         case let (.object(obj), .string(key)):
-            return obj[.string(key)] ?? .undefined
+            return (Namespace.get(obj)?.attributes ?? obj)[.string(key)] ?? .undefined
 
         case let (.object(obj), .int(key)):
-            return obj[.int(key)] ?? .undefined
+            return (Namespace.get(obj)?.attributes ?? obj)[.int(key)] ?? .undefined
 
         case let (.string(str), .int(index)):
             let safeIndex = index < 0 ? str.count + index : index

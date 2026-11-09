@@ -360,9 +360,15 @@ def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
-@rule("undefined-tests", "tests on undefined differ (`missing is iterable`)", "new (minor)")
+@rule("undefined-tests", "undefined values are not iterable in swift-jinja", "new (minor)")
 def _(case, jr, sr, cls):
-    return cls == "a" and {JO(jr).strip(), SO(sr).strip()} == {"True", "False"} and re.search(r"is (not )?(iterable|callable)", T(case)) is not None
+    if cls != "a":
+        return False
+    test = re.search(r"is (not )?iterable\b", T(case))
+    if test is None:
+        return False
+    expected = ("False", "True") if test[1] else ("True", "False")
+    return (JO(jr).strip(), SO(sr).strip()) == expected
 
 
 @rule("chained-compare", "chained comparisons (a < b < c, a <= b != c)", "harness:operators")

@@ -341,6 +341,12 @@ public enum Globals: Sendable {
 
     /// Creates a namespace object for attribute assignment.
     ///
+    /// The returned `.object` holds an internal marker rather than the attributes.
+    /// `JSONEncoder` throws when encoding a namespace or any value that contains one,
+    /// so namespaces do not round-trip through `Codable`.
+    /// Namespaces compare and hash by identity.
+    /// They print in Jinja2's `<Namespace {...}>` form.
+    ///
     /// - Parameters:
     ///   - args: Function arguments (unused)
     ///   - kwargs: Initial values for the namespace
@@ -355,7 +361,7 @@ public enum Globals: Sendable {
         for (key, value) in kwargs.sorted(by: { $0.key < $1.key }) {
             namespaceDict[.string(key)] = value
         }
-        return .object(namespaceDict)
+        return Namespace(attributes: namespaceDict).value
     }
 
     /// Retrieves the current date and time in a specific format.

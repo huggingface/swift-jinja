@@ -133,6 +133,7 @@ extension JSON {
                 try newline(depth: depth)
                 output += "]"
             case let .object(members):
+                try Namespace.requireMapping(members)
                 guard !members.isEmpty else {
                     output += "{}"
                     return

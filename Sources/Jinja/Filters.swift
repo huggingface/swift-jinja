@@ -60,6 +60,7 @@ public enum Filters {
         case let .array(arr):
             return .int(arr.count)
         case let .object(obj):
+            try Namespace.requireMapping(obj)
             return .int(obj.count)
         case .undefined:
             return .int(0)
@@ -211,6 +212,7 @@ public enum Filters {
         case let .string(str):
             return str.randomElement().map { .string(String($0)) } ?? .undefined
         case let .object(dict):
+            try Namespace.requireMapping(dict)
             if dict.isEmpty { return .undefined }
             let randomIndex = dict.keys.indices.randomElement()!
             let randomKey = dict.keys[randomIndex]
@@ -296,8 +298,8 @@ public enum Filters {
                 var sorted = items
                 for attr in attributes.reversed() {
                     sorted = try stableSorted(sorted) { a, b in
-                        let aValue = try PropertyMembers.evaluate(a, String(attr))
-                        let bValue = try PropertyMembers.evaluate(b, String(attr))
+                        let aValue = try resolveAttributeValue(a, attribute: .string(String(attr)))
+                        let bValue = try resolveAttributeValue(b, attribute: .string(String(attr)))
                         return try compare(aValue, bValue)
                     }
                 }
@@ -352,7 +354,7 @@ public enum Filters {
         }
 
         let keyedItems: [(item: Value, displayKey: Value, normalized: Value)] = try items.map {
-            let rawKey = try PropertyMembers.evaluate($0, attribute)
+            let rawKey = try resolveAttributeValue($0, attribute: .string(attribute))
             let displayKey = rawKey == .undefined && defaultValue != .null ? defaultValue : rawKey
             return (item: $0, displayKey: displayKey, normalized: normalizedKey(displayKey))
         }
@@ -554,7 +556,7 @@ public enum Filters {
         let testArgs = Array(args.dropFirst(2))
         return try .array(
             items.filter {
-                let attrValue = try PropertyMembers.evaluate($0, attribute)
+                let attrValue = try resolveAttributeValue($0, attribute: .string(attribute))
                 guard case let .string(testName) = arguments["testname"] else {
                     return attrValue.isTruthy
                 }
@@ -594,7 +596,7 @@ public enum Filters {
         let testArgs = Array(args.dropFirst(2))
         return try .array(
             items.filter {
-                let attrValue = try PropertyMembers.evaluate($0, attribute)
+                let attrValue = try resolveAttributeValue($0, attribute: .string(attribute))
                 guard case let .string(testName) = arguments["testname"] else {
                     return !attrValue.isTruthy
                 }
@@ -664,9 +666,33 @@ public enum Filters {
         }
         let reverse = arguments["reverse"]!.isTruthy
 
+        if let namespace = Namespace.get(dict) {
+            guard by == "key" || by == "value" else {
+                throw JinjaError.runtime("dictsort requires by to be key or value")
+            }
+            let position = by == "key" ? 0 : 1
+            let entries = try namespaceItems(namespace, env: env)
+            let keyed = try entries.map { entry in
+                var key = try namespaceSortComponent(entry, at: position)
+                if !caseSensitive, case .string = key,
+                    case let .function(lower) = try PropertyMembers.evaluate(key, "lower")
+                {
+                    key = try lower([], [:], env)
+                }
+                return (entry: entry, key: key)
+            }
+            return .array(
+                try keyed.sorted { a, b in
+                    let comparison = try a.key.compare(to: b.key)
+                    return reverse ? comparison > 0 : comparison < 0
+                }.map(\.entry)
+            )
+        }
+
+        let pairs = Array(dict)
         let sortedPairs: [(key: ObjectKey, value: Value)]
         if by == "value" {
-            sortedPairs = dict.sorted { a, b in
+            sortedPairs = pairs.sorted { a, b in
                 let comparison =
                     caseSensitive
                     ? a.value.description.compare(b.value.description)
@@ -674,7 +700,7 @@ public enum Filters {
                 return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
             }
         } else {
-            sortedPairs = dict.sorted { a, b in
+            sortedPairs = pairs.sorted { a, b in
                 let comparison = a.key.compare(b.key, options: caseSensitive ? [] : [.caseInsensitive])
                 return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
             }
@@ -971,6 +997,7 @@ public enum Filters {
         guard let value = args.first, case let .object(dict) = value else {
             return .string("")
         }
+        let namespace = Namespace.get(dict)
 
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
@@ -979,25 +1006,50 @@ public enum Filters {
             defaults: ["autospace": .boolean(true)]
         )
 
+        let pairs: [(key: String, value: Value)]
+        if let namespace {
+            pairs = try namespaceItems(namespace, env: env).compactMap { entry in
+                let values = try namespaceIterable(entry)
+                guard values.count == 2 else {
+                    throw JinjaError.runtime("xmlattr items must unpack into two values")
+                }
+                let value = values[1]
+                if value == .null || value == .undefined { return nil }
+                guard case let .string(key) = values[0] else {
+                    throw JinjaError.runtime("xmlattr keys must be strings")
+                }
+                guard !key.unicodeScalars.contains(where: { " \t\n\r\u{b}\u{c}/>=".unicodeScalars.contains($0) })
+                else {
+                    throw JinjaError.runtime("Invalid character in XML attribute key: '\(key)'")
+                }
+                return (key: key, value: value)
+            }
+        } else {
+            pairs = dict.map { (key: $0.key.stringValue, value: $0.value) }
+        }
         let autospace = arguments["autospace"]!.isTruthy
         var result = ""
         var needsSpace = false
-        for (key, value) in dict {
+        for (key, value) in pairs {
             if value == .null || value == .undefined { continue }
-            let keyString = key.stringValue
+            let keyString = key
             // Validate key doesn't contain invalid characters
             if keyString.contains(" ") || keyString.contains("/") || keyString.contains(">")
                 || keyString.contains("=")
             {
                 throw JinjaError.runtime("Invalid character in XML attribute key: '\(keyString)'")
             }
-            let escapedValue = value.description
-                .replacingOccurrences(of: "&", with: "&amp;")
-                .replacingOccurrences(of: "<", with: "&lt;")
-                .replacingOccurrences(of: ">", with: "&gt;")
-                .replacingOccurrences(of: "\"", with: "&quot;")
+            let escapedValue =
+                namespace != nil
+                ? htmlEscape(value.description)
+                : value.description
+                    .replacingOccurrences(of: "&", with: "&amp;")
+                    .replacingOccurrences(of: "<", with: "&lt;")
+                    .replacingOccurrences(of: ">", with: "&gt;")
+                    .replacingOccurrences(of: "\"", with: "&quot;")
             if needsSpace { result += " " }
-            result += "\(keyString)=\"\(escapedValue)\""
+            let escapedKey = namespace != nil ? htmlEscape(keyString) : keyString
+            result += "\(escapedKey)=\"\(escapedValue)\""
             needsSpace = true
         }
         if autospace && !result.isEmpty {
@@ -1316,6 +1368,7 @@ public enum Filters {
         case let .string(str):
             return .array(str.map { .string(String($0)) })
         case let .object(dict):
+            try Namespace.requireMapping(dict)
             return .array(dict.keys.map(Value.init))
         default:
             return .array([])
@@ -1341,8 +1394,8 @@ public enum Filters {
 
         if case let .string(attribute) = arguments["attribute"] {
             return try items.max(by: { a, b in
-                let aValue = try PropertyMembers.evaluate(a, attribute)
-                let bValue = try PropertyMembers.evaluate(b, attribute)
+                let aValue = try resolveAttributeValue(a, attribute: .string(attribute))
+                let bValue = try resolveAttributeValue(b, attribute: .string(attribute))
                 return try compareValues(aValue, bValue, caseSensitive: caseSensitive) < 0
             }) ?? .undefined
         } else {
@@ -1375,8 +1428,8 @@ public enum Filters {
 
         if case let .string(attribute) = arguments["attribute"] {
             return try items.min(by: { a, b in
-                let aValue = try PropertyMembers.evaluate(a, attribute)
-                let bValue = try PropertyMembers.evaluate(b, attribute)
+                let aValue = try resolveAttributeValue(a, attribute: .string(attribute))
+                let bValue = try resolveAttributeValue(b, attribute: .string(attribute))
                 return try compareValues(aValue, bValue, caseSensitive: caseSensitive) < 0
             }) ?? .undefined
         } else {
@@ -1568,6 +1621,10 @@ public enum Filters {
         if case let .string(s) = value {
             return .string(s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
         }
+        if value.namespace != nil {
+            let safe = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/")
+            return .string(value.description.addingPercentEncoding(withAllowedCharacters: safe) ?? "")
+        }
         if case .object(let dict) = value {
             var components = URLComponents()
             components.queryItems = dict.map { key, value in
@@ -1642,7 +1699,7 @@ public enum Filters {
         let valuesToSum: [Value]
         if case let .string(attribute) = arguments["attribute"] {
             valuesToSum = try items.map { item in
-                try PropertyMembers.evaluate(item, attribute)
+                try resolveAttributeValue(item, attribute: .string(attribute))
             }
         } else {
             valuesToSum = items
@@ -1832,6 +1889,7 @@ public enum Filters {
         )
 
         if case let .object(obj) = value {
+            try Namespace.requireMapping(obj)
             let pairs = obj.map { key, value in
                 Value.array([Value(key), value])
             }
@@ -1865,6 +1923,7 @@ public enum Filters {
                 return "[\n" + items.map { "\(indentString)  \($0)" }.joined(separator: ",\n")
                     + "\n\(indentString)]"
             case let .object(dict):
+                if Namespace.get(dict) != nil { return val.description }
                 if dict.isEmpty { return "{}" }
                 let items = dict.map { key, value in
                     "\(indentString)  \"\(key.stringValue)\": \(prettyPrint(value, indent: indent + 1))"
@@ -2089,6 +2148,49 @@ public enum Filters {
 
 // MARK: -
 
+/// Calls a namespace's items attribute without changing the returned entries.
+private func namespaceItems(_ namespace: Namespace, env: Environment) throws -> [Value] {
+    let result: Value
+    switch namespace.attributes["items"] {
+    case let .function(function):
+        result = try function([], [:], env)
+    case let .macro(macro):
+        result = try Interpreter.callMacro(macro: macro, arguments: [], keywordArguments: [:], env: env)
+    default:
+        throw JinjaError.runtime("Namespace items attribute must be callable")
+    }
+    return try namespaceIterable(result)
+}
+
+/// Iterates a namespace filter result or an entry that xmlattr must unpack.
+private func namespaceIterable(_ value: Value) throws -> [Value] {
+    switch value {
+    case let .array(values): return values
+    case let .string(string): return string.unicodeScalars.map { .string(String($0)) }
+    case let .object(object):
+        try Namespace.requireMapping(object)
+        return object.keys.map(Value.init)
+    case .undefined: return []
+    default: throw JinjaError.runtime("Namespace items must be iterable")
+    }
+}
+
+/// Indexes an entry as Python's dictsort key function does.
+private func namespaceSortComponent(_ entry: Value, at position: Int) throws -> Value {
+    switch entry {
+    case let .array(values):
+        if position < values.count { return values[position] }
+    case let .string(string):
+        let scalars = Array(string.unicodeScalars)
+        if position < scalars.count { return .string(String(scalars[position])) }
+    case let .object(object):
+        try Namespace.requireMapping(object)
+        if let value = object[.int(position)] { return value }
+    default: break
+    }
+    throw JinjaError.runtime("dictsort entry has no component at index \(position)")
+}
+
 /// Returns the string form of a value, matching Jinja2's `soft_str`.
 ///
 /// Treats `undefined` as an empty string.
@@ -2138,6 +2240,11 @@ private func htmlEscape(_ string: String) -> String {
 private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
     switch attribute {
     case let .string(name):
+        if case let .object(object) = item,
+            let value = (Namespace.get(object)?.attributes ?? object)[.string(name)]
+        {
+            return value
+        }
         return try PropertyMembers.evaluate(item, name)
     case let .int(index):
         switch item {
@@ -2147,7 +2254,8 @@ private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Va
             }
             return .undefined
         case let .object(values):
-            return values[.int(index)] ?? values[.string(String(index))] ?? .undefined
+            let attributes = Namespace.get(values)?.attributes ?? values
+            return attributes[.int(index)] ?? attributes[.string(String(index))] ?? .undefined
         default:
             return .undefined
         }
