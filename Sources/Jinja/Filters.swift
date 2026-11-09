@@ -646,8 +646,6 @@ public enum Filters {
             return .array([])
         }
 
-        let pairs = try mappingFilterPairs(dict, env: env)
-
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
             kwargs: kwargs,
@@ -668,6 +666,30 @@ public enum Filters {
         }
         let reverse = arguments["reverse"]!.isTruthy
 
+        if let namespace = Namespace.get(dict) {
+            guard by == "key" || by == "value" else {
+                throw JinjaError.runtime("dictsort requires by to be key or value")
+            }
+            let position = by == "key" ? 0 : 1
+            let entries = try namespaceItems(namespace, env: env)
+            let keyed = try entries.map { entry in
+                var key = try namespaceSortComponent(entry, at: position)
+                if !caseSensitive, case .string = key,
+                    case let .function(lower) = try PropertyMembers.evaluate(key, "lower")
+                {
+                    key = try lower([], [:], env)
+                }
+                return (entry: entry, key: key)
+            }
+            return .array(
+                try keyed.sorted { a, b in
+                    let comparison = try a.key.compare(to: b.key)
+                    return reverse ? comparison > 0 : comparison < 0
+                }.map(\.entry)
+            )
+        }
+
+        let pairs = Array(dict)
         let sortedPairs: [(key: ObjectKey, value: Value)]
         if by == "value" {
             sortedPairs = pairs.sorted { a, b in
@@ -975,7 +997,7 @@ public enum Filters {
         guard let value = args.first, case let .object(dict) = value else {
             return .string("")
         }
-        let pairs = try mappingFilterPairs(dict, env: env)
+        let namespace = Namespace.get(dict)
 
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
@@ -984,25 +1006,50 @@ public enum Filters {
             defaults: ["autospace": .boolean(true)]
         )
 
+        let pairs: [(key: String, value: Value)]
+        if let namespace {
+            pairs = try namespaceItems(namespace, env: env).compactMap { entry in
+                let values = try namespaceIterable(entry)
+                guard values.count == 2 else {
+                    throw JinjaError.runtime("xmlattr items must unpack into two values")
+                }
+                let value = values[1]
+                if value == .null || value == .undefined { return nil }
+                guard case let .string(key) = values[0] else {
+                    throw JinjaError.runtime("xmlattr keys must be strings")
+                }
+                guard !key.unicodeScalars.contains(where: { " \t\n\r\u{b}\u{c}/>=".unicodeScalars.contains($0) })
+                else {
+                    throw JinjaError.runtime("Invalid character in XML attribute key: '\(key)'")
+                }
+                return (key: key, value: value)
+            }
+        } else {
+            pairs = dict.map { (key: $0.key.stringValue, value: $0.value) }
+        }
         let autospace = arguments["autospace"]!.isTruthy
         var result = ""
         var needsSpace = false
         for (key, value) in pairs {
             if value == .null || value == .undefined { continue }
-            let keyString = key.stringValue
+            let keyString = key
             // Validate key doesn't contain invalid characters
             if keyString.contains(" ") || keyString.contains("/") || keyString.contains(">")
                 || keyString.contains("=")
             {
                 throw JinjaError.runtime("Invalid character in XML attribute key: '\(keyString)'")
             }
-            let escapedValue = value.description
-                .replacingOccurrences(of: "&", with: "&amp;")
-                .replacingOccurrences(of: "<", with: "&lt;")
-                .replacingOccurrences(of: ">", with: "&gt;")
-                .replacingOccurrences(of: "\"", with: "&quot;")
+            let escapedValue =
+                namespace != nil
+                ? htmlEscape(value.description)
+                : value.description
+                    .replacingOccurrences(of: "&", with: "&amp;")
+                    .replacingOccurrences(of: "<", with: "&lt;")
+                    .replacingOccurrences(of: ">", with: "&gt;")
+                    .replacingOccurrences(of: "\"", with: "&quot;")
             if needsSpace { result += " " }
-            result += "\(keyString)=\"\(escapedValue)\""
+            let escapedKey = namespace != nil ? htmlEscape(keyString) : keyString
+            result += "\(escapedKey)=\"\(escapedValue)\""
             needsSpace = true
         }
         if autospace && !result.isEmpty {
@@ -2101,13 +2148,8 @@ public enum Filters {
 
 // MARK: -
 
-/// Gets dictionary pairs or calls a namespace's stored items attribute.
-private func mappingFilterPairs(
-    _ object: OrderedDictionary<ObjectKey, Value>,
-    env: Environment
-) throws -> [(key: ObjectKey, value: Value)] {
-    guard let namespace = Namespace.get(object) else { return Array(object) }
-
+/// Calls a namespace's items attribute without changing the returned entries.
+private func namespaceItems(_ namespace: Namespace, env: Environment) throws -> [Value] {
     let result: Value
     switch namespace.attributes["items"] {
     case let .function(function):
@@ -2117,16 +2159,36 @@ private func mappingFilterPairs(
     default:
         throw JinjaError.runtime("Namespace items attribute must be callable")
     }
+    return try namespaceIterable(result)
+}
 
-    guard case let .array(pairs) = result else {
-        throw JinjaError.runtime("Namespace items() must return key-value pairs")
+/// Iterates a namespace filter result or an entry that xmlattr must unpack.
+private func namespaceIterable(_ value: Value) throws -> [Value] {
+    switch value {
+    case let .array(values): return values
+    case let .string(string): return string.unicodeScalars.map { .string(String($0)) }
+    case let .object(object):
+        try Namespace.requireMapping(object)
+        return object.keys.map(Value.init)
+    case .undefined: return []
+    default: throw JinjaError.runtime("Namespace items must be iterable")
     }
-    return try pairs.map { pair in
-        guard case let .array(values) = pair, values.count == 2, let key = ObjectKey(values[0]) else {
-            throw JinjaError.runtime("Namespace items() must return key-value pairs")
-        }
-        return (key: key, value: values[1])
+}
+
+/// Indexes an entry as Python's dictsort key function does.
+private func namespaceSortComponent(_ entry: Value, at position: Int) throws -> Value {
+    switch entry {
+    case let .array(values):
+        if position < values.count { return values[position] }
+    case let .string(string):
+        let scalars = Array(string.unicodeScalars)
+        if position < scalars.count { return .string(String(scalars[position])) }
+    case let .object(object):
+        try Namespace.requireMapping(object)
+        if let value = object[.int(position)] { return value }
+    default: break
     }
+    throw JinjaError.runtime("dictsort entry has no component at index \(position)")
 }
 
 /// Returns the string form of a value, matching Jinja2's `soft_str`.

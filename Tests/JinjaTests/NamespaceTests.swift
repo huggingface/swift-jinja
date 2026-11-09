@@ -137,6 +137,85 @@ struct NamespaceTests {
         #expect(throws: (any Error).self) { try Template(template).render([:]) }
     }
 
+    @Test(arguments: [
+        ("{{ namespace(items={'pair': [1.5, 1]}.values)|dictsort|length }}", "null", "1"),
+        ("{{ namespace(items='ab'.split)|dictsort|length }}", "null", "1"),
+        ("{{ namespace(items='ab'.split)|dictsort }}", "null", "['ab']"),
+        ("{{ namespace(items='ab'.split)|xmlattr }}", "null", " a=\"b\""),
+        ("{% macro empty() %}{% endmacro %}{{ namespace(items=empty)|dictsort }}", "null", "[]"),
+        ("{% macro empty() %}{% endmacro %}{{ namespace(items=empty)|xmlattr }}", "null", ""),
+        ("{{ namespace(items=d)|dictsort }}", "[[1.5, 1]]", "[[1.5, 1]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[1.5, 1]]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[[1]]", "[[1]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[1]]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[[1, 2, 3]]", "[[1, 2, 3]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[1, 2, 3]]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[[]]", nil),
+        ("{{ namespace(items=d)|xmlattr }}", "[[]]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[\"ab\"]", "['ab']"),
+        ("{{ namespace(items=d)|xmlattr }}", "[\"ab\"]", " a=\"b\""),
+        ("{{ namespace(items=d)|dictsort }}", "[\"a\"]", "['a']"),
+        ("{{ namespace(items=d)|xmlattr }}", "[\"a\"]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[\"abc\"]", "['abc']"),
+        ("{{ namespace(items=d)|xmlattr }}", "[\"abc\"]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "\"ab\"", "['a', 'b']"),
+        ("{{ namespace(items=d)|xmlattr }}", "\"ab\"", nil),
+        ("{{ namespace(items=d)|dictsort }}", "\"\"", "[]"),
+        ("{{ namespace(items=d)|xmlattr }}", "\"\"", ""),
+        ("{{ namespace(items=d)|dictsort }}", "{\"ab\": 1, \"cd\": 2}", "['ab', 'cd']"),
+        ("{{ namespace(items=d)|xmlattr }}", "{\"ab\": 1, \"cd\": 2}", " a=\"b\" c=\"d\""),
+        ("{{ namespace(items=d)|dictsort }}", "{}", "[]"),
+        ("{{ namespace(items=d)|xmlattr }}", "{}", ""),
+        ("{{ namespace(items=d)|dictsort }}", "3", nil),
+        ("{{ namespace(items=d)|xmlattr }}", "3", nil),
+        ("{{ namespace(items=d)|dictsort }}", "null", nil),
+        ("{{ namespace(items=d)|xmlattr }}", "null", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[[\"a\", null], [1, null]]", nil),
+        ("{{ namespace(items=d)|xmlattr }}", "[[\"a\", null], [1, null]]", ""),
+        ("{{ namespace(items=d)|dictsort }}", "[[1, 2]]", "[[1, 2]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[1, 2]]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[[\"a\\tb\", 1]]", "[['a\\tb', 1]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[\"a\\tb\", 1]]", nil),
+        ("{{ namespace(items=d)|dictsort }}", "[[\"a b\", 1]]", "[['a\\xa0b', 1]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[\"a b\", 1]]", " a b=\"1\""),
+        ("{{ namespace(items=d)|dictsort }}", "[[\"a'&\", \"\\\"<&\"]]", "[[\"a'&\", '\"<&']]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[\"a'&\", \"\\\"<&\"]]", " a&#39;&amp;=\"&#34;&lt;&amp;\""),
+        ("{{ namespace(items=d)|dictsort }}", "[[\"a\", 1], [\"a\", 2]]", "[['a', 1], ['a', 2]]"),
+        ("{{ namespace(items=d)|xmlattr }}", "[[\"a\", 1], [\"a\", 2]]", " a=\"1\" a=\"2\""),
+        (
+            "{{ namespace(items=d)|dictsort(by='value') }}", "[[\"a\", 10], [\"B\", 2], [\"A\", 1]]",
+            "[['A', 1], ['B', 2], ['a', 10]]"
+        ),
+        (
+            "{{ namespace(items=d)|dictsort(reverse=true) }}", "[[\"a\", 10], [\"B\", 2], [\"A\", 1]]",
+            "[['B', 2], ['a', 10], ['A', 1]]"
+        ),
+        (
+            "{{ namespace(items=d)|dictsort(case_sensitive=true) }}", "[[\"a\", 10], [\"B\", 2], [\"A\", 1]]",
+            "[['A', 1], ['B', 2], ['a', 10]]"
+        ),
+        (
+            "{{ namespace(items=d)|dictsort }}", "[[\"a\", 10], [\"B\", 2], [\"A\", 1]]",
+            "[['a', 10], ['A', 1], ['B', 2]]"
+        ),
+        ("{{ namespace(items=d)|dictsort(by='other') }}", "[[\"a\", 10], [\"B\", 2], [\"A\", 1]]", nil),
+        ("{{ namespace(items=d)|dictsort(by='value') }}", "[[1]]", nil),
+        ("{{ namespace(items=d)|dictsort(by='value') }}", "[\"ab\"]", "['ab']"),
+        ("{{ namespace(items=d)|dictsort(by='value') }}", "[[1, 2, 3]]", "[[1, 2, 3]]"),
+        ("{{ namespace(items=d)|dictsort(by='value') }}", "[{\"0\": \"a\", \"1\": \"b\"}]", nil),
+    ])
+    func itemsIterableShapes(test: (String, String, String?)) throws {
+        let returned = try parseOrderedJSON(test.1)
+        let environment = Environment()
+        environment["d"] = .function { _, _, _ in returned }
+        let template = try Template(test.0)
+        if let expected = test.2 {
+            try #expect(try template.render([:], environment: environment) == expected)
+        } else {
+            #expect(throws: (any Error).self) { try template.render([:], environment: environment) }
+        }
+    }
+
     @Test("All dict method names are ordinary namespace attributes")
     func methodNames() throws {
         let namespace = try Globals.namespace(
