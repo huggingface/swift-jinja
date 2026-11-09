@@ -178,7 +178,6 @@
     {"id": "literal.strm.startswith_tuple", "cause": "str-methods", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"startswith() requires a string prefix\")"}},
     {"id": "literal.strm.endswith_tuple", "cause": "str-methods", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"endswith() requires a string suffix\")"}},
     {"id": "literal.strm.startswith_start", "cause": "str-methods", "class": "a", "swift": {"ok": true, "output": "False"}},
-    {"id": "literal.strm.title", "cause": "str-methods", "class": "a", "swift": {"ok": true, "output": "They're Bill's Friends"}},
     {"id": "literal.strm.capitalize", "cause": "str-methods", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot call non-function value\")"}},
     {"id": "literal.strm.count", "cause": "str-methods", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot call non-function value\")"}},
     {"id": "literal.strm.find", "cause": "str-methods", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot call non-function value\")"}},
