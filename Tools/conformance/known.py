@@ -329,13 +329,6 @@ def _(case, jr, sr, cls):
     return cls == "a" and "|truncate" in T(case)
 
 
-@rule("list-of-dict", "list(dict) gives values instead of keys", "harness:filters")
-def _(case, jr, sr, cls):
-    if cls == "b":
-        return re.search(r"(\bdict\([^()]*\)|\}|\bd1)\|list\b", T(case)) is not None
-    return cls == "a" and "|list" in T(case) and re.match(r"\[['\"]", JO(jr) or "") is not None
-
-
 @rule("markup-concat", "escape (and tojson in the default environment) return Markup, and Markup + str escapes the str", "accepted artifact")
 def _(case, jr, sr, cls):
     pat = r"\|(tojson|e|escape|forceescape|safe)\b" if case["mode"] == "default" else r"\|(e|escape|forceescape|safe)\b"
@@ -362,14 +355,14 @@ def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"Cannot multiply values of these types \(\[", SE(sr)) is not None
 
 
-@rule("in-undefined", "`in` with an undefined operand raises (selectattr(attr, 'in', [...]) on a missing attribute)", "new (minor)")
+@rule("in-undefined", "the 'in' test with an undefined operand raises (selectattr(attr, 'in', [...]) on a missing attribute)", "new (minor)")
 def _(case, jr, sr, cls):
-    return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None
+    return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
 @rule("undefined-tests", "tests on undefined differ (`missing is iterable`)", "new (minor)")
 def _(case, jr, sr, cls):
-    return cls == "a" and {JO(jr).strip(), SO(sr).strip()} == {"True", "False"} and re.search(r"is (not )?(iterable|sequence|callable)", T(case)) is not None
+    return cls == "a" and {JO(jr).strip(), SO(sr).strip()} == {"True", "False"} and re.search(r"is (not )?(iterable|callable)", T(case)) is not None
 
 
 @rule("chained-compare", "chained comparisons (a < b < c, a <= b != c)", "harness:operators")
@@ -387,16 +380,77 @@ def _(case, jr, sr, cls):
     return cls == "a" and "/" in T(case) and any(isinstance(v, int) and not isinstance(v, bool) and abs(v) > 2 ** 53 for v in case["context"].values())
 
 
-@rule("is-sequence", "`is sequence` is false for dicts (and undefined)", "harness:operators")
-def _(case, jr, sr, cls):
-    return cls == "a" and "is sequence" in T(case)
+def boolean_numeric_difference(case, jr, sr, cls):
+    """Recognize boolean numeric tests, including a skipped conditional body."""
+    operand = r"(?:true|false|[A-Za-z_]\w*|\('' is not defined\))"
+    integer = r"-?\d+"
+    numeric_test = rf"(?P<operand>{operand})\s+(?:is equalto\((?P<number>{integer})\)|(?P<negated>not )?in range\((?P<range>{integer}(?:,\s*{integer}){{0,2}})\))"
+
+    def result(match):
+        token = match["operand"]
+        value = {"true": True, "false": False, "('' is not defined)": False}.get(
+            token, case["context"].get(token)
+        )
+        if not isinstance(value, bool):
+            return None
+        if match["number"] is not None:
+            return value == int(match["number"]), False
+        try:
+            numbers = range(*(int(n) for n in match["range"].split(",")))
+        except ValueError:
+            return None
+        numeric = int(value) in numbers
+        strict = False
+        if match["negated"]:
+            numeric, strict = not numeric, not strict
+        return numeric, strict
+
+    if cls == "a":
+        match = re.fullmatch(rf"\{{\{{\s*\(?{numeric_test}\)?\s*\}}\}}", T(case))
+        if match is None:
+            return None
+        outcomes = result(match)
+        return outcomes is not None and outcomes[0] != outcomes[1] and (
+            JO(jr), SO(sr)
+        ) == tuple(str(value) for value in outcomes)
+    if cls == "b":
+        match = re.fullmatch(
+            rf"\{{%-? if {numeric_test} %\}}(?P<body>(?:(?!\{{%|%\}}).)*)\{{% endif %\}}(?P<tail>[^{{}}]*)",
+            T(case), re.S,
+        )
+        if match is None:
+            return None
+        outcomes = result(match)
+        branch_called_missing_method = re.search(
+            r'\{\{\s*\[\]\[-1\]\.get\(', match["body"]
+        ) is not None
+        return outcomes == (False, True) and JO(jr) == match["tail"] and (
+            branch_called_missing_method
+            and SE(sr) == 'JinjaError: runtime("Cannot call non-function value")'
+        )
+    return None
 
 
-@rule("bool-number", "booleans are not numbers in ==, in, |int, |float, |sum, `is number`, select('number')", "harness:operators")
+@rule("bool-number", "booleans are not numbers in ==, in, |float, |sum, `is number`, select('number')", "harness:operators")
 def _(case, jr, sr, cls):
-    blob = T(case) + json.dumps(case["context"])
-    has_bool = re.search(r"\b(true|false|True|False|b1|add_generation_prompt|found)\b", blob) is not None
-    return cls == "a" and has_bool and re.search(r"[=!]=|\bin\b|is (not )?(ne|eq|equalto|number|integer|gt|lt|ge|le)|\|(int|float|sum|max|min|abs|filesizeformat)|'number'|\+|-", T(case)) is not None
+    precise = boolean_numeric_difference(case, jr, sr, cls)
+    if precise is not None:
+        return precise
+    def contains_boolean(value):
+        if isinstance(value, bool):
+            return True
+        if isinstance(value, list):
+            return any(contains_boolean(item) for item in value)
+        if isinstance(value, dict):
+            return any(contains_boolean(item) for item in value.values())
+        return False
+
+    expression = re.sub(STR, "", T(case))
+    has_bool = re.search(r"\b(true|false|True|False)\b", expression) is not None or any(
+        contains_boolean(value) and re.search(rf"\b{re.escape(name)}\b", expression)
+        for name, value in case["context"].items()
+    )
+    return cls == "a" and has_bool and re.search(r"[=!]=|\bin\b|is (not )?(ne|eq|equalto|number|integer|gt|lt|ge|le)|\|(float|sum|max|min|abs|filesizeformat)|'number'|\+|-", T(case)) is not None
 
 
 @rule("tojson-positional", "a positional tojson argument is ensure_ascii in transformers' tojson but indent in swift-jinja", "new")
@@ -440,9 +494,9 @@ def _(case, jr, sr, cls):
     return cls in ("a", "b", "c") and re.search(r"\|(center|indent|truncate|wordwrap|batch|slice)\((-|0\b)", T(case)) is not None
 
 
-@rule("in-mixed-types", "`in` (and the 'in' test) raises when the container holds values of other types (`2 in ['a', 2]`)", "new")
+@rule("in-mixed-types", "the 'in' test raises when the container holds values of other types (`2 is in(['a', 2])`)", "new")
 def _(case, jr, sr, cls):
-    return cls == "b" and "Cannot compare values of different types" in SE(sr) and re.search(r"\bin\b", T(case)) is not None
+    return cls == "b" and "Cannot compare values of different types" in SE(sr) and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
 @rule("dict-kwargs-order", "dict() with keyword arguments sorts its keys instead of keeping call order", "new")
@@ -493,3 +547,8 @@ def _(case, jr, sr, cls):
 @rule("sort-none", "sort raises when it compares none with none", "new (minor)")
 def _(case, jr, sr, cls):
     return cls == "b" and "sort" in T(case) and "Cannot compare values of different types (None and None)" in SE(sr)
+
+
+@rule("sort-undefined", "sort raises when it compares undefined values, which Jinja2 treats as equal", "new (previously hidden by list-of-dict)")
+def _(case, jr, sr, cls):
+    return cls == "b" and "Cannot compare values of different types ( and )" in SE(sr) and re.search(r"\|sort\b", T(case)) is not None

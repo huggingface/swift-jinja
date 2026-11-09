@@ -4,6 +4,47 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Membership preserves shared array storage")
+    func aliasedArrayMembership() throws {
+        let function = try Template("{% set a = [range] %}{{ a in [a] }}").render([:])
+        #expect(function == "True")
+        let nan = try Template("{% set a = [n] %}{{ a in [a] }}")
+            .render(["n": .double(.nan)])
+        #expect(nan == "True")
+    }
+
+    @Test("Integer filter converts booleans directly and through map")
+    func booleanIntegerFilter() throws {
+        let result = try Template(
+            "{{ true|int }}|{{ false|int }}|{{ true|int(7) }}|{{ false|int(7) }}|{{ [true, false]|map(\"int\")|list }}"
+        ).render([:])
+        #expect(result == "1|0|1|0|[1, 0]")
+    }
+
+    @Test("Membership compares integer and floating-point values")
+    func numericMembership() throws {
+        let result = try Template(
+            "{{ 0 in values }}|{{ 0 not in values }}|{{ 1.0 in [1] }}|{{ [0] in [[0.0]] }}"
+        ).render(["values": [-0.0]])
+        #expect(result == "True|False|True|True")
+    }
+
+    @Test("Numeric membership preserves large integer precision")
+    func largeIntegerMembership() throws {
+        let result = try Template(
+            "{{ 9007199254740993 in [9007199254740992.0] }}|{{ 9007199254740992.0 in [9007199254740993] }}"
+        ).render([:])
+        #expect(result == "False|False")
+    }
+
+    @Test("Dictionaries and undefined values are sequences")
+    func dictionarySequence() throws {
+        let result = try Template(
+            "{{ {} is sequence }}|{{ {} is not sequence }}|{{ missing is sequence }}|{{ 0 is sequence }}"
+        ).render([:])
+        #expect(result == "True|False|True|False")
+    }
+
     @Test("Empty template")
     func emptyTemplate() throws {
         let string = ""

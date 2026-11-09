@@ -445,7 +445,7 @@ public enum Tests {
         return input.isDouble
     }
 
-    /// Tests if the input is a sequence (array or string).
+    /// Tests if the input supports length and indexed access.
     @Sendable public static func sequence(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -459,7 +459,7 @@ public enum Tests {
 
         guard let input = arguments["value"] else { return false }
         switch input {
-        case .array(_), .string(_):
+        case .array(_), .string(_), .object(_), .undefined:
             return true
         default:
             return false

@@ -1881,10 +1881,10 @@ struct FiltersTests {
         #expect(result == .int(0))
     }
 
-    @Test("int filter with non-convertible returns default")
-    func intFilterNonConvertible() throws {
+    @Test("int filter converts true to one")
+    func intFilterBoolean() throws {
         let result = try Filters.int([.boolean(true)], kwargs: [:], env: env)
-        #expect(result == .int(0))
+        #expect(result == .int(1))
     }
 
     @Test("int filter int passthrough")
@@ -1918,7 +1918,13 @@ struct FiltersTests {
             Issue.record("Expected array")
             return
         }
-        #expect(values.count == 2)
+        #expect(values == [.string("a"), .string("b")])
+    }
+
+    @Test("Dictionary list filter preserves key types and order")
+    func dictionaryListKeys() throws {
+        let result = try Template("{{ {'a': 10, 2: 20}|list }}|{{ {}|list }}").render([:])
+        #expect(result == "['a', 2]|[]")
     }
 
     @Test("list filter with non-string/array/object")
