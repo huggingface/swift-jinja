@@ -60,6 +60,7 @@ public enum Filters {
         case let .array(arr):
             return .int(arr.count)
         case let .object(obj):
+            try Namespace.requireMapping(obj)
             return .int(obj.count)
         case .undefined:
             return .int(0)
@@ -211,6 +212,7 @@ public enum Filters {
         case let .string(str):
             return str.randomElement().map { .string(String($0)) } ?? .undefined
         case let .object(dict):
+            try Namespace.requireMapping(dict)
             if dict.isEmpty { return .undefined }
             let randomIndex = dict.keys.indices.randomElement()!
             let randomKey = dict.keys[randomIndex]
@@ -296,8 +298,8 @@ public enum Filters {
                 var sorted = items
                 for attr in attributes.reversed() {
                     sorted = try stableSorted(sorted) { a, b in
-                        let aValue = try PropertyMembers.evaluate(a, String(attr))
-                        let bValue = try PropertyMembers.evaluate(b, String(attr))
+                        let aValue = try resolveAttributeValue(a, attribute: .string(String(attr)))
+                        let bValue = try resolveAttributeValue(b, attribute: .string(String(attr)))
                         return try compare(aValue, bValue)
                     }
                 }
@@ -352,7 +354,7 @@ public enum Filters {
         }
 
         let keyedItems: [(item: Value, displayKey: Value, normalized: Value)] = try items.map {
-            let rawKey = try PropertyMembers.evaluate($0, attribute)
+            let rawKey = try resolveAttributeValue($0, attribute: .string(attribute))
             let displayKey = rawKey == .undefined && defaultValue != .null ? defaultValue : rawKey
             return (item: $0, displayKey: displayKey, normalized: normalizedKey(displayKey))
         }
@@ -554,7 +556,7 @@ public enum Filters {
         let testArgs = Array(args.dropFirst(2))
         return try .array(
             items.filter {
-                let attrValue = try PropertyMembers.evaluate($0, attribute)
+                let attrValue = try resolveAttributeValue($0, attribute: .string(attribute))
                 guard case let .string(testName) = arguments["testname"] else {
                     return attrValue.isTruthy
                 }
@@ -594,7 +596,7 @@ public enum Filters {
         let testArgs = Array(args.dropFirst(2))
         return try .array(
             items.filter {
-                let attrValue = try PropertyMembers.evaluate($0, attribute)
+                let attrValue = try resolveAttributeValue($0, attribute: .string(attribute))
                 guard case let .string(testName) = arguments["testname"] else {
                     return !attrValue.isTruthy
                 }
@@ -643,6 +645,8 @@ public enum Filters {
         guard case let .object(dict) = args.first else {
             return .array([])
         }
+
+        try Namespace.requireMapping(dict)
 
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
@@ -971,6 +975,7 @@ public enum Filters {
         guard let value = args.first, case let .object(dict) = value else {
             return .string("")
         }
+        try Namespace.requireMapping(dict)
 
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
@@ -1316,6 +1321,7 @@ public enum Filters {
         case let .string(str):
             return .array(str.map { .string(String($0)) })
         case let .object(dict):
+            try Namespace.requireMapping(dict)
             return .array(dict.keys.map(Value.init))
         default:
             return .array([])
@@ -1341,8 +1347,8 @@ public enum Filters {
 
         if case let .string(attribute) = arguments["attribute"] {
             return try items.max(by: { a, b in
-                let aValue = try PropertyMembers.evaluate(a, attribute)
-                let bValue = try PropertyMembers.evaluate(b, attribute)
+                let aValue = try resolveAttributeValue(a, attribute: .string(attribute))
+                let bValue = try resolveAttributeValue(b, attribute: .string(attribute))
                 return try compareValues(aValue, bValue, caseSensitive: caseSensitive) < 0
             }) ?? .undefined
         } else {
@@ -1375,8 +1381,8 @@ public enum Filters {
 
         if case let .string(attribute) = arguments["attribute"] {
             return try items.min(by: { a, b in
-                let aValue = try PropertyMembers.evaluate(a, attribute)
-                let bValue = try PropertyMembers.evaluate(b, attribute)
+                let aValue = try resolveAttributeValue(a, attribute: .string(attribute))
+                let bValue = try resolveAttributeValue(b, attribute: .string(attribute))
                 return try compareValues(aValue, bValue, caseSensitive: caseSensitive) < 0
             }) ?? .undefined
         } else {
@@ -1569,6 +1575,7 @@ public enum Filters {
             return .string(s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
         }
         if case .object(let dict) = value {
+            try Namespace.requireMapping(dict)
             var components = URLComponents()
             components.queryItems = dict.map { key, value in
                 URLQueryItem(name: key.stringValue, value: value.description)
@@ -1642,7 +1649,7 @@ public enum Filters {
         let valuesToSum: [Value]
         if case let .string(attribute) = arguments["attribute"] {
             valuesToSum = try items.map { item in
-                try PropertyMembers.evaluate(item, attribute)
+                try resolveAttributeValue(item, attribute: .string(attribute))
             }
         } else {
             valuesToSum = items
@@ -1832,6 +1839,7 @@ public enum Filters {
         )
 
         if case let .object(obj) = value {
+            try Namespace.requireMapping(obj)
             let pairs = obj.map { key, value in
                 Value.array([Value(key), value])
             }
@@ -1865,6 +1873,7 @@ public enum Filters {
                 return "[\n" + items.map { "\(indentString)  \($0)" }.joined(separator: ",\n")
                     + "\n\(indentString)]"
             case let .object(dict):
+                if Namespace.get(dict) != nil { return val.description }
                 if dict.isEmpty { return "{}" }
                 let items = dict.map { key, value in
                     "\(indentString)  \"\(key.stringValue)\": \(prettyPrint(value, indent: indent + 1))"
@@ -2138,6 +2147,11 @@ private func htmlEscape(_ string: String) -> String {
 private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Value {
     switch attribute {
     case let .string(name):
+        if case let .object(object) = item,
+            let value = (Namespace.get(object)?.attributes ?? object)[.string(name)]
+        {
+            return value
+        }
         return try PropertyMembers.evaluate(item, name)
     case let .int(index):
         switch item {
@@ -2147,7 +2161,8 @@ private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Va
             }
             return .undefined
         case let .object(values):
-            return values[.int(index)] ?? values[.string(String(index))] ?? .undefined
+            let attributes = Namespace.get(values)?.attributes ?? values
+            return attributes[.int(index)] ?? attributes[.string(String(index))] ?? .undefined
         default:
             return .undefined
         }

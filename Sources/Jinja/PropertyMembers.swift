@@ -18,6 +18,9 @@ enum PropertyMembers {
         case let .string(str):
             return try evaluateStringProperty(str, propertyName)
         case let .object(obj):
+            if let namespace = Namespace.get(obj) {
+                return namespace.attributes[.string(propertyName)] ?? .undefined
+            }
             return try evaluateObjectProperty(obj, propertyName)
         default:
             return .undefined
@@ -263,6 +266,7 @@ enum PropertyMembers {
                 case let .string(string):
                     items = string.unicodeScalars.map { .string(String($0)) }
                 case let .object(object):
+                    try Namespace.requireMapping(object)
                     items = object.keys.map(Value.init)
                 case .undefined:
                     items = []

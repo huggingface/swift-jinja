@@ -273,7 +273,7 @@ struct GlobalsTests {
             #expect(Bool(false), "Expected object result")
             return
         }
-        #expect(obj["x"] == .int(1))
+        #expect(Namespace.get(obj)?.attributes["x"] == .int(1))
     }
 
     @Test("namespace result has deterministic key ordering")
@@ -294,7 +294,7 @@ struct GlobalsTests {
                 #expect(Bool(false), "Expected object result")
                 continue
             }
-            #expect(Array(obj.keys) == ["is_urgent", "priority", "text"])
+            #expect(Array(try #require(Namespace.get(obj)).attributes.keys) == ["is_urgent", "priority", "text"])
         }
     }
 

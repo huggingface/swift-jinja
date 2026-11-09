@@ -191,6 +191,7 @@ public enum Value: Sendable {
 
     /// Returns `true` if this value can be iterated over (array, object, or string).
     public var isIterable: Bool {
+        if namespace != nil { return false }
         switch self {
         case .array, .object, .string: return true
         default: return false
@@ -446,6 +447,7 @@ public enum Value: Sendable {
             guard !substr.isEmpty else { return true }  // '' in 'abc' -> true
             return str.contains(substr)
         case let .object(dict):
+            try Namespace.requireMapping(dict)
             guard let key = ObjectKey(self) else { return false }
             return dict.keys.contains(key)
 
@@ -487,6 +489,8 @@ public enum Value: Sendable {
             guard a.count == b.count else { return false }
             return zip(a, b).allSatisfy { $0.isEquivalent(to: $1) }
         case let (.object(a), .object(b)):
+            if let namespace = Namespace.get(a) { return namespace == Namespace.get(b) }
+            if Namespace.get(b) != nil { return false }
             guard a.count == b.count else { return false }
             for ((keyA, valueA), (keyB, valueB)) in zip(a, b) {
                 if keyA != keyB || !valueA.isEquivalent(to: valueB) {
@@ -541,6 +545,9 @@ extension Value: CustomStringConvertible {
         case .array(let a):
             return "[\(a.map(\.pythonRepr).joined(separator: ", "))]"
         case .object(let o):
+            if let namespace = Namespace.get(o) {
+                return "<Namespace \(Value.object(namespace.attributes).pythonRepr)>"
+            }
             return "{\(o.map { "\(Value($0.key).pythonRepr): \($0.value.pythonRepr)" }.joined(separator: ", "))}"
         case .function: return description
         case .macro(let m): return "<Macro \(m.name.pythonRepr)>"
@@ -622,7 +629,10 @@ extension Value: Equatable {
         case (.null, .null): return true
         case (.undefined, .undefined): return true
         case let (.array(lhs), .array(rhs)): return lhs == rhs
-        case let (.object(lhs), .object(rhs)): return lhs == rhs
+        case let (.object(lhs), .object(rhs)):
+            if let namespace = Namespace.get(lhs) { return namespace == Namespace.get(rhs) }
+            if Namespace.get(rhs) != nil { return false }
+            return lhs == rhs
         case (.function, .function): return false
         case let (.macro(lhs), .macro(rhs)): return lhs == rhs
         default: return false
@@ -643,7 +653,12 @@ extension Value: Hashable {
         case .null: hasher.combine(0)
         case .undefined: hasher.combine(0)
         case let .array(value): hasher.combine(value)
-        case let .object(value): hasher.combine(value)
+        case let .object(value):
+            if let namespace = Namespace.get(value) {
+                hasher.combine(namespace)
+            } else {
+                hasher.combine(value)
+            }
         case .function: hasher.combine(0)
         case .macro(let m): hasher.combine(m)
         }
@@ -656,6 +671,7 @@ extension Value: Encodable {
     public func encode(to encoder: Encoder) throws {
         switch self {
         case let .object(value):
+            try Namespace.requireMapping(value)
             var keyedContainer = encoder.container(keyedBy: ObjectKey.self)
             var seenStringValues: Set<String> = []
             for key in value.keys.sorted() {

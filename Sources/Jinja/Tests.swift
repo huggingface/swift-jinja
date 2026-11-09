@@ -324,7 +324,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isObject
+        return input.isObject && input.namespace == nil
     }
 
     /// Tests if the input is callable (function or macro).
@@ -458,6 +458,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
+        guard input.namespace == nil else { return false }
         switch input {
         case .array(_), .string(_), .object(_), .undefined:
             return true
@@ -559,6 +560,7 @@ public enum Tests {
             }
             return false
         case let .object(dict):
+            try Namespace.requireMapping(dict)
             if let key = ObjectKey(input) {
                 return dict[key] != nil
             }
