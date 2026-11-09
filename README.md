@@ -18,7 +18,7 @@ Add the following to your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/huggingface/swift-jinja.git", from: "2.0.0")
+    .package(url: "https://github.com/huggingface/swift-jinja.git", from: "3.0.0")
 ]
 ```
 
@@ -259,34 +259,6 @@ let context: [String: Value] = [
 let result = try template.render(context)
 // "Welcome, Alice!\nYou have 3 new messages."
 ```
-
-> [!IMPORTANT]  
-> **Migrating to Jinja v2.0**:
-> Most code using Jinja v1 should work with v2 with minimal changes.
-> The biggest breaking change is that the context parameter for rendering templates
-> has changed from `[String: Any]` to `[String: Value]`.
->
-> Thanks to `Value` being expressible by literals,
-> existing code may work as-is.
-> You can also try the `Value(any:)` constructor
-> to automatically convert complex values:
->
-> ```swift
-> // Create template and context
-> let template = try Template("Hello {{ user.name }}!")
->
-> var context: [String: Value] = [
->     // Use literals:
->     "user": ["name": "Alice"],
-> ]
->
-> // ...or convert from Any value:
-> let settings: [String: Any] = ["theme": "dark", "notifications": true]
-> context["settings"] = try Value(any: settings)
->
-> let result = try template.render(context)
-> // "Hello Alice!"
-> ```
 
 ### Control Flow
 
