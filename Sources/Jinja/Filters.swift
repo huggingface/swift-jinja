@@ -1574,8 +1574,11 @@ public enum Filters {
         if case let .string(s) = value {
             return .string(s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")
         }
+        if value.namespace != nil {
+            let safe = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/")
+            return .string(value.description.addingPercentEncoding(withAllowedCharacters: safe) ?? "")
+        }
         if case .object(let dict) = value {
-            try Namespace.requireMapping(dict)
             var components = URLComponents()
             components.queryItems = dict.map { key, value in
                 URLQueryItem(name: key.stringValue, value: value.description)

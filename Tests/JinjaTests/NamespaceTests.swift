@@ -44,7 +44,6 @@ struct NamespaceTests {
         "{% set n = namespace(a=1) %}{{ n|items|list }}",
         "{% set n = namespace(a=1) %}{{ n|dictsort }}",
         "{% set n = namespace(a=1) %}{{ n|xmlattr }}",
-        "{% set n = namespace(a=1) %}{{ n|urlencode }}",
         "{% set n = namespace(a=1) %}{{ n|random }}",
         "{% set n = namespace(a=1) %}{{ 'a' in n }}",
         "{% set n = namespace(a=1) %}{{ ','.join(n) }}",
@@ -93,6 +92,31 @@ struct NamespaceTests {
     ])
     func mergedBehavior(test: (String, String)) throws {
         #expect(try Template(test.0).render([:]) == test.1)
+    }
+
+    @Test(arguments: [
+        ("{% set n = namespace() %}{{ n|urlencode }}", "%3CNamespace%20%7B%7D%3E"),
+        ("{% set n = namespace(a=1) %}{{ n|urlencode }}", "%3CNamespace%20%7B%27a%27%3A%201%7D%3E"),
+        (
+            "{% set n = namespace(path='a/b?x=1&y=é ~') %}{{ n|urlencode }}",
+            "%3CNamespace%20%7B%27path%27%3A%20%27a/b%3Fx%3D1%26y%3D%C3%A9%20~%27%7D%3E"
+        ),
+    ])
+    func urlencode(test: (String, String)) throws {
+        #expect(try Template(test.0).render([:]) == test.1)
+    }
+
+    @Test("Namespace URL quoting preserves existing string and dict behavior")
+    func urlencodeOtherValues() throws {
+        let environment = Environment()
+        #expect(
+            try Filters.urlencode([.string("<Namespace {'a': 1}>")], env: environment)
+                == .string("%3CNamespace%20%7B'a':%201%7D%3E")
+        )
+        #expect(
+            try Filters.urlencode([.object(["a": .string("x/y & z")])], env: environment)
+                == .string("a=x/y%20%26%20z")
+        )
     }
 
     @Test("All dict method names are ordinary namespace attributes")
