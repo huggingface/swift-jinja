@@ -18,6 +18,10 @@ class BooleanNumericTests(unittest.TestCase):
         self.assertTrue(self.matches("{{ true in range(1, 4) }}"))
         self.assertTrue(self.matches("{{ flag in range(1, 4) }}", {"flag": True}))
 
+    def test_existing_nested_boolean_filters(self):
+        self.assertTrue(self.matches("{{ l1|select('number')|list }}", {"l1": [True]}, "[True]", "[]"))
+        self.assertFalse(self.matches("{{ l1|select('number')|list }}", {"l1": ["true"]}, "[True]", "[]"))
+
     def test_skipped_boolean_branch(self):
         template = '{%- if flag not in range(1, 4) %}{{ [][-1].get("k", {}) }}]\n{% endif %} | '
         self.assertTrue(self.matches(template, {"flag": True}, " | ", "ERROR", "b"))

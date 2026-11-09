@@ -437,9 +437,18 @@ def _(case, jr, sr, cls):
     precise = boolean_numeric_difference(case, jr, sr, cls)
     if precise is not None:
         return precise
+    def contains_boolean(value):
+        if isinstance(value, bool):
+            return True
+        if isinstance(value, list):
+            return any(contains_boolean(item) for item in value)
+        if isinstance(value, dict):
+            return any(contains_boolean(item) for item in value.values())
+        return False
+
     expression = re.sub(STR, "", T(case))
     has_bool = re.search(r"\b(true|false|True|False)\b", expression) is not None or any(
-        isinstance(value, bool) and re.search(rf"\b{re.escape(name)}\b", expression)
+        contains_boolean(value) and re.search(rf"\b{re.escape(name)}\b", expression)
         for name, value in case["context"].items()
     )
     return cls == "a" and has_bool and re.search(r"[=!]=|\bin\b|is (not )?(ne|eq|equalto|number|integer|gt|lt|ge|le)|\|(int|float|sum|max|min|abs|filesizeformat)|'number'|\+|-", T(case)) is not None
