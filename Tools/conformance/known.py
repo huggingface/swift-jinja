@@ -387,15 +387,61 @@ def _(case, jr, sr, cls):
     return cls == "a" and "/" in T(case) and any(isinstance(v, int) and not isinstance(v, bool) and abs(v) > 2 ** 53 for v in case["context"].values())
 
 
-@rule("is-sequence", "`is sequence` is false for dicts (and undefined)", "harness:operators")
-def _(case, jr, sr, cls):
-    return cls == "a" and "is sequence" in T(case)
+def boolean_numeric_difference(case, jr, sr, cls):
+    """Recognize boolean numeric tests, including a skipped conditional body."""
+    operand = r"(?:true|false|[A-Za-z_]\w*|\('' is not defined\))"
+    integer = r"-?\d+"
+    numeric_test = rf"(?P<operand>{operand})\s+(?:is equalto\((?P<number>{integer})\)|(?P<negated>not )?in range\((?P<range>{integer}(?:,\s*{integer}){{0,2}})\))"
+
+    def result(match):
+        token = match["operand"]
+        value = {"true": True, "false": False, "('' is not defined)": False}.get(
+            token, case["context"].get(token)
+        )
+        if not isinstance(value, bool):
+            return None
+        if match["number"] is not None:
+            return value == int(match["number"]), False
+        try:
+            numbers = range(*(int(n) for n in match["range"].split(",")))
+        except ValueError:
+            return None
+        numeric = int(value) in numbers
+        strict = False
+        if match["negated"]:
+            numeric, strict = not numeric, not strict
+        return numeric, strict
+
+    if cls == "a":
+        match = re.fullmatch(rf"\{{\{{\s*\(?{numeric_test}\)?\s*\}}\}}", T(case))
+        if match is None:
+            return None
+        outcomes = result(match)
+        return outcomes is not None and outcomes[0] != outcomes[1] and (
+            JO(jr), SO(sr)
+        ) == tuple(str(value) for value in outcomes)
+    if cls == "b":
+        match = re.fullmatch(
+            rf"\{{%-? if {numeric_test} %\}}(?P<body>(?:(?!\{{%|%\}}).)*)\{{% endif %\}}(?P<tail>[^{{}}]*)",
+            T(case), re.S,
+        )
+        if match is None:
+            return None
+        outcomes = result(match)
+        return outcomes == (False, True) and JO(jr) == match["tail"]
+    return None
 
 
 @rule("bool-number", "booleans are not numbers in ==, in, |int, |float, |sum, `is number`, select('number')", "harness:operators")
 def _(case, jr, sr, cls):
-    blob = T(case) + json.dumps(case["context"])
-    has_bool = re.search(r"\b(true|false|True|False|b1|add_generation_prompt|found)\b", blob) is not None
+    precise = boolean_numeric_difference(case, jr, sr, cls)
+    if precise is not None:
+        return precise
+    expression = re.sub(STR, "", T(case))
+    has_bool = re.search(r"\b(true|false|True|False)\b", expression) is not None or any(
+        isinstance(value, bool) and re.search(rf"\b{re.escape(name)}\b", expression)
+        for name, value in case["context"].items()
+    )
     return cls == "a" and has_bool and re.search(r"[=!]=|\bin\b|is (not )?(ne|eq|equalto|number|integer|gt|lt|ge|le)|\|(int|float|sum|max|min|abs|filesizeformat)|'number'|\+|-", T(case)) is not None
 
 
