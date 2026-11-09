@@ -4,6 +4,15 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Membership preserves shared array storage")
+    func aliasedArrayMembership() throws {
+        let function = try Template("{% set a = [range] %}{{ a in [a] }}").render([:])
+        #expect(function == "True")
+        let nan = try Template("{% set a = [n] %}{{ a in [a] }}")
+            .render(["n": .double(.nan)])
+        #expect(nan == "True")
+    }
+
     @Test("Integer filter converts booleans directly and through map")
     func booleanIntegerFilter() throws {
         let result = try Template(

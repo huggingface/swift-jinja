@@ -440,7 +440,7 @@ public enum Value: Sendable {
         case .null:
             return false
         case let .array(items):
-            return items.contains { self.isEquivalent(to: $0) }
+            return items.contains { self == $0 || self.isEquivalent(to: $0) }
         case let .string(str):
             guard case let .string(substr) = self else { return false }
             guard !substr.isEmpty else { return true }  // '' in 'abc' -> true

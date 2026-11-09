@@ -428,11 +428,17 @@ def boolean_numeric_difference(case, jr, sr, cls):
         if match is None:
             return None
         outcomes = result(match)
-        return outcomes == (False, True) and JO(jr) == match["tail"]
+        branch_called_missing_method = re.search(
+            r'\{\{\s*\[\]\[-1\]\.get\(', match["body"]
+        ) is not None
+        return outcomes == (False, True) and JO(jr) == match["tail"] and (
+            branch_called_missing_method
+            and SE(sr) == 'JinjaError: runtime("Cannot call non-function value")'
+        )
     return None
 
 
-@rule("bool-number", "booleans are not numbers in ==, in, |int, |float, |sum, `is number`, select('number')", "harness:operators")
+@rule("bool-number", "booleans are not numbers in ==, in, |float, |sum, `is number`, select('number')", "harness:operators")
 def _(case, jr, sr, cls):
     precise = boolean_numeric_difference(case, jr, sr, cls)
     if precise is not None:
