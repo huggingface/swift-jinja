@@ -42,8 +42,6 @@ struct NamespaceTests {
         "{% set n = namespace(a=1) %}{{ [n]|tojson }}",
         "{% set n = namespace(a=1) %}{{ n|list }}",
         "{% set n = namespace(a=1) %}{{ n|items|list }}",
-        "{% set n = namespace(a=1) %}{{ n|dictsort }}",
-        "{% set n = namespace(a=1) %}{{ n|xmlattr }}",
         "{% set n = namespace(a=1) %}{{ n|random }}",
         "{% set n = namespace(a=1) %}{{ 'a' in n }}",
         "{% set n = namespace(a=1) %}{{ ','.join(n) }}",
@@ -117,6 +115,26 @@ struct NamespaceTests {
             try Filters.urlencode([.object(["a": .string("x/y & z")])], env: environment)
                 == .string("a=x/y%20%26%20z")
         )
+    }
+
+    @Test(arguments: [
+        ("{{ namespace(items={'a': 1}.items)|dictsort|length }}", "1"),
+        ("{{ namespace(items={'a': 1}.items)|xmlattr }}", " a=\"1\""),
+        ("{{ namespace(items={'a': 1, 'b': 2}.items)|dictsort(reverse=true)|first|first }}", "b"),
+        ("{{ namespace(items={'a': 1}.items)|xmlattr(false) }}", "a=\"1\""),
+    ])
+    func callableItemsFilters(test: (String, String)) throws {
+        #expect(try Template(test.0).render([:]) == test.1)
+    }
+
+    @Test(arguments: [
+        "{{ namespace(a=1)|dictsort }}",
+        "{{ namespace(items=[1])|dictsort }}",
+        "{{ namespace(a=1)|xmlattr }}",
+        "{{ namespace(items=[1])|xmlattr }}",
+    ])
+    func rejectsNonCallableItems(template: String) throws {
+        #expect(throws: (any Error).self) { try Template(template).render([:]) }
     }
 
     @Test("All dict method names are ordinary namespace attributes")

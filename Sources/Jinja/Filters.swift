@@ -646,7 +646,7 @@ public enum Filters {
             return .array([])
         }
 
-        try Namespace.requireMapping(dict)
+        let pairs = try mappingFilterPairs(dict, env: env)
 
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
@@ -670,7 +670,7 @@ public enum Filters {
 
         let sortedPairs: [(key: ObjectKey, value: Value)]
         if by == "value" {
-            sortedPairs = dict.sorted { a, b in
+            sortedPairs = pairs.sorted { a, b in
                 let comparison =
                     caseSensitive
                     ? a.value.description.compare(b.value.description)
@@ -678,7 +678,7 @@ public enum Filters {
                 return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
             }
         } else {
-            sortedPairs = dict.sorted { a, b in
+            sortedPairs = pairs.sorted { a, b in
                 let comparison = a.key.compare(b.key, options: caseSensitive ? [] : [.caseInsensitive])
                 return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
             }
@@ -975,7 +975,7 @@ public enum Filters {
         guard let value = args.first, case let .object(dict) = value else {
             return .string("")
         }
-        try Namespace.requireMapping(dict)
+        let pairs = try mappingFilterPairs(dict, env: env)
 
         let arguments = try resolveCallArguments(
             args: Array(args.dropFirst()),
@@ -987,7 +987,7 @@ public enum Filters {
         let autospace = arguments["autospace"]!.isTruthy
         var result = ""
         var needsSpace = false
-        for (key, value) in dict {
+        for (key, value) in pairs {
             if value == .null || value == .undefined { continue }
             let keyString = key.stringValue
             // Validate key doesn't contain invalid characters
@@ -2100,6 +2100,34 @@ public enum Filters {
 }
 
 // MARK: -
+
+/// Gets dictionary pairs or calls a namespace's stored items attribute.
+private func mappingFilterPairs(
+    _ object: OrderedDictionary<ObjectKey, Value>,
+    env: Environment
+) throws -> [(key: ObjectKey, value: Value)] {
+    guard let namespace = Namespace.get(object) else { return Array(object) }
+
+    let result: Value
+    switch namespace.attributes["items"] {
+    case let .function(function):
+        result = try function([], [:], env)
+    case let .macro(macro):
+        result = try Interpreter.callMacro(macro: macro, arguments: [], keywordArguments: [:], env: env)
+    default:
+        throw JinjaError.runtime("Namespace items attribute must be callable")
+    }
+
+    guard case let .array(pairs) = result else {
+        throw JinjaError.runtime("Namespace items() must return key-value pairs")
+    }
+    return try pairs.map { pair in
+        guard case let .array(values) = pair, values.count == 2, let key = ObjectKey(values[0]) else {
+            throw JinjaError.runtime("Namespace items() must return key-value pairs")
+        }
+        return (key: key, value: values[1])
+    }
+}
 
 /// Returns the string form of a value, matching Jinja2's `soft_str`.
 ///
