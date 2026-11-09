@@ -47,5 +47,43 @@ class BooleanNumericTests(unittest.TestCase):
         self.assertFalse(self.matches("{{ true in range(1, 4) }}", jinja="unrelated"))
 
 
+class FixedDifferenceTests(unittest.TestCase):
+    def label(self, template, jinja, swift, context=None, cls="a"):
+        case = {"template": template, "context": context or {}, "mode": "default", "options": {}}
+        return known.label(case, {"ok": True, "output": jinja},
+                           {"ok": True, "output": swift} if cls == "a"
+                           else {"ok": False, "error": swift}, cls)
+
+    def test_dictionary_list_regression_is_unlabeled(self):
+        self.assertIsNone(self.label("{{ {'a': 10}|list }}", "['a']", "[10]"))
+        self.assertIsNone(self.label("{{ {'a': 10}|list }}", "['a']",
+                                    'JinjaError: runtime("Unrelated failure")', cls="b"))
+
+    def test_sort_missing_attributes_keeps_its_own_label(self):
+        error = 'JinjaError: runtime("Cannot compare values of different types ( and )")'
+        self.assertEqual(self.label("{{ {'a': 1, 'b': 2}|list|sort(attribute='k') }}",
+                                    "['a', 'b']", error, cls="b"), "sort-undefined")
+        self.assertEqual(self.label("{{ [missing, missing]|sort }}",
+                                    "[Undefined, Undefined]", error, cls="b"), "sort-undefined")
+        self.assertIsNone(self.label("{{ {'a': 1}|list }}", "['a']", error, cls="b"))
+
+    def test_other_fixed_differences_are_unlabeled(self):
+        self.assertIsNone(self.label("{{ true|int }}", "1", "0"))
+        self.assertIsNone(self.label("{{ missing is sequence }}", "True", "False"))
+        self.assertIsNone(self.label("{{ 2 in ['a', 2] }}", "True",
+                                    'JinjaError: runtime("Cannot compare values of different types (a and 2)")', cls="b"))
+
+    def test_undefined_membership_operator_is_fixed(self):
+        error = 'JinjaError: runtime("Cannot compare values of different types (1 and )")'
+        self.assertIsNone(self.label("{{ missing in [1] }}", "False", error, cls="b"))
+        self.assertEqual(self.label("{{ missing is in([1]) }}", "False", error, cls="b"),
+                         "in-undefined")
+
+    def test_in_test_difference_remains_labeled(self):
+        self.assertEqual(self.label("{{ 2 is in(['a', 2]) }}", "True",
+                                    'JinjaError: runtime("Cannot compare values of different types (a and 2)")', cls="b"),
+                         "in-mixed-types")
+
+
 if __name__ == "__main__":
     unittest.main()

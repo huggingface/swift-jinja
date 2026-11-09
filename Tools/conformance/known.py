@@ -329,13 +329,6 @@ def _(case, jr, sr, cls):
     return cls == "a" and "|truncate" in T(case)
 
 
-@rule("list-of-dict", "list(dict) gives values instead of keys", "harness:filters")
-def _(case, jr, sr, cls):
-    if cls == "b":
-        return re.search(r"(\bdict\([^()]*\)|\}|\bd1)\|list\b", T(case)) is not None
-    return cls == "a" and "|list" in T(case) and re.match(r"\[['\"]", JO(jr) or "") is not None
-
-
 @rule("markup-concat", "escape (and tojson in the default environment) return Markup, and Markup + str escapes the str", "accepted artifact")
 def _(case, jr, sr, cls):
     pat = r"\|(tojson|e|escape|forceescape|safe)\b" if case["mode"] == "default" else r"\|(e|escape|forceescape|safe)\b"
@@ -362,14 +355,14 @@ def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"Cannot multiply values of these types \(\[", SE(sr)) is not None
 
 
-@rule("in-undefined", "`in` with an undefined operand raises (selectattr(attr, 'in', [...]) on a missing attribute)", "new (minor)")
+@rule("in-undefined", "the 'in' test with an undefined operand raises (selectattr(attr, 'in', [...]) on a missing attribute)", "new (minor)")
 def _(case, jr, sr, cls):
-    return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None
+    return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
 @rule("undefined-tests", "tests on undefined differ (`missing is iterable`)", "new (minor)")
 def _(case, jr, sr, cls):
-    return cls == "a" and {JO(jr).strip(), SO(sr).strip()} == {"True", "False"} and re.search(r"is (not )?(iterable|sequence|callable)", T(case)) is not None
+    return cls == "a" and {JO(jr).strip(), SO(sr).strip()} == {"True", "False"} and re.search(r"is (not )?(iterable|callable)", T(case)) is not None
 
 
 @rule("chained-compare", "chained comparisons (a < b < c, a <= b != c)", "harness:operators")
@@ -457,7 +450,7 @@ def _(case, jr, sr, cls):
         contains_boolean(value) and re.search(rf"\b{re.escape(name)}\b", expression)
         for name, value in case["context"].items()
     )
-    return cls == "a" and has_bool and re.search(r"[=!]=|\bin\b|is (not )?(ne|eq|equalto|number|integer|gt|lt|ge|le)|\|(int|float|sum|max|min|abs|filesizeformat)|'number'|\+|-", T(case)) is not None
+    return cls == "a" and has_bool and re.search(r"[=!]=|\bin\b|is (not )?(ne|eq|equalto|number|integer|gt|lt|ge|le)|\|(float|sum|max|min|abs|filesizeformat)|'number'|\+|-", T(case)) is not None
 
 
 @rule("tojson-positional", "a positional tojson argument is ensure_ascii in transformers' tojson but indent in swift-jinja", "new")
@@ -501,9 +494,9 @@ def _(case, jr, sr, cls):
     return cls in ("a", "b", "c") and re.search(r"\|(center|indent|truncate|wordwrap|batch|slice)\((-|0\b)", T(case)) is not None
 
 
-@rule("in-mixed-types", "`in` (and the 'in' test) raises when the container holds values of other types (`2 in ['a', 2]`)", "new")
+@rule("in-mixed-types", "the 'in' test raises when the container holds values of other types (`2 is in(['a', 2])`)", "new")
 def _(case, jr, sr, cls):
-    return cls == "b" and "Cannot compare values of different types" in SE(sr) and re.search(r"\bin\b", T(case)) is not None
+    return cls == "b" and "Cannot compare values of different types" in SE(sr) and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
 @rule("dict-kwargs-order", "dict() with keyword arguments sorts its keys instead of keeping call order", "new")
@@ -554,3 +547,8 @@ def _(case, jr, sr, cls):
 @rule("sort-none", "sort raises when it compares none with none", "new (minor)")
 def _(case, jr, sr, cls):
     return cls == "b" and "sort" in T(case) and "Cannot compare values of different types (None and None)" in SE(sr)
+
+
+@rule("sort-undefined", "sort raises when it compares undefined values, which Jinja2 treats as equal", "new (previously hidden by list-of-dict)")
+def _(case, jr, sr, cls):
+    return cls == "b" and "Cannot compare values of different types ( and )" in SE(sr) and re.search(r"\|sort\b", T(case)) is not None
