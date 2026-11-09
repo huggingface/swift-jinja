@@ -553,7 +553,7 @@ struct TestsTests {
             kwargs: [:],
             env: env
         )
-        #expect(result == false)
+        #expect(result == true)
     }
 
     @Test("escaped test")

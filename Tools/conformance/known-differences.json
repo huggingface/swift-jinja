@@ -125,7 +125,6 @@
     {"id": "literal.op.chain_gt", "cause": "operators", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (True and 1)\")"}},
     {"id": "literal.op.chain_lt_false", "cause": "operators", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (True and 2)\")"}},
     {"id": "literal.op.chain_eq", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
-    {"id": "literal.op.int_in_floats", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "literal.op.is_binds_tight", "cause": "operators", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot add values of different types (1 and False)\")"}},
     {"id": "literal.op.eq_int_bool", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "literal.op.eq_zero_false", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
@@ -203,7 +202,6 @@
     {"id": "literal.f.map_attr_dotted", "cause": "filters", "class": "a", "swift": {"ok": true, "output": ""}},
     {"id": "literal.f.map_attr_index", "cause": "filters", "class": "a", "swift": {"ok": true, "output": ""}},
     {"id": "literal.f.groupby_tuple", "cause": "filters", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot unpack object into 2 loop variables\")"}},
-    {"id": "literal.f.list_dict", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "[1, 2]"}},
     {"id": "literal.f.format_float", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "%.2f"}},
     {"id": "literal.f.format_named", "cause": "filters", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Unexpected keyword argument \\'a\\' for filter.\")"}},
     {"id": "literal.f.format_d", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "%d items"}},
@@ -211,7 +209,6 @@
     {"id": "literal.f.pprint", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "{\n  \"a\": [\n    1\n  ]\n}"}},
     {"id": "literal.f.urlencode", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "a%20b&c"}},
     {"id": "literal.t.bool_is_number", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
-    {"id": "literal.t.dict_is_sequence", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "literal.t.sameas_none", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (None and None)\")"}},
     {"id": "literal.t.sameas_true", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (1 and True)\")"}},
     {"id": "literal.t.filter", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: parser(\"Expected test name but found filter.\")"}},
@@ -322,7 +319,6 @@
     {"id": "pallets.test_tests.py::TestTestsCase::test_types[false is number-True]#0", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_types[true is number-True]#0", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_types[(10 ** 100) is number-True]#0", "cause": "bigint", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Integer overflow in 10 ** 100\")"}},
-    {"id": "pallets.test_tests.py::TestTestsCase::test_types[{} is sequence-True]#0", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_sameas#0", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (False and False)\")"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_no_paren_for_arg1#0", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (None and None)\")"}}
   ]

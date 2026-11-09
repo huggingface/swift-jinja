@@ -1259,6 +1259,8 @@ public enum Filters {
         switch value {
         case let .int(i):
             return .int(i)
+        case let .boolean(value):
+            return .int(value ? 1 : 0)
         case let .double(n):
             // Python's `int()` raises `ValueError` for NaN, and Jinja2 returns the default.
             if n.isNaN { return defaultValue }
@@ -1314,7 +1316,7 @@ public enum Filters {
         case let .string(str):
             return .array(str.map { .string(String($0)) })
         case let .object(dict):
-            return .array(dict.values.map { $0 })
+            return .array(dict.keys.map(Value.init))
         default:
             return .array([])
         }
