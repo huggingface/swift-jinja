@@ -10,25 +10,25 @@ struct RenderEnvironmentTests {
     @Test("Context values don't carry over to later renders")
     func contextDoesNotCarryOver() throws {
         let env = Environment()
-        #expect(try Template("{{ x }}").render(["x": 1], environment: env) == "1")
-        #expect(try Template("[{{ x }}]").render([:], environment: env) == "[]")
+        try #expect(try Template("{{ x }}").render(["x": 1], environment: env) == "1")
+        try #expect(try Template("[{{ x }}]").render([:], environment: env) == "[]")
         #expect(env["x"] == .undefined)
     }
 
     @Test("Variables and macros that a template sets don't carry over")
     func setAndMacroDoNotCarryOver() throws {
         let env = Environment()
-        #expect(try Template("{% set y = 2 %}{{ y }}").render([:], environment: env) == "2")
-        #expect(try Template("[{{ y }}]").render([:], environment: env) == "[]")
-        #expect(try Template("{% macro m() %}M{% endmacro %}{{ m() }}").render([:], environment: env) == "M")
-        #expect(try Template("[{{ m is defined }}]").render([:], environment: env) == "[False]")
+        try #expect(try Template("{% set y = 2 %}{{ y }}").render([:], environment: env) == "2")
+        try #expect(try Template("[{{ y }}]").render([:], environment: env) == "[]")
+        try #expect(try Template("{% macro m() %}M{% endmacro %}{{ m() }}").render([:], environment: env) == "M")
+        try #expect(try Template("[{{ m is defined }}]").render([:], environment: env) == "[False]")
     }
 
     @Test("Environment variables are visible to the template")
     func environmentVariablesVisible() throws {
         let env = Environment()
         env["site"] = "example"
-        #expect(try Template("{{ site }}").render([:], environment: env) == "example")
+        try #expect(try Template("{{ site }}").render([:], environment: env) == "example")
     }
 
     @Test("A context value hides an environment variable for one render")
@@ -36,29 +36,29 @@ struct RenderEnvironmentTests {
         let env = Environment()
         env["greeting"] = "hi"
         let template = try Template("{{ greeting }}")
-        #expect(try template.render(["greeting": "hello"], environment: env) == "hello")
-        #expect(try template.render([:], environment: env) == "hi")
+        try #expect(try template.render(["greeting": "hello"], environment: env) == "hello")
+        try #expect(try template.render([:], environment: env) == "hi")
     }
 
     @Test("A context value hides a built-in global")
     func contextHidesBuiltIn() throws {
-        #expect(try Template("{{ range }}").render(["range": "r"]) == "r")
-        #expect(try Template("{{ namespace }}").render(["namespace": "n"]) == "n")
+        try #expect(try Template("{{ range }}").render(["range": "r"]) == "r")
+        try #expect(try Template("{{ namespace }}").render(["namespace": "n"]) == "n")
     }
 
     @Test("An environment variable hides a built-in global")
     func environmentVariableHidesBuiltIn() throws {
         let env = Environment()
         env["range"] = "r"
-        #expect(try Template("{{ range }}").render([:], environment: env) == "r")
+        try #expect(try Template("{{ range }}").render([:], environment: env) == "r")
     }
 
     @Test("A template set hides an environment variable for one render")
     func setHidesEnvironmentVariable() throws {
         let env = Environment()
         env["g"] = "global"
-        #expect(try Template("{% set g = 'local' %}{{ g }}").render([:], environment: env) == "local")
-        #expect(try Template("{{ g }}").render([:], environment: env) == "global")
+        try #expect(try Template("{% set g = 'local' %}{{ g }}").render([:], environment: env) == "local")
+        try #expect(try Template("{{ g }}").render([:], environment: env) == "global")
         #expect(env["g"] == "global")
     }
 
@@ -69,7 +69,7 @@ struct RenderEnvironmentTests {
         parent["b"] = "env"
         let child = Environment(parent: parent)
         child["b"] = "template"
-        #expect(try Template("{{ a }} {{ b }}").render([:], environment: child) == "env template")
+        try #expect(try Template("{{ a }} {{ b }}").render([:], environment: child) == "env template")
     }
 
     @Test("A namespace that a template creates starts over for each render")
@@ -78,9 +78,9 @@ struct RenderEnvironmentTests {
         let template = try Template(
             "{% set ns = namespace(n=0) %}{% for i in [1, 2, 3] %}{% set ns.n = ns.n + i %}{% endfor %}{{ ns.n }}"
         )
-        #expect(try template.render([:], environment: env) == "6")
-        #expect(try template.render([:], environment: env) == "6")
-        #expect(try Template("[{{ ns is defined }}]").render([:], environment: env) == "[False]")
+        try #expect(try template.render([:], environment: env) == "6")
+        try #expect(try template.render([:], environment: env) == "6")
+        try #expect(try Template("[{{ ns is defined }}]").render([:], environment: env) == "[False]")
     }
 
     @Test("Assigning an attribute of an environment variable doesn't change the environment")
@@ -92,9 +92,9 @@ struct RenderEnvironmentTests {
         env["ns"] = try Globals.namespace([], ["n": 0], env)
         let template = try Template("{% set ns.n = ns.n + 1 %}{{ ns.n }}")
         for _ in 0 ..< 3 {
-            #expect(try template.render([:], environment: env) == "1")
+            try #expect(try template.render([:], environment: env) == "1")
         }
-        #expect(try PropertyMembers.evaluate(env["ns"], "n") == .int(0))
+        try #expect(try PropertyMembers.evaluate(env["ns"], "n") == .int(0))
     }
 
     @Test("A cycler in the environment shares its position across renders")
@@ -112,8 +112,8 @@ struct RenderEnvironmentTests {
         let template = try Template(
             "{% set c = cycler('a', 'b') %}{% set j = joiner('-') %}{% for i in [1, 2, 3] %}{{ j() }}{{ c.next() }}{% endfor %}"
         )
-        #expect(try template.render([:], environment: env) == "a-b-a")
-        #expect(try template.render([:], environment: env) == "a-b-a")
+        try #expect(try template.render([:], environment: env) == "a-b-a")
+        try #expect(try template.render([:], environment: env) == "a-b-a")
     }
 
     @Test("Rendering with one environment from many tasks gives the right results")

@@ -294,7 +294,7 @@ struct GlobalsTests {
                 #expect(Bool(false), "Expected object result")
                 continue
             }
-            #expect(Array(try #require(Namespace.get(obj)).attributes.keys) == ["is_urgent", "priority", "text"])
+            try #expect(Array(try #require(Namespace.get(obj)).attributes.keys) == ["is_urgent", "priority", "text"])
         }
     }
 
