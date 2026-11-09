@@ -294,7 +294,8 @@ struct GlobalsTests {
                 #expect(Bool(false), "Expected object result")
                 continue
             }
-            try #expect(Array(try #require(Namespace.get(obj)).attributes.keys) == ["is_urgent", "priority", "text"])
+            let namespace = try #require(Namespace.get(obj))
+            #expect(Array(namespace.attributes.keys) == ["is_urgent", "priority", "text"])
         }
     }
 

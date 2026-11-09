@@ -30,7 +30,7 @@ struct NamespaceTests {
         ("{% set n = namespace(a=1) %}{{ [n] }}", "[<Namespace {'a': 1}>]"),
     ])
     func render(test: (String, String)) throws {
-        try #expect(try Template(test.0).render([:]) == test.1)
+        #expect(try Template(test.0).render([:]) == test.1)
     }
 
     @Test(arguments: [
@@ -64,7 +64,7 @@ struct NamespaceTests {
     ])
     func filterLookup(test: (String, String)) throws {
         let template = "{% set rows = [{'items': 2}, {'items': 1}, {'items': 2}] %}" + test.0
-        try #expect(try Template(template).render([:]) == test.1)
+        #expect(try Template(template).render([:]) == test.1)
     }
 
     @Test(arguments: [
@@ -89,7 +89,7 @@ struct NamespaceTests {
         ),
     ])
     func mergedBehavior(test: (String, String)) throws {
-        try #expect(try Template(test.0).render([:]) == test.1)
+        #expect(try Template(test.0).render([:]) == test.1)
     }
 
     @Test(arguments: [
@@ -101,17 +101,17 @@ struct NamespaceTests {
         ),
     ])
     func urlencode(test: (String, String)) throws {
-        try #expect(try Template(test.0).render([:]) == test.1)
+        #expect(try Template(test.0).render([:]) == test.1)
     }
 
     @Test("Namespace URL quoting preserves existing string and dict behavior")
     func urlencodeOtherValues() throws {
         let environment = Environment()
-        try #expect(
+        #expect(
             try Filters.urlencode([.string("<Namespace {'a': 1}>")], env: environment)
                 == .string("%3CNamespace%20%7B'a':%201%7D%3E")
         )
-        try #expect(
+        #expect(
             try Filters.urlencode([.object(["a": .string("x/y & z")])], env: environment)
                 == .string("a=x/y%20%26%20z")
         )
@@ -124,7 +124,7 @@ struct NamespaceTests {
         ("{{ namespace(items={'a': 1}.items)|xmlattr(false) }}", "a=\"1\""),
     ])
     func callableItemsFilters(test: (String, String)) throws {
-        try #expect(try Template(test.0).render([:]) == test.1)
+        #expect(try Template(test.0).render([:]) == test.1)
     }
 
     @Test(arguments: [
@@ -210,7 +210,7 @@ struct NamespaceTests {
         environment["d"] = .function { _, _, _ in returned }
         let template = try Template(test.0)
         if let expected = test.2 {
-            try #expect(try template.render([:], environment: environment) == expected)
+            #expect(try template.render([:], environment: environment) == expected)
         } else {
             #expect(throws: (any Error).self) { try template.render([:], environment: environment) }
         }
@@ -224,9 +224,9 @@ struct NamespaceTests {
             Environment()
         )
         for (name, value) in [("items", 1), ("keys", 2), ("values", 3), ("get", 4)] {
-            try #expect(try PropertyMembers.evaluate(namespace, name) == .int(value))
+            #expect(try PropertyMembers.evaluate(namespace, name) == .int(value))
             let empty = try Globals.namespace([], [:], Environment())
-            try #expect(try PropertyMembers.evaluate(empty, name) == .undefined)
+            #expect(try PropertyMembers.evaluate(empty, name) == .undefined)
         }
     }
 
@@ -234,24 +234,24 @@ struct NamespaceTests {
     func markerName() throws {
         let key = "\0jinja.namespace"
         let namespace = try Globals.namespace([], [key: .int(42)], Environment())
-        try #expect(try PropertyMembers.evaluate(namespace, key) == .int(42))
-        try #expect(try Interpreter.evaluateComputedMember(namespace, .string(key)) == .int(42))
-        try #expect(try PropertyMembers.evaluate(.object([ObjectKey.string(key): .int(42)]), key) == .int(42))
-        try #expect(try PropertyMembers.evaluate(namespace, "items") == .undefined)
+        #expect(try PropertyMembers.evaluate(namespace, key) == .int(42))
+        #expect(try Interpreter.evaluateComputedMember(namespace, .string(key)) == .int(42))
+        #expect(try PropertyMembers.evaluate(.object([ObjectKey.string(key): .int(42)]), key) == .int(42))
+        #expect(try PropertyMembers.evaluate(namespace, "items") == .undefined)
         #expect(throws: (any Error).self) { try JSONEncoder().encode(namespace) }
         let empty = try Globals.namespace([], [:], Environment())
-        try #expect(try PropertyMembers.evaluate(empty, key) == .undefined)
-        try #expect(try Interpreter.evaluateComputedMember(empty, .string(key)) == .undefined)
-        try #expect(
+        #expect(try PropertyMembers.evaluate(empty, key) == .undefined)
+        #expect(try Interpreter.evaluateComputedMember(empty, .string(key)) == .undefined)
+        #expect(
             try Filters.map([.array([empty])], kwargs: ["attribute": .string(key)], env: Environment())
                 == .array([.undefined])
         )
-        try #expect(try Filters.pprint([empty], env: Environment()) == .string("<Namespace {}>"))
+        #expect(try Filters.pprint([empty], env: Environment()) == .string("<Namespace {}>"))
         let macro = Macro(name: "", parameters: [], defaults: [:], body: [])
         let decoded = try JSONDecoder().decode(Macro.self, from: JSONEncoder().encode(macro))
         let ordinary = Value.object([ObjectKey.string(key): .macro(decoded)])
         #expect(ordinary.namespace == nil)
-        try #expect(try PropertyMembers.evaluate(ordinary, "items").isFunction)
+        #expect(try PropertyMembers.evaluate(ordinary, "items").isFunction)
     }
 
     @Test("Namespace identity survives assignment without changing its hash")
@@ -262,6 +262,7 @@ struct NamespaceTests {
         #expect(namespace == changed.value)
         #expect(namespace.isEquivalent(to: changed.value))
         #expect(Set([namespace, changed.value]).count == 1)
-        try #expect(namespace != (try Globals.namespace([], ["a": .int(1)], Environment())))
+        let otherNamespace = try Globals.namespace([], ["a": .int(1)], Environment())
+        #expect(namespace != otherNamespace)
     }
 }
