@@ -362,7 +362,13 @@ enum Interpreter {
             return .boolean(negated ? !result : result)
 
         case let .call(callableExpr, argsExpr, kwargsExpr):
-            let callableValue = try evaluateExpression(callableExpr, env: env)
+            let callableValue: Value
+            if case let .member(objectExpr, .identifier(methodName), false) = callableExpr {
+                let objectValue = try evaluateExpression(objectExpr, env: env)
+                callableValue = try PropertyMembers.evaluate(objectValue, methodName, asCall: true)
+            } else {
+                callableValue = try evaluateExpression(callableExpr, env: env)
+            }
 
             // Handle unpacking in arguments
             var argValues: [Value] = []

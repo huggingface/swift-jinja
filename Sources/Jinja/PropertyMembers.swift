@@ -11,13 +11,28 @@ enum PropertyMembers {
     /// - Parameters:
     ///   - object: The object to access the property on
     ///   - propertyName: The name of the property to access
+    ///   - asCall: Whether the property is about to be called, as in `ns.items()`.
     /// - Returns: The property value or `.undefined` if not found
     /// - Throws: `JinjaError.runtime` for invalid operations
-    static func evaluate(_ object: Value, _ propertyName: String) throws -> Value {
+    ///
+    /// On an object, a stored key shadows a built-in method of the same name
+    /// unless the property is being called. `namespace(items=[])` must read back
+    /// as the list, as it does in Jinja2, where a namespace is not a dict and
+    /// `attribute=` filters look up items first; a call such as
+    /// `schema.items()` must still reach the method even when the object has an
+    /// `items` key, as JSON schemas for arrays do.
+    static func evaluate(
+        _ object: Value,
+        _ propertyName: String,
+        asCall: Bool = false
+    ) throws -> Value {
         switch object {
         case let .string(str):
             return try evaluateStringProperty(str, propertyName)
         case let .object(obj):
+            if !asCall, let stored = obj[.string(propertyName)] {
+                return stored
+            }
             return try evaluateObjectProperty(obj, propertyName)
         default:
             return .undefined

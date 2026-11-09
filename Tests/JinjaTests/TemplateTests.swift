@@ -2619,6 +2619,31 @@ struct TemplateTests {
         #expect(result == "&lt;&#34;&gt;&amp; ", "Should use numeric entities for quotes")
     }
 
+    @Test("A namespace attribute named like a dict method reads back as the stored value")
+    func namespaceAttributeShadowsDictMethod() throws {
+        let template = """
+            {%- set carry = namespace(items=[], keys=0, get="g") -%}
+            {%- if carry.items -%}truthy{%- else -%}empty{%- endif -%}
+            {%- set carry.items = carry.items + [1, 2] -%}
+            |{{ carry.items | length }}|{{ carry.keys }}|{{ carry.get }}
+            """
+        let rendered = try Template(template).render([:])
+        #expect(rendered == "empty|2|0|g")
+    }
+
+    @Test("Calling a dict method still reaches the method when a key has the same name")
+    func calledDictMethodWinsOverKey() throws {
+        let template = """
+            {%- for k, v in schema.items() -%}{{ k }};{%- endfor -%}
+            |{{ schema.items.type }}
+            """
+        let context: Context = [
+            "schema": ["type": "array", "items": ["type": "string"]]
+        ]
+        let rendered = try Template(template).render(context)
+        #expect(rendered == "type;items;|string")
+    }
+
     @Test("Namespace attribute mutations should persist after loops")
     func namespaceAttributeMutationPersistence() throws {
         let template = """
