@@ -50,6 +50,46 @@ struct PropertyMembersTests {
         #expect(titleResult == .string("Hello World"))
     }
 
+    @Test(
+        "String title follows Python casing boundaries",
+        arguments: [
+            ("they're bil", "They'Re Bil"),
+            ("1x foo_bar foo-BAR", "1X Foo_Bar Foo-Bar"),
+            ("éCOLE ÜBER", "École Über"),
+            ("ǆUNG ǅUNG ǄUNG", "ǅung ǅung ǅung"),
+            ("ßABC ﬃABC", "Ssabc Ffiabc"),
+            ("a\u{0301}B", "A\u{0301}B"),
+        ]
+    )
+    func stringTitleBoundaries(input: String, expected: String) throws {
+        let result = try Template("{{ s.title() }}").render(["s": .string(input)])
+        #expect(result == expected)
+    }
+
+    @Test(
+        "String methods use Unicode casing and final sigma",
+        arguments: [
+            ("ΑΣ ΑΣ", "Ας Ας", "ας ας", "ΑΣ ΑΣ"),
+            ("ΑΣ", "Ας", "ας", "ΑΣ"),
+            ("ΑΣ.", "Ας.", "ας.", "ΑΣ."),
+            ("ΑΣΑ", "Ασα", "ασα", "ΑΣΑ"),
+            ("Σ", "Σ", "σ", "Σ"),
+            ("ΑΣ'", "Ας'", "ας'", "ΑΣ'"),
+            ("ΑΣ'Α", "Ασ'Α", "ασ'α", "ΑΣ'Α"),
+            ("Α'Σ", "Α'Σ", "α'ς", "Α'Σ"),
+            ("ΑΣ\u{0301}", "Ας\u{0301}", "ας\u{0301}", "ΑΣ\u{0301}"),
+            ("ΑΣ\u{0301}Α", "Ασ\u{0301}Α", "ασ\u{0301}α", "ΑΣ\u{0301}Α"),
+            ("Α\u{0301}Σ", "Α\u{0301}Σ", "α\u{0301}ς", "Α\u{0301}Σ"),
+            ("ß", "Ss", "ß", "SS"),
+            ("ŉ", "ʼN", "ŉ", "ʼN"),
+        ]
+    )
+    func unicodeCasing(input: String, title: String, lower: String, upper: String) throws {
+        let result = try Template("{{ s.title() }}|{{ s.lower() }}|{{ s.upper() }}")
+            .render(["s": .string(input)])
+        #expect(result == "\(title)|\(lower)|\(upper)")
+    }
+
     @Test("String strip method")
     func stringStrip() throws {
         let value = Value.string("  hello world  ")
