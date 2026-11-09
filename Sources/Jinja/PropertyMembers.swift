@@ -31,9 +31,12 @@ enum PropertyMembers {
         guard scalar == "Σ" else { return scalar.properties.lowercaseMapping }
 
         // Final sigma requires a preceding cased scalar and no following cased scalar.
-        // Ignore case-ignorable scalars in both directions.
-        let before = scalars[..<index].last { !$0.properties.isCaseIgnorable }
-        let after = scalars[(index + 1)...].first { !$0.properties.isCaseIgnorable }
+        // Ignore case-ignorable scalars in both directions, except private-use scalars.
+        func isCaseIgnorable(_ scalar: Unicode.Scalar) -> Bool {
+            scalar.properties.generalCategory != .privateUse && scalar.properties.isCaseIgnorable
+        }
+        let before = scalars[..<index].last { !isCaseIgnorable($0) }
+        let after = scalars[(index + 1)...].first { !isCaseIgnorable($0) }
         return before?.properties.isCased == true && after?.properties.isCased != true ? "ς" : "σ"
     }
 

@@ -69,6 +69,8 @@ struct PropertyMembersTests {
     @Test(
         "String methods use Unicode casing and final sigma",
         arguments: [
+            ("A\u{F870}Σ", "A\u{F870}Σ", "a\u{F870}σ", "A\u{F870}Σ"),
+            ("AΣ\u{F870}B", "Aς\u{F870}B", "aς\u{F870}b", "AΣ\u{F870}B"),
             ("ΑΣ ΑΣ", "Ας Ας", "ας ας", "ΑΣ ΑΣ"),
             ("ΑΣ", "Ας", "ας", "ΑΣ"),
             ("ΑΣ.", "Ας.", "ας.", "ΑΣ."),
