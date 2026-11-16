@@ -860,7 +860,10 @@ public enum ObjectKey: Hashable, Sendable {
 
     /// Creates an object key from a runtime value.
     ///
-    /// - Parameter value: A string or integer value to use as a key.
+    /// A Boolean becomes the integer key 0 or 1,
+    /// because Python's `True` and `1` are the same dictionary key.
+    ///
+    /// - Parameter value: A string, integer, or Boolean value to use as a key.
     /// - Returns: The corresponding key, or `nil` if the value is not a valid key type.
     public init?(_ value: Value) {
         switch value {
@@ -868,6 +871,8 @@ public enum ObjectKey: Hashable, Sendable {
             self = .string(string)
         case let .int(int):
             self = .int(int)
+        case let .boolean(boolean):
+            self = .int(boolean ? 1 : 0)
         default:
             return nil
         }

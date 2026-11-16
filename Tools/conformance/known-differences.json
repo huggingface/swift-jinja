@@ -163,7 +163,6 @@
     {"id": "literal.undef.item", "cause": "strict-undefined", "class": "c", "swift": {"ok": true, "output": "[]"}},
     {"id": "literal.undef.iter_join", "cause": "loop-other", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"join filter requires array\")"}},
     {"id": "literal.missing_key.nested", "cause": "strict-undefined", "class": "c", "swift": {"ok": true, "output": "[]"}},
-    {"id": "literal.index.bool", "cause": "subscript-globals", "class": "a", "swift": {"ok": true, "output": "[]"}},
     {"id": "literal.index.method_via_subscript", "cause": "subscript-globals", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot call non-function value\")"}},
     {"id": "literal.strm.split_ws", "cause": "str-methods", "class": "a", "swift": {"ok": true, "output": "['a', 'b\\tc\\nd']"}},
     {"id": "literal.strm.rsplit", "cause": "str-methods", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot call non-function value\")"}},

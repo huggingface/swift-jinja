@@ -4,6 +4,14 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Booleans are the dictionary keys and indices 0 and 1")
+    func booleanKeys() throws {
+        let result = try Template(
+            "{{ true in {1: 'a'} }}|{{ false in {0: 'a'} }}|{{ true is in({1: 'a'}) }}|{{ 2 in {1: 'a'} }}|{{ {1: 'a'}[true] }}|{{ {0: 'a'}[false] }}|{{ {1: 'a'}.get(true) }}|{{ {'1': 'a'}[true] }}|{{ [10, 20][true] }}|{{ 'ab'[true] }}"
+        ).render([:])
+        #expect(result == "True|True|True|False|a|a|a||20|b")
+    }
+
     @Test("Chained comparisons compare adjacent operands")
     func chainedComparisons() throws {
         let result = try Template(

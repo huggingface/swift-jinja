@@ -849,7 +849,8 @@ enum Interpreter {
     }
 
     static func evaluateComputedMember(_ object: Value, _ property: Value) throws -> Value {
-        switch (object, property) {
+        // Python indexes with `True` and `False` as the integers 1 and 0.
+        switch (object, property.booleanAsInt) {
         case let (.array(arr), .int(index)):
             let safeIndex = index < 0 ? arr.count + index : index
             guard safeIndex >= 0 && safeIndex < arr.count else {
