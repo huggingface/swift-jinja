@@ -34,6 +34,12 @@ struct TemplateTests {
         #expect(result == "33")
     }
 
+    @Test("Integer filter rejects signed hexadecimal floats")
+    func signedHexadecimalIntegerFilter() throws {
+        let result = try Template("{{ '-0x1p2'|int(7) }}|{{ '+0x1p2'|int(7) }}|{{ '1_0.5'|int(7) }}").render([:])
+        #expect(result == "7|7|10")
+    }
+
     @Test("Membership preserves shared array storage")
     func aliasedArrayMembership() throws {
         let function = try Template("{% set a = [range] %}{{ a in [a] }}").render([:])
