@@ -4,6 +4,12 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Integer filter truncates floating-point strings")
+    func floatStringIntegerFilter() throws {
+        let result = try Template("{{ [10, '3.5'|int, 10, 10]|sum }}").render([:])
+        #expect(result == "33")
+    }
+
     @Test("Membership preserves shared array storage")
     func aliasedArrayMembership() throws {
         let function = try Template("{% set a = [range] %}{{ a in [a] }}").render([:])
