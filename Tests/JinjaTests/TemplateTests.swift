@@ -80,6 +80,13 @@ struct TemplateTests {
         #expect(result == "7|7|10")
     }
 
+    @Test("Integer filter keeps zero-width spaces, which Python doesn't strip")
+    func zeroWidthSpaceIntegerFilter() throws {
+        let result = try Template("{{ v|int(7) }}|{{ w|int(7) }}")
+            .render(["v": "\u{200B}2.5\u{200B}", "w": "\u{200B}2"])
+        #expect(result == "7|7")
+    }
+
     @Test("Membership preserves shared array storage")
     func aliasedArrayMembership() throws {
         let function = try Template("{% set a = [range] %}{{ a in [a] }}").render([:])
