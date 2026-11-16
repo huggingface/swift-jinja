@@ -1366,7 +1366,7 @@ public enum Filters {
             }
             // Jinja2 falls back to `int(float(value))`, so "3.5" gives 3.
             // NaN, infinity, and values outside the range of `Int` give the default.
-            if let converted = Double(trimmed),
+            if let converted = pythonDecimalFloat(trimmed),
                 let truncated = Int(exactly: converted.rounded(.towardZero))
             {
                 return .int(truncated)

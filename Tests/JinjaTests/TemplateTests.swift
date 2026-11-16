@@ -13,6 +13,14 @@ struct TemplateTests {
         #expect(indent == "    x")
     }
 
+    @Test("Booleans are the dictionary keys and indices 0 and 1")
+    func booleanKeys() throws {
+        let result = try Template(
+            "{{ true in {1: 'a'} }}|{{ false in {0: 'a'} }}|{{ true is in({1: 'a'}) }}|{{ 2 in {1: 'a'} }}|{{ {1: 'a'}[true] }}|{{ {0: 'a'}[false] }}|{{ {1: 'a'}.get(true) }}|{{ {'1': 'a'}[true] }}|{{ [10, 20][true] }}|{{ 'ab'[true] }}"
+        ).render([:])
+        #expect(result == "True|True|True|False|a|a|a||20|b")
+    }
+
     @Test("Chained comparisons compare adjacent operands")
     func chainedComparisons() throws {
         let result = try Template(
@@ -73,6 +81,12 @@ struct TemplateTests {
     func floatStringIntegerFilter() throws {
         let result = try Template("{{ [10, '3.5'|int, 10, 10]|sum }}").render([:])
         #expect(result == "33")
+    }
+
+    @Test("Integer filter rejects signed hexadecimal floats")
+    func signedHexadecimalIntegerFilter() throws {
+        let result = try Template("{{ '-0x1p2'|int(7) }}|{{ '+0x1p2'|int(7) }}|{{ '1_0.5'|int(7) }}").render([:])
+        #expect(result == "7|7|10")
     }
 
     @Test("Membership preserves shared array storage")

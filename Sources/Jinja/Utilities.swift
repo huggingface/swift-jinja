@@ -286,3 +286,21 @@ private func decodedNamedReference(_ name: [Unicode.Scalar]) -> String {
     }
     return "&" + text
 }
+
+/// Parses a finite decimal number with Python's `float()` syntax.
+///
+/// The syntax is an optional sign, ASCII digits with an optional decimal point,
+/// and an optional exponent, where a single underscore may separate two digits.
+/// Swift's `Double(_:)` also accepts hexadecimal floats such as `-0x1p2`,
+/// which Python rejects.
+/// Python's spellings of infinity and NaN are rejected too,
+/// because no caller can convert them.
+///
+/// - Parameter string: The string to parse, without surrounding whitespace.
+/// - Returns: The number, or `nil` if the string doesn't have this syntax.
+internal func pythonDecimalFloat(_ string: String) -> Double? {
+    let digits = #"[0-9](?:_?[0-9])*"#
+    let pattern = #"[+-]?(?:\#(digits)(?:\.(?:\#(digits))?)?|\.\#(digits))(?:[eE][+-]?\#(digits))?"#
+    guard let regex = try? Regex(pattern), (try? regex.wholeMatch(in: string)) != nil else { return nil }
+    return Double(string.replacingOccurrences(of: "_", with: ""))
+}
