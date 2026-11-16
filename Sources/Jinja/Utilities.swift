@@ -289,12 +289,14 @@ private func decodedNamedReference(_ name: [Unicode.Scalar]) -> String {
 
 /// Prepares a string for numeric parsing as CPython does for `int()` and `float()`.
 ///
-/// CPython replaces each non-ASCII decimal digit with its ASCII digit,
-/// each non-ASCII whitespace character with a space,
-/// and every other non-ASCII character with `?`.
-/// Then it ignores leading and trailing ASCII whitespace.
+/// CPython replaces each non-ASCII whitespace character with a space,
+/// and then ignores leading and trailing ASCII whitespace.
 /// So U+3000 IDEOGRAPHIC SPACE is stripped,
 /// but U+200B ZERO WIDTH SPACE and the ASCII separators U+001C through U+001F aren't.
+///
+/// CPython also accepts non-ASCII decimal digits, using its own Unicode tables.
+/// This function doesn't, because Swift's tables can differ from CPython's,
+/// so it replaces every other non-ASCII character with `?`, which no parser accepts.
 ///
 /// - Parameter string: The string to prepare.
 /// - Returns: An ASCII string to pass to ``pythonInt(_:base:)`` or ``pythonFloat(_:)``.
@@ -305,8 +307,6 @@ internal func pythonNumericText(_ string: String) -> String {
             scalars.append(scalar)
         } else if scalar.properties.isWhitespace {
             scalars.append(" ")
-        } else if scalar.properties.numericType == .decimal, let digit = scalar.properties.numericValue {
-            scalars.append(Unicode.Scalar(UInt8(48 + Int(digit))))
         } else {
             scalars.append("?")
         }

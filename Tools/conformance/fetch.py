@@ -1,5 +1,5 @@
 # /// script
-# requires-python = ">=3.10"
+# requires-python = "==3.12.*"
 # dependencies = ["jinja2==3.1.6", "markupsafe==3.0.4", "pytest==9.1.1"]
 # ///
 """Build the conformance corpus from the pinned sources in manifest.json.

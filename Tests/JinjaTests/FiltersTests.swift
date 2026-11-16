@@ -1899,7 +1899,7 @@ struct FiltersTests {
     func floatFilterPythonSyntax() throws {
         let cases: [(String, Double)] = [
             (" 12 ", 12), ("\u{3000}2.5\u{2028}", 2.5), ("1_0.5", 10.5), (".5", 0.5), ("5.", 5), ("1e3", 1000),
-            ("\u{0661}.\u{0665}", 1.5), ("0x10", 7.5), ("0x1p2", 7.5), ("1__0", 7.5), ("\u{200B}1", 7.5),
+            ("0x10", 7.5), ("0x1p2", 7.5), ("1__0", 7.5), ("\u{200B}1", 7.5),
             ("\u{1C}1", 7.5), ("", 7.5), ("abc", 7.5),
         ]
         for (input, expected) in cases {
@@ -1953,7 +1953,7 @@ struct FiltersTests {
             ("010", .int(10), 10), ("zz", .int(36), 1295), ("z", .int(35), 7),
             // An invalid base or a base that isn't an integer falls back to `int(float(value))`.
             ("12", .int(1), 12), ("12", .int(37), 12), ("12", .string("x"), 12), ("ff", .double(16), 7),
-            ("2.5", .int(16), 2), ("\u{0661}\u{0662}", .int(10), 12), ("\u{3000}12\u{3000}", .int(10), 12),
+            ("2.5", .int(16), 2), ("\u{3000}12\u{3000}", .int(10), 12),
         ]
         for (input, base, expected) in cases {
             let result = try Filters.int([.string(input), .int(7), base], kwargs: [:], env: env)
