@@ -1277,6 +1277,8 @@ public enum Filters {
     }
 
     /// Converts a value to float.
+    ///
+    /// Like Jinja2, it parses a string as Python's `float()` does, or returns the default.
     @Sendable public static func float(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -1299,17 +1301,17 @@ public enum Filters {
         case let .double(n):
             return .double(n)
         case let .string(s):
-            if let converted = Double(s) {
-                return .double(converted)
-            } else {
-                return defaultValue
-            }
+            return pythonFloat(pythonNumericText(s)).map(Value.double) ?? defaultValue
         default:
             return defaultValue
         }
     }
 
     /// Converts a value to integer.
+    ///
+    /// Like Jinja2, it parses a string as Python's `int(value, base)` does,
+    /// so a `0x`, `0o`, or `0b` prefix needs base 16, 8, or 2, or base 0.
+    /// If that fails, it truncates the string's `float()` value, and otherwise returns the default.
     @Sendable public static func int(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -1325,12 +1327,6 @@ public enum Filters {
         )
 
         let defaultValue = arguments["default"]!
-        let base: Int
-        if case let .int(value) = arguments["base"] {
-            base = value
-        } else {
-            base = 10
-        }
 
         switch value {
         case let .int(i):
@@ -1342,35 +1338,15 @@ public enum Filters {
             if n.isNaN { return defaultValue }
             return .int(try truncatedInt(n))
         case let .string(s):
-            // Python's `int()` and `float()` strip only Unicode whitespace,
-            // so U+200B ZERO WIDTH SPACE or U+001C makes the string invalid.
-            let trimmed = s.trimmingNumericWhitespace()
-            if trimmed.hasPrefix("0b") || trimmed.hasPrefix("0B") {
-                let digits = String(trimmed.dropFirst(2))
-                if let converted = Int(digits, radix: 2) { return .int(converted) }
-                return defaultValue
-            }
-            if trimmed.hasPrefix("0o") || trimmed.hasPrefix("0O") {
-                let digits = String(trimmed.dropFirst(2))
-                if let converted = Int(digits, radix: 8) { return .int(converted) }
-                return defaultValue
-            }
-            if trimmed.hasPrefix("0x") || trimmed.hasPrefix("0X") {
-                let digits = String(trimmed.dropFirst(2))
-                if let converted = Int(digits, radix: 16) { return .int(converted) }
-                return defaultValue
-            }
-            if base != 10, (2 ... 36).contains(base), let converted = Int(trimmed, radix: base) {
+            // Jinja2 returns `int(value, base)`, or `int(float(value))` if that fails,
+            // so "0x10" gives the default with base 10 and "3.5" gives 3.
+            // A base that isn't an integer also falls back.
+            let text = pythonNumericText(s)
+            if case let .int(base) = arguments["base"]!.booleanAsInt, let converted = pythonInt(text, base: base) {
                 return .int(converted)
             }
-            if let converted = Int(trimmed) {
-                return .int(converted)
-            }
-            // Jinja2 falls back to `int(float(value))`, so "3.5" gives 3.
             // NaN, infinity, and values outside the range of `Int` give the default.
-            if let converted = pythonDecimalFloat(trimmed),
-                let truncated = Int(exactly: converted.rounded(.towardZero))
-            {
+            if let converted = pythonFloat(text), let truncated = Int(exactly: converted.rounded(.towardZero)) {
                 return .int(truncated)
             }
             return defaultValue

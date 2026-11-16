@@ -287,37 +287,129 @@ private func decodedNamedReference(_ name: [Unicode.Scalar]) -> String {
     return "&" + text
 }
 
-/// Parses a finite decimal number with Python's `float()` syntax.
+/// Prepares a string for numeric parsing as CPython does for `int()` and `float()`.
 ///
-/// The syntax is an optional sign, ASCII digits with an optional decimal point,
-/// and an optional exponent, where a single underscore may separate two digits.
-/// Swift's `Double(_:)` also accepts hexadecimal floats such as `-0x1p2`,
-/// which Python rejects.
-/// Python's spellings of infinity and NaN are rejected too,
-/// because no caller can convert them.
+/// CPython replaces each non-ASCII decimal digit with its ASCII digit,
+/// each non-ASCII whitespace character with a space,
+/// and every other non-ASCII character with `?`.
+/// Then it ignores leading and trailing ASCII whitespace.
+/// So U+3000 IDEOGRAPHIC SPACE is stripped,
+/// but U+200B ZERO WIDTH SPACE and the ASCII separators U+001C through U+001F aren't.
 ///
-/// - Parameter string: The string to parse, without surrounding whitespace.
-/// - Returns: The number, or `nil` if the string doesn't have this syntax.
-internal func pythonDecimalFloat(_ string: String) -> Double? {
-    let digits = #"[0-9](?:_?[0-9])*"#
-    let pattern = #"[+-]?(?:\#(digits)(?:\.(?:\#(digits))?)?|\.\#(digits))(?:[eE][+-]?\#(digits))?"#
-    guard let regex = try? Regex(pattern), (try? regex.wholeMatch(in: string)) != nil else { return nil }
-    return Double(string.replacingOccurrences(of: "_", with: ""))
+/// - Parameter string: The string to prepare.
+/// - Returns: An ASCII string to pass to ``pythonInt(_:base:)`` or ``pythonFloat(_:)``.
+internal func pythonNumericText(_ string: String) -> String {
+    var scalars = String.UnicodeScalarView()
+    for scalar in string.unicodeScalars {
+        if scalar.isASCII {
+            scalars.append(scalar)
+        } else if scalar.properties.isWhitespace {
+            scalars.append(" ")
+        } else if scalar.properties.numericType == .decimal, let digit = scalar.properties.numericValue {
+            scalars.append(Unicode.Scalar(UInt8(48 + Int(digit))))
+        } else {
+            scalars.append("?")
+        }
+    }
+    let isSpace: (Unicode.Scalar) -> Bool = { " \t\n\u{0B}\u{0C}\r".unicodeScalars.contains($0) }
+    guard let first = scalars.firstIndex(where: { !isSpace($0) }),
+        let last = scalars.lastIndex(where: { !isSpace($0) })
+    else { return "" }
+    return String(scalars[first ... last])
 }
 
-extension String {
-    /// Returns the string without the leading and trailing whitespace
-    /// that Python's `int()` and `float()` skip.
-    ///
-    /// That whitespace is Unicode's `White_Space` property.
-    /// Unlike `str.strip()`, it excludes the separators U+001C through U+001F,
-    /// and unlike Foundation's `.whitespacesAndNewlines`,
-    /// it excludes U+200B ZERO WIDTH SPACE.
-    func trimmingNumericWhitespace() -> String {
-        let scalars = unicodeScalars
-        guard let start = scalars.firstIndex(where: { !$0.properties.isWhitespace }),
-            let last = scalars.lastIndex(where: { !$0.properties.isWhitespace })
-        else { return "" }
-        return String(scalars[start ... last])
+/// Parses an integer as Python's `int(text, base)` does.
+///
+/// The base is 0 or 2 through 36.
+/// With base 0, a `0x`, `0o`, or `0b` prefix selects the base, and the default is 10,
+/// where a nonzero number can't start with `0`.
+/// With base 16, 8, or 2, the matching prefix is allowed.
+/// A single underscore may separate two digits or follow a prefix.
+///
+/// - Parameters:
+///   - text: A string from ``pythonNumericText(_:)``.
+///   - base: The base.
+/// - Returns: The integer, or `nil` if Python raises `ValueError`
+///   or the integer is outside the range of `Int`.
+internal func pythonInt(_ text: String, base: Int) -> Int? {
+    guard base == 0 || (2 ... 36).contains(base) else { return nil }
+    let scalars = Array(text.unicodeScalars)
+    var index = 0
+    var isNegative = false
+    if index < scalars.count, scalars[index] == "+" || scalars[index] == "-" {
+        isNegative = scalars[index] == "-"
+        index += 1
+    }
+
+    var base = base
+    var hasPrefix = false
+    if index + 1 < scalars.count, scalars[index] == "0" {
+        let prefixBase: Int? =
+            switch scalars[index + 1] {
+            case "x", "X": 16
+            case "o", "O": 8
+            case "b", "B": 2
+            default: nil
+            }
+        if let prefixBase, base == 0 || base == prefixBase {
+            base = prefixBase
+            hasPrefix = true
+            index += 2
+            if index < scalars.count, scalars[index] == "_" { index += 1 }
+        }
+    }
+    let rejectsLeadingZero = base == 0
+    if base == 0 { base = 10 }
+
+    var value = 0
+    var digitCount = 0
+    var startsWithZero = false
+    var followsUnderscore = hasPrefix
+    while index < scalars.count {
+        let scalar = scalars[index]
+        index += 1
+        if scalar == "_" {
+            guard digitCount > 0, !followsUnderscore else { return nil }
+            followsUnderscore = true
+            continue
+        }
+        guard let digit = Int(String(scalar), radix: 36), digit < base else { return nil }
+        if digitCount == 0 { startsWithZero = digit == 0 }
+        digitCount += 1
+        followsUnderscore = false
+        // Accumulate toward the sign so that `Int.min` fits.
+        let (product, productOverflow) = value.multipliedReportingOverflow(by: base)
+        let (sum, sumOverflow) =
+            isNegative ? product.subtractingReportingOverflow(digit) : product.addingReportingOverflow(digit)
+        guard !productOverflow, !sumOverflow else { return nil }
+        value = sum
+    }
+    guard digitCount > 0, !followsUnderscore else { return nil }
+    if rejectsLeadingZero, startsWithZero, value != 0 { return nil }
+    return value
+}
+
+/// Parses a number with Python's `float()` syntax.
+///
+/// The syntax is an optional sign, ASCII digits with an optional decimal point,
+/// and an optional exponent, where a single underscore may separate two digits,
+/// or `inf`, `infinity`, or `nan` in any case after an optional sign.
+/// Swift's `Double(_:)` also accepts hexadecimal floats such as `0x1p2`,
+/// which Python rejects.
+///
+/// - Parameter text: A string from ``pythonNumericText(_:)``.
+/// - Returns: The number, or `nil` if Python raises `ValueError`.
+internal func pythonFloat(_ text: String) -> Double? {
+    let digits = #"[0-9](?:_?[0-9])*"#
+    let decimal = #"[+-]?(?:\#(digits)(?:\.(?:\#(digits))?)?|\.\#(digits))(?:[eE][+-]?\#(digits))?"#
+    if let regex = try? Regex(decimal), (try? regex.wholeMatch(in: text)) != nil {
+        return Double(text.replacingOccurrences(of: "_", with: ""))
+    }
+    let isNegative = text.hasPrefix("-")
+    let name = (text.hasPrefix("+") || isNegative ? String(text.dropFirst()) : text).lowercased()
+    switch name {
+    case "inf", "infinity": return isNegative ? -.infinity : .infinity
+    case "nan": return .nan
+    default: return nil
     }
 }

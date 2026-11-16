@@ -254,10 +254,18 @@ struct FiltersTests {
         #expect(result == .int(3))
     }
 
-    @Test("int filter with base and prefix")
+    @Test("int filter accepts a prefix only for its base or base 0")
     func intFilterWithBaseAndPrefix() throws {
+        // Python's `int("0x10", 10)` raises `ValueError`, so Jinja2 returns the default.
         let prefixed = try Filters.int([.string("0x10")], kwargs: [:], env: env)
-        #expect(prefixed == .int(16))
+        #expect(prefixed == .int(0))
+        let hexadecimal = try Filters.int([.string("0x10")], kwargs: ["base": .int(16)], env: env)
+        #expect(hexadecimal == .int(16))
+        let automatic = try Filters.int([.string("0x10")], kwargs: ["base": .int(0)], env: env)
+        #expect(automatic == .int(16))
+        // In base 16, "0b101" is a hexadecimal number, not a binary prefix.
+        let binaryDigits = try Filters.int([.string("0b101")], kwargs: ["base": .int(16)], env: env)
+        #expect(binaryDigits == .int(45313))
 
         let baseResult = try Filters.int(
             [.string("ff"), .int(0), .int(16)],
@@ -1887,6 +1895,26 @@ struct FiltersTests {
         #expect(result == .double(3.14))
     }
 
+    @Test("float filter accepts only Python float syntax")
+    func floatFilterPythonSyntax() throws {
+        let cases: [(String, Double)] = [
+            (" 12 ", 12), ("\u{3000}2.5\u{2028}", 2.5), ("1_0.5", 10.5), (".5", 0.5), ("5.", 5), ("1e3", 1000),
+            ("\u{0661}.\u{0665}", 1.5), ("0x10", 7.5), ("0x1p2", 7.5), ("1__0", 7.5), ("\u{200B}1", 7.5),
+            ("\u{1C}1", 7.5), ("", 7.5), ("abc", 7.5),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.float([.string(input), .double(7.5)], kwargs: [:], env: env)
+            #expect(result == .double(expected), "\(input.debugDescription)")
+        }
+        let infinity = try Filters.float([.string("-Infinity")], kwargs: [:], env: env)
+        #expect(infinity == .double(-.infinity))
+        guard case let .double(nan) = try Filters.float([.string("+NaN")], kwargs: [:], env: env) else {
+            Issue.record("Expected a double")
+            return
+        }
+        #expect(nan.isNaN)
+    }
+
     @Test("float filter with non-convertible returns default")
     func floatFilterNonConvertible() throws {
         let result = try Filters.float([.null], kwargs: [:], env: env)
@@ -1907,14 +1935,30 @@ struct FiltersTests {
 
     @Test("int filter with 0b prefix")
     func intFilterBinaryPrefix() throws {
-        let result = try Filters.int([.string("0b1010")], kwargs: [:], env: env)
-        #expect(result == .int(10))
+        #expect(try Filters.int([.string("0b1010")], kwargs: [:], env: env) == .int(0))
+        #expect(try Filters.int([.string("0b1010")], kwargs: ["base": .int(2)], env: env) == .int(10))
     }
 
     @Test("int filter with 0o prefix")
     func intFilterOctalPrefix() throws {
-        let result = try Filters.int([.string("0o17")], kwargs: [:], env: env)
-        #expect(result == .int(15))
+        #expect(try Filters.int([.string("0o17")], kwargs: [:], env: env) == .int(0))
+        #expect(try Filters.int([.string("0o17")], kwargs: ["base": .int(8)], env: env) == .int(15))
+    }
+
+    @Test("int filter follows Python's int(value, base)")
+    func intFilterPythonBase() throws {
+        let cases: [(String, Value, Int)] = [
+            ("0x_1f", .int(16), 31), ("0x__1", .int(16), 7), ("0x1_", .int(16), 7), ("0x", .int(16), 7),
+            ("-0x10", .int(0), -16), ("+0b1", .int(0), 1), ("010", .int(0), 10), ("0_0", .int(0), 0),
+            ("010", .int(10), 10), ("zz", .int(36), 1295), ("z", .int(35), 7),
+            // An invalid base or a base that isn't an integer falls back to `int(float(value))`.
+            ("12", .int(1), 12), ("12", .int(37), 12), ("12", .string("x"), 12), ("ff", .double(16), 7),
+            ("2.5", .int(16), 2), ("\u{0661}\u{0662}", .int(10), 12), ("\u{3000}12\u{3000}", .int(10), 12),
+        ]
+        for (input, base, expected) in cases {
+            let result = try Filters.int([.string(input), .int(7), base], kwargs: [:], env: env)
+            #expect(result == .int(expected), "\(input.debugDescription) base \(base)")
+        }
     }
 
     @Test("int filter with invalid binary")
