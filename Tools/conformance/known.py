@@ -371,11 +371,6 @@ def _(case, jr, sr, cls):
     return (JO(jr).strip(), SO(sr).strip()) == expected
 
 
-@rule("chained-compare", "chained comparisons (a < b < c, a <= b != c)", "harness:operators")
-def _(case, jr, sr, cls):
-    return re.search(r"(<|>|==|!=|<=|>=|\bin\b)[^()]*(<|>|==|!=|<=|>=|\bnot in\b)", T(case).replace("{{", "").replace("}}", "")) is not None and cls in ("a", "b")
-
-
 @rule("bool-eq-zero", "a comparison result compared with 0 or 1 (False == 0 is true in Python)", "harness:operators")
 def _(case, jr, sr, cls):
     return cls == "a" and re.search(r"==\s*\(*\s*[01]\b|\b[01]\s*==|!=\s*[01]\b", T(case)) is not None

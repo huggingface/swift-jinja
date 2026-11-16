@@ -4,6 +4,30 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Chained comparisons compare adjacent operands")
+    func chainedComparisons() throws {
+        let result = try Template(
+            "{{ 1 < 2 < 3 }}|{{ 3 > 2 > 1 }}|{{ 1 < 2 == true }}|{{ 1 < 3 > 2 }}|{{ 2 > 1 < 0 }}|{{ 1 == 1 in [1] }}|{{ 'x' == 'a,b'.split(',') != 100.0 }}"
+        ).render([:])
+        #expect(result == "True|True|False|True|False|True|False")
+    }
+
+    @Test("Chained comparisons stop at the first false comparison")
+    func chainedComparisonShortCircuit() throws {
+        let result = try Template(
+            "{% for k in {'': ''} if '' == 'a' in 0 %}{{ k }}{% endfor %}done"
+        ).render([:])
+        #expect(result == "done")
+    }
+
+    @Test("Chained comparisons evaluate each operand once")
+    func chainedComparisonEvaluatesOnce() throws {
+        let result = try Template(
+            "{% set c = cycler(1, 2, 3) %}{{ 0 < c.next() < 2 }}|{{ c.next() }}"
+        ).render([:])
+        #expect(result == "True|2")
+    }
+
     @Test("Booleans equal the numbers 0 and 1")
     func booleanNumericEquality() throws {
         let result = try Template(

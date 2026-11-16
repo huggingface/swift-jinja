@@ -362,37 +362,40 @@ struct Parser: Sendable {
     }
 
     private mutating func parseComparison() throws -> Expression {
-        var expr = try parseTerm()
+        let first = try parseTerm()
+        var comparisons: [Expression.Comparison] = []
         while true {
+            let op: Expression.BinaryOp
             if match(.equal) {
-                let right = try parseTerm()
-                expr = .binary(.equal, expr, right)
+                op = .equal
             } else if match(.notEqual) {
-                let right = try parseTerm()
-                expr = .binary(.notEqual, expr, right)
+                op = .notEqual
             } else if match(.less) {
-                let right = try parseTerm()
-                expr = .binary(.less, expr, right)
+                op = .less
             } else if match(.lessEqual) {
-                let right = try parseTerm()
-                expr = .binary(.lessEqual, expr, right)
+                op = .lessEqual
             } else if match(.greater) {
-                let right = try parseTerm()
-                expr = .binary(.greater, expr, right)
+                op = .greater
             } else if match(.greaterEqual) {
-                let right = try parseTerm()
-                expr = .binary(.greaterEqual, expr, right)
+                op = .greaterEqual
             } else if match(.in) {
-                let right = try parseTerm()
-                expr = .binary(.in, expr, right)
+                op = .in
             } else if match(.not), match(.in) {
-                let right = try parseTerm()
-                expr = .binary(.notIn, expr, right)
+                op = .notIn
             } else {
                 break
             }
+            comparisons.append(.init(op: op, operand: try parseTerm()))
         }
-        return expr
+        switch comparisons.count {
+        case 0:
+            return first
+        case 1:
+            return .binary(comparisons[0].op, first, comparisons[0].operand)
+        default:
+            // `a < b < c` means `a < b and b < c`, as in Python.
+            return .comparison(first, comparisons)
+        }
     }
 
     private mutating func parseTerm() throws -> Expression {

@@ -326,6 +326,17 @@ enum Interpreter {
                 return try evaluateBinaryValues(op, leftValue, rightValue)
             }
 
+        case let .comparison(first, comparisons):
+            var left = try evaluateExpression(first, env: env)
+            var result = Value.boolean(true)
+            for comparison in comparisons {
+                let right = try evaluateExpression(comparison.operand, env: env)
+                result = try evaluateBinaryValues(comparison.op, left, right)
+                if !result.isTruthy { break }
+                left = right
+            }
+            return result
+
         case let .ternary(value, test, alternate):
             let testValue = try evaluateExpression(test, env: env)
             if testValue.isTruthy {
@@ -1041,6 +1052,8 @@ enum Interpreter {
             return readsLaterItems(operand)
         case let .binary(_, left, right):
             return readsLaterItems(left) || readsLaterItems(right)
+        case let .comparison(first, comparisons):
+            return readsLaterItems(first) || comparisons.contains { readsLaterItems($0.operand) }
         case let .ternary(value, test, alternate):
             return readsLaterItems(value) || readsLaterItems(test)
                 || alternate.map(readsLaterItems) == true
