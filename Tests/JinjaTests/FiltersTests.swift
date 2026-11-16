@@ -1908,6 +1908,18 @@ struct FiltersTests {
         #expect(try Filters.int([.string("inf"), .int(7)], kwargs: [:], env: env) == .int(7))
     }
 
+    @Test("int filter accepts only Python float syntax")
+    func intFilterPythonFloatSyntax() throws {
+        let cases: [(String, Int)] = [
+            ("-0x1p2", 7), ("+0x1p2", 7), ("0x1p2", 7), ("1__0", 7), ("_1", 7), ("1_.5", 7), (".", 7), ("1e", 7),
+            ("1_0.5", 10), ("1e1_0", 10_000_000_000), (".5e1", 5), ("1.", 1), ("-2.5", -2), ("+2.5", 2),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.int([.string(input), .int(7)], kwargs: [:], env: env)
+            #expect(result == .int(expected), "\(input)")
+        }
+    }
+
     @Test("int filter non-parseable string returns default")
     func intFilterNonParseableString() throws {
         let result = try Filters.int([.string("abc")], kwargs: [:], env: env)

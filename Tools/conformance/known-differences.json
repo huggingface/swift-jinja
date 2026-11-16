@@ -186,7 +186,6 @@
     {"id": "literal.f.dictsort", "cause": "py-str", "class": "a", "swift": {"ok": true, "output": "[['a', 2], ['b', 1]]"}},
     {"id": "literal.f.items", "cause": "py-str", "class": "a", "swift": {"ok": true, "output": "[['b', 1], ['a', 2]]"}},
     {"id": "literal.f.tojson_float", "cause": "numlit", "class": "b", "swift": {"ok": false, "error": "JinjaError: parser(\"Expected \\']\\' after array literal. Got \\'e20\\' (identifier) instead.\")"}},
-    {"id": "literal.f.int_underscore", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "0"}},
     {"id": "literal.f.round", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "3.0"}},
     {"id": "literal.f.round_int", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "3.0"}},
     {"id": "literal.f.map_attr_dotted", "cause": "filters", "class": "a", "swift": {"ok": true, "output": ""}},
