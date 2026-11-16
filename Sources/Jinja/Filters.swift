@@ -774,10 +774,31 @@ public enum Filters {
             defaults: [:]
         )
 
-        let htmlTags = /<[^>]+>/.ignoresCase()
-        let noTags = str.replacing(htmlTags, with: "")
-        let components = noTags.components(separatedBy: .whitespacesAndNewlines)
-        return .string(components.filter { !$0.isEmpty }.joined(separator: " "))
+        // MarkupSafe's `Markup.striptags`: remove comments and tags,
+        // stopping at the first one that isn't closed,
+        // then collapse whitespace and decode character references.
+        // Search code points, as Python does, rather than characters.
+        let scalars = Array(str.unicodeScalars)
+        func find(_ pattern: String, from start: Int) -> Int? {
+            let pattern = Array(pattern.unicodeScalars)
+            guard start <= scalars.count - pattern.count else { return nil }
+            return (start ... scalars.count - pattern.count).first {
+                scalars[$0 ..< $0 + pattern.count].elementsEqual(pattern)
+            }
+        }
+        var text: [Unicode.Scalar] = []
+        var position = 0
+        while let start = find("<", from: position) {
+            let isComment = scalars[start...].starts(with: "<!--".unicodeScalars)
+            let terminator = isComment ? "-->" : ">"
+            guard let end = find(terminator, from: start + (isComment ? 4 : 1)) else { break }
+            text += scalars[position ..< start]
+            position = end + terminator.unicodeScalars.count
+        }
+        text += scalars[position...]
+        let words = text.split(whereSeparator: \.isPythonWhitespace)
+        let collapsed = words.map { String(String.UnicodeScalarView($0)) }.joined(separator: " ")
+        return .string(htmlUnescape(collapsed))
     }
 
     /// Basic string formatting.
@@ -1866,20 +1887,20 @@ public enum Filters {
         let first = arguments["first"]!.isTruthy
         let blank = arguments["blank"]!.isTruthy
 
-        let lines = str.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        var result = ""
-
-        for (i, line) in lines.enumerated() {
-            if i == 0 && !first {
-                result += line
-            } else if line.isEmpty && !blank {
-                result += line
-            } else {
-                result += widthString + line
+        // Jinja2 appends a newline before splitting the lines,
+        // so a trailing newline leaves an empty last line.
+        let lines = pythonSplitLines(str + "\n")
+        var result: String
+        if blank {
+            result = lines.joined(separator: "\n" + widthString)
+        } else {
+            result = lines[0]
+            if lines.count > 1 {
+                result += "\n" + lines.dropFirst().map { $0.isEmpty ? $0 : widthString + $0 }.joined(separator: "\n")
             }
-            if i < lines.count - 1 {
-                result += "\n"
-            }
+        }
+        if first {
+            result = widthString + result
         }
         return .string(result)
     }

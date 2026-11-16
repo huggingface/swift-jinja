@@ -150,9 +150,7 @@ enum Lexer: Sendable {
     /// A character that combines whitespace with a mark, such as U+0020 U+0301,
     /// isn't whitespace here, though Python strips its U+0020.
     private static func isPythonWhitespace(_ char: Character) -> Bool {
-        char.unicodeScalars.allSatisfy { scalar in
-            scalar.properties.isWhitespace || (0x1C ... 0x1F).contains(scalar.value)
-        }
+        char.unicodeScalars.allSatisfy(\.isPythonWhitespace)
     }
 
     private static func extractToken(

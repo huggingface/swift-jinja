@@ -1589,6 +1589,54 @@ struct FiltersTests {
         #expect(result == .string(""))
     }
 
+    @Test("striptags filter decodes character references")
+    func striptagsFilterDecodesReferences() throws {
+        let cases: [(String, String)] = [
+            ("<b>&amp;</b>", "&"),
+            ("Main &raquo;\t<em>About</em>", "Main \u{BB} About"),
+            ("&lt;b&gt; &#60;&#x3C;&#X3c", "<b> <<<"),
+            ("&notit; &amp &ampx", "\u{AC}it; & &x"),
+            ("&#0;&#128;&#x110000;&#1;", "\u{FFFD}\u{20AC}\u{FFFD}"),
+            ("&#; &x; & x", "&#; &x; & x"),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.striptags([.string(input)], kwargs: [:], env: env)
+            #expect(result == .string(expected), "\(input)")
+        }
+    }
+
+    @Test("striptags filter removes comments and stops at an unclosed tag")
+    func striptagsFilterCommentsAndUnclosedTags() throws {
+        let cases: [(String, String)] = [
+            ("a <!-- x > y --> b", "a b"),
+            ("x<>y", "xy"),
+            ("<a>1</a> <b", "1 <b"),
+            ("a <!-- unclosed", "a <!-- unclosed"),
+            ("a\u{2028}b\u{1C}c\u{A0}d", "a b c d"),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.striptags([.string(input)], kwargs: [:], env: env)
+            #expect(result == .string(expected), "\(input)")
+        }
+    }
+
+    // MarkupSafe 3.0.4 looks for `-->` after `<!--`, and stops at a comment that isn't closed.
+    // MarkupSafe 3.0.3 instead removed "<!-- unclosed >" through the next `>`,
+    // and treated `<!-->` and `<!--->` as closed comments.
+    @Test("striptags filter matches MarkupSafe 3.0.4 for unclosed and empty comments")
+    func striptagsFilterMarkupSafeComments() throws {
+        let cases: [(String, String)] = [
+            ("a <!-- unclosed > b", "a <!-- unclosed > b"),
+            ("a <!--> b", "a <!--> b"),
+            ("a <!---> b", "a <!---> b"),
+            ("a <!--> b --> c", "a c"),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.striptags([.string(input)], kwargs: [:], env: env)
+            #expect(result == .string(expected), "\(input)")
+        }
+    }
+
     @Test("striptags filter with non-string")
     func striptagsFilterNonString() throws {
         let result = try Filters.striptags([.int(42)], kwargs: [:], env: env)
@@ -2243,6 +2291,22 @@ struct FiltersTests {
             #expect(lines[1] == "  ")
         } else {
             Issue.record("Expected string result")
+        }
+    }
+
+    @Test("indent filter matches Jinja2 for empty strings and line endings")
+    func indentFilterEdgeCases() throws {
+        let cases: [(String, [String: Value], String)] = [
+            ("", ["first": .boolean(true)], "  "),
+            ("", ["first": .boolean(true), "blank": .boolean(true)], "  "),
+            ("\n", ["first": .boolean(true)], "  \n"),
+            ("a\n", ["blank": .boolean(true)], "a\n  "),
+            ("a\r\nb", [:], "a\n  b"),
+            ("a\u{2028}b", [:], "a\n  b"),
+        ]
+        for (input, kwargs, expected) in cases {
+            let result = try Filters.indent([.string(input), .int(2)], kwargs: kwargs, env: env)
+            #expect(result == .string(expected), "\(input.debugDescription) \(kwargs)")
         }
     }
 
