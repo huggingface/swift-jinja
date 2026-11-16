@@ -386,7 +386,7 @@ def _(case, jr, sr, cls):
     return cls == "b" and "primary expression: closeParen" in SE(sr) and ",)" in T(case)
 
 
-@rule("unicode-linebreaks", "Python splitlines() treats U+2028, U+2029, U+0085, \\v, \\f, \\x1c-\\x1e as line breaks (indent, wordwrap)", "new (minor)")
+@rule("unicode-linebreaks", "Python splitlines() treats U+2028, U+2029, U+0085, \\v, \\f, \\x1c-\\x1e as line breaks (wordwrap)", "new (minor)")
 def _(case, jr, sr, cls):
     blob = T(case) + json.dumps(case["context"], ensure_ascii=False)
     return cls == "a" and re.search("[\u2028\u2029\x85\x0b\x0c\x1c\x1d\x1e]", blob) is not None

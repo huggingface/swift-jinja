@@ -4,6 +4,15 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Fuzz cases for striptags and indent match Jinja2")
+    func striptagsAndIndentFuzzCases() throws {
+        let striptags = try Template(#"{{- "<b>&amp;</b>"|striptags }}"#).render([:])
+        #expect(striptags == "&")
+        let indent = try Template("{{ bos_token|indent(4, first=true, blank=false) -}}x")
+            .render(["bos_token": ""])
+        #expect(indent == "    x")
+    }
+
     @Test("Chained comparisons compare adjacent operands")
     func chainedComparisons() throws {
         let result = try Template(

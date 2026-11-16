@@ -153,3 +153,136 @@ internal func truncatedInt(_ value: Double) throws -> Int {
     }
     return int
 }
+
+extension Unicode.Scalar {
+    /// Whether Python's `str.isspace()` is true for this scalar:
+    /// Unicode's `White_Space` property and the separators U+001C through U+001F.
+    var isPythonWhitespace: Bool {
+        properties.isWhitespace || (0x1C ... 0x1F).contains(value)
+    }
+}
+
+/// Splits a string into lines as Python's `str.splitlines()` does.
+///
+/// The line boundaries are `\n`, `\r`, `\r\n`, `\v`, `\f`, U+001C through U+001E,
+/// U+0085, U+2028, and U+2029.
+/// The result has no empty last line for a string that ends with a boundary.
+internal func pythonSplitLines(_ string: String) -> [String] {
+    var lines: [String] = []
+    var line = String.UnicodeScalarView()
+    var scalars = string.unicodeScalars.makeIterator()
+    var pending = scalars.next()
+    while let scalar = pending {
+        pending = scalars.next()
+        switch scalar.value {
+        case 0x0D:
+            if pending == "\n" { pending = scalars.next() }
+            fallthrough
+        case 0x0A, 0x0B, 0x0C, 0x1C, 0x1D, 0x1E, 0x85, 0x2028, 0x2029:
+            lines.append(String(line))
+            line = String.UnicodeScalarView()
+        default:
+            line.append(scalar)
+        }
+    }
+    if !line.isEmpty { lines.append(String(line)) }
+    return lines
+}
+
+/// Decodes HTML character references as Python's `html.unescape()` does.
+///
+/// It decodes named references from the HTML5 table, with or without a semicolon,
+/// and decimal and hexadecimal references,
+/// replacing the code points that HTML5 forbids as Python does.
+internal func htmlUnescape(_ string: String) -> String {
+    guard string.contains("&") else { return string }
+    let scalars = Array(string.unicodeScalars)
+    var result = String.UnicodeScalarView()
+    var index = 0
+
+    func isDigit(_ scalar: Unicode.Scalar, radix: Int) -> Bool {
+        Int(String(scalar), radix: radix) != nil
+    }
+
+    while index < scalars.count {
+        guard scalars[index] == "&", index + 1 < scalars.count else {
+            result.append(scalars[index])
+            index += 1
+            continue
+        }
+        var end = index + 1
+        if scalars[end] == "#" {
+            // `#[0-9]+;?` or `#[xX][0-9a-fA-F]+;?`
+            var radix = 10
+            var digitsStart = end + 1
+            if digitsStart < scalars.count, scalars[digitsStart] == "x" || scalars[digitsStart] == "X" {
+                radix = 16
+                digitsStart += 1
+            }
+            end = digitsStart
+            while end < scalars.count, isDigit(scalars[end], radix: radix) { end += 1 }
+            guard end > digitsStart else {
+                result.append(scalars[index])
+                index += 1
+                continue
+            }
+            let digits = String(String.UnicodeScalarView(scalars[digitsStart ..< end]))
+            if end < scalars.count, scalars[end] == ";" { end += 1 }
+            result.append(contentsOf: decodedCharacterReference(Int(digits, radix: radix)).unicodeScalars)
+            index = end
+            continue
+        }
+        // `[^\t\n\f <&#;]{1,32};?`
+        while end < scalars.count, end - index - 1 < 32, !"\t\n\u{0C} <&#;".unicodeScalars.contains(scalars[end]) {
+            end += 1
+        }
+        guard end > index + 1 else {
+            result.append(scalars[index])
+            index += 1
+            continue
+        }
+        if end < scalars.count, scalars[end] == ";" { end += 1 }
+        let name = Array(scalars[(index + 1) ..< end])
+        result.append(contentsOf: decodedNamedReference(name).unicodeScalars)
+        index = end
+    }
+    return String(result)
+}
+
+/// Decodes a numeric character reference; `nil` is a number too large for `Int`.
+private func decodedCharacterReference(_ number: Int?) -> String {
+    let replacements: [Int: String] = [
+        0x00: "\u{FFFD}", 0x0D: "\r", 0x80: "\u{20AC}", 0x81: "\u{81}", 0x82: "\u{201A}",
+        0x83: "\u{192}", 0x84: "\u{201E}", 0x85: "\u{2026}", 0x86: "\u{2020}", 0x87: "\u{2021}",
+        0x88: "\u{2C6}", 0x89: "\u{2030}", 0x8A: "\u{160}", 0x8B: "\u{2039}", 0x8C: "\u{152}",
+        0x8D: "\u{8D}", 0x8E: "\u{17D}", 0x8F: "\u{8F}", 0x90: "\u{90}", 0x91: "\u{2018}",
+        0x92: "\u{2019}", 0x93: "\u{201C}", 0x94: "\u{201D}", 0x95: "\u{2022}", 0x96: "\u{2013}",
+        0x97: "\u{2014}", 0x98: "\u{2DC}", 0x99: "\u{2122}", 0x9A: "\u{161}", 0x9B: "\u{203A}",
+        0x9C: "\u{153}", 0x9D: "\u{9D}", 0x9E: "\u{17E}", 0x9F: "\u{178}",
+    ]
+    guard let number, number <= 0x10FFFF else { return "\u{FFFD}" }
+    if let replacement = replacements[number] { return replacement }
+    guard let scalar = Unicode.Scalar(number) else { return "\u{FFFD}" }  // surrogates
+    let value = scalar.value
+    let isInvalid =
+        (0x01 ... 0x08).contains(value) || (0x0E ... 0x1F).contains(value)
+        || (0x7F ... 0x9F).contains(value) || (0xFDD0 ... 0xFDEF).contains(value)
+        || value == 0x0B || value & 0xFFFE == 0xFFFE
+    return isInvalid ? "" : String(scalar)
+}
+
+/// Decodes a named character reference, or the longest name that begins it.
+private func decodedNamedReference(_ name: [Unicode.Scalar]) -> String {
+    let text = String(String.UnicodeScalarView(name))
+    if let value = htmlEntities[text] { return value }
+    // Python tries each shorter prefix, down to two characters.
+    var length = name.count - 1
+    while length > 1 {
+        let prefix = String(String.UnicodeScalarView(name[..<length]))
+        if let value = htmlEntities[prefix] {
+            return value + String(String.UnicodeScalarView(name[length...]))
+        }
+        length -= 1
+    }
+    return "&" + text
+}
