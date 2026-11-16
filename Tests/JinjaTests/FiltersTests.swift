@@ -1620,6 +1620,23 @@ struct FiltersTests {
         }
     }
 
+    // MarkupSafe 3.0.4 looks for `-->` after `<!--`, and stops at a comment that isn't closed.
+    // MarkupSafe 3.0.3 instead removed "<!-- unclosed >" through the next `>`,
+    // and treated `<!-->` and `<!--->` as closed comments.
+    @Test("striptags filter matches MarkupSafe 3.0.4 for unclosed and empty comments")
+    func striptagsFilterMarkupSafeComments() throws {
+        let cases: [(String, String)] = [
+            ("a <!-- unclosed > b", "a <!-- unclosed > b"),
+            ("a <!--> b", "a <!--> b"),
+            ("a <!---> b", "a <!---> b"),
+            ("a <!--> b --> c", "a c"),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.striptags([.string(input)], kwargs: [:], env: env)
+            #expect(result == .string(expected), "\(input)")
+        }
+    }
+
     @Test("striptags filter with non-string")
     func striptagsFilterNonString() throws {
         let result = try Filters.striptags([.int(42)], kwargs: [:], env: env)
