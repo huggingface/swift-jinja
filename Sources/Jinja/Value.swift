@@ -460,9 +460,9 @@ public enum Value: Sendable {
 
     /// Checks if the current value is equivalent to another value.
     ///
-    /// This is similar to `==`, but provides special handling for numeric types,
-    /// allowing an `Int` and a `Double` to be considered equivalent if they represent
-    /// the same number.
+    /// This is similar to `==`, but compares numbers as Python does:
+    /// an `Int` and a `Double` are equivalent if they represent the same number,
+    /// and `true` and `false` are equivalent to 1 and 0.
     ///
     /// - Parameters:
     ///   - other: The value to compare for equivalence.
@@ -481,6 +481,11 @@ public enum Value: Sendable {
             return a == b
         case let (.boolean(a), .boolean(b)):
             return a == b
+        // Python's `bool` is a subclass of `int`, so `True == 1` and `False == 0.0`.
+        case let (.boolean(a), .int(b)), let (.int(b), .boolean(a)):
+            return (a ? 1 : 0) == b
+        case let (.boolean(a), .double(b)), let (.double(b), .boolean(a)):
+            return (a ? 1.0 : 0.0) == b
         case (.null, .null):
             return true
         case (.undefined, .undefined):

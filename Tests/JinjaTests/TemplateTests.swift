@@ -4,6 +4,14 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Booleans equal the numbers 0 and 1")
+    func booleanNumericEquality() throws {
+        let result = try Template(
+            "{{ 0 == false }}|{{ 1 != true }}|{{ 1.0 == true }}|{{ 0 is ne(false) }}|{{ 2 == true }}|{{ true in [1] }}|{{ [1, 0] == [true, false] }}"
+        ).render([:])
+        #expect(result == "True|False|True|False|False|True|True")
+    }
+
     @Test("Booleans are numbers but not integers")
     func booleanNumberTest() throws {
         let result = try Template(
@@ -1509,7 +1517,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|True|False|True|False|True|False|")
+        #expect(rendered == "|True|True|True|True|True|False|")
     }
 
     @Test("Membership negation with not")
@@ -1522,7 +1530,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|False|True|False|True|False|True|")
+        #expect(rendered == "|False|False|False|False|False|True|")
     }
 
     @Test("Membership negation with not in")
@@ -1556,7 +1564,7 @@ struct TemplateTests {
 
         // Check result of template
         let rendered = try Template(string).render(context)
-        #expect(rendered == "|False|True|False|True|False|True|")
+        #expect(rendered == "|False|False|False|False|False|True|")
     }
 
     @Test("Membership with undefined")

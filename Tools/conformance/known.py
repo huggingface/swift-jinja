@@ -437,7 +437,7 @@ def boolean_numeric_difference(case, jr, sr, cls):
     return None
 
 
-@rule("bool-number", "booleans are not numbers in ==, in, |float, |sum, `is number`, select('number')", "harness:operators")
+@rule("bool-number", "booleans are not numbers in |float, |sum, |max, |min, |abs, and |filesizeformat", "harness:operators")
 def _(case, jr, sr, cls):
     precise = boolean_numeric_difference(case, jr, sr, cls)
     if precise is not None:
