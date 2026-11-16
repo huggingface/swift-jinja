@@ -1318,7 +1318,9 @@ public enum Filters {
             if n.isNaN { return defaultValue }
             return .int(try truncatedInt(n))
         case let .string(s):
-            let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Python's `int()` and `float()` strip only Unicode whitespace,
+            // so U+200B ZERO WIDTH SPACE or U+001C makes the string invalid.
+            let trimmed = s.trimmingNumericWhitespace()
             if trimmed.hasPrefix("0b") || trimmed.hasPrefix("0B") {
                 let digits = String(trimmed.dropFirst(2))
                 if let converted = Int(digits, radix: 2) { return .int(converted) }
@@ -1339,6 +1341,13 @@ public enum Filters {
             }
             if let converted = Int(trimmed) {
                 return .int(converted)
+            }
+            // Jinja2 falls back to `int(float(value))`, so "3.5" gives 3.
+            // NaN, infinity, and values outside the range of `Int` give the default.
+            if let converted = pythonDecimalFloat(trimmed),
+                let truncated = Int(exactly: converted.rounded(.towardZero))
+            {
+                return .int(truncated)
             }
             return defaultValue
         default:

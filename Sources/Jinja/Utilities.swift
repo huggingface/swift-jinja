@@ -153,3 +153,38 @@ internal func truncatedInt(_ value: Double) throws -> Int {
     }
     return int
 }
+
+/// Parses a finite decimal number with Python's `float()` syntax.
+///
+/// The syntax is an optional sign, ASCII digits with an optional decimal point,
+/// and an optional exponent, where a single underscore may separate two digits.
+/// Swift's `Double(_:)` also accepts hexadecimal floats such as `-0x1p2`,
+/// which Python rejects.
+/// Python's spellings of infinity and NaN are rejected too,
+/// because no caller can convert them.
+///
+/// - Parameter string: The string to parse, without surrounding whitespace.
+/// - Returns: The number, or `nil` if the string doesn't have this syntax.
+internal func pythonDecimalFloat(_ string: String) -> Double? {
+    let digits = #"[0-9](?:_?[0-9])*"#
+    let pattern = #"[+-]?(?:\#(digits)(?:\.(?:\#(digits))?)?|\.\#(digits))(?:[eE][+-]?\#(digits))?"#
+    guard let regex = try? Regex(pattern), (try? regex.wholeMatch(in: string)) != nil else { return nil }
+    return Double(string.replacingOccurrences(of: "_", with: ""))
+}
+
+extension String {
+    /// Returns the string without the leading and trailing whitespace
+    /// that Python's `int()` and `float()` skip.
+    ///
+    /// That whitespace is Unicode's `White_Space` property.
+    /// Unlike `str.strip()`, it excludes the separators U+001C through U+001F,
+    /// and unlike Foundation's `.whitespacesAndNewlines`,
+    /// it excludes U+200B ZERO WIDTH SPACE.
+    func trimmingNumericWhitespace() -> String {
+        let scalars = unicodeScalars
+        guard let start = scalars.firstIndex(where: { !$0.properties.isWhitespace }),
+            let last = scalars.lastIndex(where: { !$0.properties.isWhitespace })
+        else { return "" }
+        return String(scalars[start ... last])
+    }
+}

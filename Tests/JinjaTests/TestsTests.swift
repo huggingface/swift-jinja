@@ -97,6 +97,12 @@ struct TestsTests {
         #expect(result == true)
     }
 
+    @Test("number test with Boolean value")
+    func numberWithBooleanValue() throws {
+        #expect(try Tests.number([.boolean(true)], kwargs: [:], env: env))
+        #expect(try Tests.number([.boolean(false)], kwargs: [:], env: env))
+    }
+
     @Test("number test with non-number value")
     func numberWithNonNumberValue() throws {
         let result = try Tests.number([.string("hello")], kwargs: [:], env: env)
@@ -710,6 +716,12 @@ struct TestsTests {
     func callableWithMacro() throws {
         let m = Macro(name: "test", parameters: [], defaults: [:], body: [])
         let result = try Tests.callable([.macro(m)], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
+    @Test("callable with undefined")
+    func callableWithUndefined() throws {
+        let result = try Tests.callable([.undefined], kwargs: [:], env: env)
         #expect(result == true)
     }
 

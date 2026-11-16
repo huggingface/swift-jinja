@@ -1893,6 +1893,39 @@ struct FiltersTests {
         #expect(result == .int(42))
     }
 
+    @Test("int filter truncates float strings")
+    func intFilterFloatString() throws {
+        #expect(try Filters.int([.string("3.5")], kwargs: [:], env: env) == .int(3))
+        #expect(try Filters.int([.string(" -2.9 ")], kwargs: [:], env: env) == .int(-2))
+        #expect(try Filters.int([.string("1e3")], kwargs: [:], env: env) == .int(1000))
+        #expect(try Filters.int([.string("nan"), .int(7)], kwargs: [:], env: env) == .int(7))
+        #expect(try Filters.int([.string("inf"), .int(7)], kwargs: [:], env: env) == .int(7))
+    }
+
+    @Test("int filter accepts only Python float syntax")
+    func intFilterPythonFloatSyntax() throws {
+        let cases: [(String, Int)] = [
+            ("-0x1p2", 7), ("+0x1p2", 7), ("0x1p2", 7), ("1__0", 7), ("_1", 7), ("1_.5", 7), (".", 7), ("1e", 7),
+            ("1_0.5", 10), ("1e1_0", 10_000_000_000), (".5e1", 5), ("1.", 1), ("-2.5", -2), ("+2.5", 2),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.int([.string(input), .int(7)], kwargs: [:], env: env)
+            #expect(result == .int(expected), "\(input)")
+        }
+    }
+
+    @Test("int filter strips only Python whitespace")
+    func intFilterPythonWhitespace() throws {
+        let cases: [(String, Int)] = [
+            ("\u{200B}2.5\u{200B}", 7), ("\u{200B}2", 7), ("2\u{200B}", 7), ("\u{200B}0x10", 7),
+            (" 12 ", 12), ("\u{A0}12\u{3000}", 12), ("\u{1C}12\u{1F}", 7), ("\u{85}2.5\u{2028}", 2),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.int([.string(input), .int(7)], kwargs: [:], env: env)
+            #expect(result == .int(expected), "\(input.debugDescription)")
+        }
+    }
+
     @Test("int filter non-parseable string returns default")
     func intFilterNonParseableString() throws {
         let result = try Filters.int([.string("abc")], kwargs: [:], env: env)

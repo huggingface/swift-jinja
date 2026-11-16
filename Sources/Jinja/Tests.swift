@@ -71,6 +71,8 @@ public enum Tests {
     }
 
     /// Tests if the input is a number.
+    ///
+    /// Booleans are numbers, as they are in Python.
     @Sendable public static func number(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -83,7 +85,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isInt || input.isDouble
+        return input.isInt || input.isDouble || input.isBoolean
     }
 
     /// Tests if the input is a Boolean.
@@ -327,7 +329,9 @@ public enum Tests {
         return input.isObject && input.namespace == nil
     }
 
-    /// Tests if the input is callable (function or macro).
+    /// Tests if the input is callable (function, macro, or undefined).
+    ///
+    /// Jinja2's `Undefined` defines `__call__`, so an undefined value is callable.
     @Sendable public static func callable(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -340,7 +344,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isFunction || input.isMacro
+        return input.isFunction || input.isMacro || input.isUndefined
     }
 
     /// Tests if the input is an integer.
