@@ -206,7 +206,6 @@
     {"id": "literal.f.attr", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "1"}},
     {"id": "literal.f.pprint", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "{\n  \"a\": [\n    1\n  ]\n}"}},
     {"id": "literal.f.urlencode", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "a%20b&c"}},
-    {"id": "literal.t.bool_is_number", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "literal.t.sameas_none", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (None and None)\")"}},
     {"id": "literal.t.sameas_true", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (1 and True)\")"}},
     {"id": "literal.t.filter", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: parser(\"Expected test name but found filter.\")"}},
@@ -313,8 +312,6 @@
     {"id": "pallets.test_filters.py::TestFilter::test_filtertag#0", "cause": "filters", "class": "a", "swift": {"ok": true, "output": "foobar"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_types[(10 ** 100) is integer-True]#0", "cause": "bigint", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Integer overflow in 10 ** 100\")"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_types[(10 ** 100) is float-False]#0", "cause": "bigint", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Integer overflow in 10 ** 100\")"}},
-    {"id": "pallets.test_tests.py::TestTestsCase::test_types[false is number-True]#0", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
-    {"id": "pallets.test_tests.py::TestTestsCase::test_types[true is number-True]#0", "cause": "operators", "class": "a", "swift": {"ok": true, "output": "False"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_types[(10 ** 100) is number-True]#0", "cause": "bigint", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Integer overflow in 10 ** 100\")"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_sameas#0", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (False and False)\")"}},
     {"id": "pallets.test_tests.py::TestTestsCase::test_no_paren_for_arg1#0", "cause": "parser-names", "class": "b", "swift": {"ok": false, "error": "JinjaError: runtime(\"Cannot compare values of different types (None and None)\")"}}

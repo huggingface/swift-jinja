@@ -4,6 +4,22 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Booleans are numbers but not integers")
+    func booleanNumberTest() throws {
+        let result = try Template(
+            "{{ (1 > 0) is number }}|{{ true is integer }}|{{ [true, 1, \"a\"]|select(\"number\")|list }}"
+        ).render([:])
+        #expect(result == "True|False|[True, 1]")
+    }
+
+    @Test("Undefined values are callable")
+    func undefinedCallable() throws {
+        let result = try Template(
+            "{{ missing is callable }}|{{ ''.name is callable }}|{{ none is callable }}"
+        ).render([:])
+        #expect(result == "True|True|False")
+    }
+
     @Test("Integer filter truncates floating-point strings")
     func floatStringIntegerFilter() throws {
         let result = try Template("{{ [10, '3.5'|int, 10, 10]|sum }}").render([:])
