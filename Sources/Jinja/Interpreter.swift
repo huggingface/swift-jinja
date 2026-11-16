@@ -326,6 +326,17 @@ enum Interpreter {
                 return try evaluateBinaryValues(op, leftValue, rightValue)
             }
 
+        case let .comparison(first, comparisons):
+            var left = try evaluateExpression(first, env: env)
+            var result = Value.boolean(true)
+            for comparison in comparisons {
+                let right = try evaluateExpression(comparison.operand, env: env)
+                result = try evaluateBinaryValues(comparison.op, left, right)
+                if !result.isTruthy { break }
+                left = right
+            }
+            return result
+
         case let .ternary(value, test, alternate):
             let testValue = try evaluateExpression(test, env: env)
             if testValue.isTruthy {
@@ -838,7 +849,8 @@ enum Interpreter {
     }
 
     static func evaluateComputedMember(_ object: Value, _ property: Value) throws -> Value {
-        switch (object, property) {
+        // Python indexes with `True` and `False` as the integers 1 and 0.
+        switch (object, property.booleanAsInt) {
         case let (.array(arr), .int(index)):
             let safeIndex = index < 0 ? arr.count + index : index
             guard safeIndex >= 0 && safeIndex < arr.count else {
@@ -1041,6 +1053,8 @@ enum Interpreter {
             return readsLaterItems(operand)
         case let .binary(_, left, right):
             return readsLaterItems(left) || readsLaterItems(right)
+        case let .comparison(first, comparisons):
+            return readsLaterItems(first) || comparisons.contains { readsLaterItems($0.operand) }
         case let .ternary(value, test, alternate):
             return readsLaterItems(value) || readsLaterItems(test)
                 || alternate.map(readsLaterItems) == true

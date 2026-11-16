@@ -958,7 +958,7 @@ public enum Filters {
         )
 
         let bytes: Double
-        switch value {
+        switch value.booleanAsInt {
         case let .double(num):
             bytes = num
         case let .int(num):
@@ -969,6 +969,9 @@ public enum Filters {
 
         let binary = arguments["binary"]!.isTruthy
         let unit: Double = binary ? 1024 : 1000
+        if bytes == 1 {
+            return .string("1 Byte")
+        }
         if bytes < unit {
             return .string("\(try truncatedInt(bytes)) Bytes")
         }
@@ -1195,7 +1198,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        switch value {
+        switch value.booleanAsInt {
         case let .int(i):
             guard i != .min else {
                 throw JinjaError.runtime("Integer overflow in abs(\(i))")
@@ -1269,7 +1272,7 @@ public enum Filters {
 
         let defaultValue = arguments["default"]!
 
-        switch value {
+        switch value.booleanAsInt {
         case let .int(i):
             return .double(Double(i))
         case let .double(n):
@@ -1714,8 +1717,9 @@ public enum Filters {
             valuesToSum = items
         }
 
+        // Python adds booleans as the integers 0 and 1.
         let sum = try valuesToSum.reduce(start) { acc, next in
-            try acc.add(with: next)
+            try acc.booleanAsInt.add(with: next.booleanAsInt)
         }
         return sum
     }

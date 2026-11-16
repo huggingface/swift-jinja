@@ -536,7 +536,14 @@ public enum Tests {
         )
 
         guard let a = arguments["a"], let b = arguments["b"] else { return false }
-        return try a.compare(to: b) == 0
+        switch (a, b) {
+        case (.boolean, _), (_, .boolean), (.null, _), (_, .null):
+            // Python's `True`, `False`, and `None` are singletons,
+            // so `1 is sameas true` is false although `1 == true`.
+            return a == b
+        default:
+            return try a.compare(to: b) == 0
+        }
     }
 
     /// Tests if the input is in a sequence.

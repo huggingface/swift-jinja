@@ -147,6 +147,13 @@ public enum Value: Sendable {
         return false
     }
 
+    /// This value with a Boolean replaced by 0 or 1,
+    /// because Python's `bool` is a subclass of `int`.
+    var booleanAsInt: Value {
+        if case let .boolean(value) = self { return .int(value ? 1 : 0) }
+        return self
+    }
+
     /// Returns `true` if this value is an integer.
     public var isInt: Bool {
         if case .int = self { return true }
@@ -423,6 +430,10 @@ public enum Value: Sendable {
             return a < val ? -1 : a > val ? 1 : 0
         case let (.string(a), .string(b)):
             return a < b ? -1 : a > b ? 1 : 0
+        case (.boolean, .boolean), (.boolean, .int), (.boolean, .double),
+            (.int, .boolean), (.double, .boolean):
+            // Python orders booleans as the integers 0 and 1.
+            return try booleanAsInt.compare(to: other.booleanAsInt)
         default:
             throw JinjaError.runtime(
                 "Cannot compare values of different types (\(self) and \(other))"
@@ -849,7 +860,10 @@ public enum ObjectKey: Hashable, Sendable {
 
     /// Creates an object key from a runtime value.
     ///
-    /// - Parameter value: A string or integer value to use as a key.
+    /// A Boolean becomes the integer key 0 or 1,
+    /// because Python's `True` and `1` are the same dictionary key.
+    ///
+    /// - Parameter value: A string, integer, or Boolean value to use as a key.
     /// - Returns: The corresponding key, or `nil` if the value is not a valid key type.
     public init?(_ value: Value) {
         switch value {
@@ -857,6 +871,8 @@ public enum ObjectKey: Hashable, Sendable {
             self = .string(string)
         case let .int(int):
             self = .int(int)
+        case let .boolean(boolean):
+            self = .int(boolean ? 1 : 0)
         default:
             return nil
         }

@@ -130,6 +130,19 @@ indirect enum Expression: Hashable, Codable, Sendable {
     /// Binary operation with operator and operands.
     case binary(BinaryOp, Expression, Expression)
 
+    /// An operator and its right operand in a chained comparison.
+    struct Comparison: Hashable, Codable, Sendable {
+        /// The comparison or membership operator.
+        let op: BinaryOp
+
+        /// The right operand.
+        let operand: Expression
+    }
+    /// Chained comparison (`a < b < c`), which is true if each adjacent pair compares true.
+    /// Like Python, it evaluates each operand at most once
+    /// and stops at the first comparison that is false.
+    case comparison(Expression, [Comparison])
+
     /// Ternary conditional expression (`value if test else alternate`)
     case ternary(Expression, test: Expression, alternate: Expression?)
 

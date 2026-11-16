@@ -4,6 +4,46 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Booleans are the dictionary keys and indices 0 and 1")
+    func booleanKeys() throws {
+        let result = try Template(
+            "{{ true in {1: 'a'} }}|{{ false in {0: 'a'} }}|{{ true is in({1: 'a'}) }}|{{ 2 in {1: 'a'} }}|{{ {1: 'a'}[true] }}|{{ {0: 'a'}[false] }}|{{ {1: 'a'}.get(true) }}|{{ {'1': 'a'}[true] }}|{{ [10, 20][true] }}|{{ 'ab'[true] }}"
+        ).render([:])
+        #expect(result == "True|True|True|False|a|a|a||20|b")
+    }
+
+    @Test("Chained comparisons compare adjacent operands")
+    func chainedComparisons() throws {
+        let result = try Template(
+            "{{ 1 < 2 < 3 }}|{{ 3 > 2 > 1 }}|{{ 1 < 2 == true }}|{{ 1 < 3 > 2 }}|{{ 2 > 1 < 0 }}|{{ 1 == 1 in [1] }}|{{ 'x' == 'a,b'.split(',') != 100.0 }}"
+        ).render([:])
+        #expect(result == "True|True|False|True|False|True|False")
+    }
+
+    @Test("Chained comparisons stop at the first false comparison")
+    func chainedComparisonShortCircuit() throws {
+        let result = try Template(
+            "{% for k in {'': ''} if '' == 'a' in 0 %}{{ k }}{% endfor %}done"
+        ).render([:])
+        #expect(result == "done")
+    }
+
+    @Test("Chained comparisons evaluate each operand once")
+    func chainedComparisonEvaluatesOnce() throws {
+        let result = try Template(
+            "{% set c = cycler(1, 2, 3) %}{{ 0 < c.next() < 2 }}|{{ c.next() }}"
+        ).render([:])
+        #expect(result == "True|2")
+    }
+
+    @Test("Numeric filters treat booleans as 0 and 1")
+    func booleanNumericFilters() throws {
+        let result = try Template(
+            "{{ true|float }}|{{ true|abs }}|{{ [true, true, 1]|sum }}|{{ [true, 2]|max }}|{{ [false, 0.5]|min }}|{{ [true, 0, 2]|sort }}|{{ true|filesizeformat }}|{{ false < 1 }}"
+        ).render([:])
+        #expect(result == "1.0|1|3|2|False|[0, True, 2]|1 Byte|True")
+    }
+
     @Test("Booleans equal the numbers 0 and 1")
     func booleanNumericEquality() throws {
         let result = try Template(
