@@ -304,3 +304,20 @@ internal func pythonDecimalFloat(_ string: String) -> Double? {
     guard let regex = try? Regex(pattern), (try? regex.wholeMatch(in: string)) != nil else { return nil }
     return Double(string.replacingOccurrences(of: "_", with: ""))
 }
+
+extension String {
+    /// Returns the string without the leading and trailing whitespace
+    /// that Python's `int()` and `float()` skip.
+    ///
+    /// That whitespace is Unicode's `White_Space` property.
+    /// Unlike `str.strip()`, it excludes the separators U+001C through U+001F,
+    /// and unlike Foundation's `.whitespacesAndNewlines`,
+    /// it excludes U+200B ZERO WIDTH SPACE.
+    func trimmingNumericWhitespace() -> String {
+        let scalars = unicodeScalars
+        guard let start = scalars.firstIndex(where: { !$0.properties.isWhitespace }),
+            let last = scalars.lastIndex(where: { !$0.properties.isWhitespace })
+        else { return "" }
+        return String(scalars[start ... last])
+    }
+}
