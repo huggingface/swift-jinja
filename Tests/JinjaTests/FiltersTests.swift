@@ -1914,6 +1914,18 @@ struct FiltersTests {
         }
     }
 
+    @Test("int filter strips only Python whitespace")
+    func intFilterPythonWhitespace() throws {
+        let cases: [(String, Int)] = [
+            ("\u{200B}2.5\u{200B}", 7), ("\u{200B}2", 7), ("2\u{200B}", 7), ("\u{200B}0x10", 7),
+            (" 12 ", 12), ("\u{A0}12\u{3000}", 12), ("\u{1C}12\u{1F}", 7), ("\u{85}2.5\u{2028}", 2),
+        ]
+        for (input, expected) in cases {
+            let result = try Filters.int([.string(input), .int(7)], kwargs: [:], env: env)
+            #expect(result == .int(expected), "\(input.debugDescription)")
+        }
+    }
+
     @Test("int filter non-parseable string returns default")
     func intFilterNonParseableString() throws {
         let result = try Filters.int([.string("abc")], kwargs: [:], env: env)
