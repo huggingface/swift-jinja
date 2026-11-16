@@ -1841,8 +1841,14 @@ struct FiltersTests {
 
     @Test("float filter with non-convertible returns default")
     func floatFilterNonConvertible() throws {
-        let result = try Filters.float([.boolean(true)], kwargs: [:], env: env)
+        let result = try Filters.float([.null], kwargs: [:], env: env)
         #expect(result == .double(0.0))
+    }
+
+    @Test("float filter converts booleans to 1 and 0")
+    func floatFilterBoolean() throws {
+        #expect(try Filters.float([.boolean(true)], kwargs: [:], env: env) == .double(1.0))
+        #expect(try Filters.float([.boolean(false)], kwargs: [:], env: env) == .double(0.0))
     }
 
     @Test("int filter with no args")

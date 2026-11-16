@@ -851,6 +851,14 @@ struct TestsTests {
         #expect(result == false)
     }
 
+    @Test("sameas compares booleans and none by identity")
+    func sameasSingletons() throws {
+        #expect(try Tests.sameas([.boolean(false), .boolean(false)], kwargs: [:], env: env))
+        #expect(try Tests.sameas([.null, .null], kwargs: [:], env: env))
+        #expect(try !Tests.sameas([.int(1), .boolean(true)], kwargs: [:], env: env))
+        #expect(try !Tests.sameas([.int(0), .boolean(false)], kwargs: [:], env: env))
+    }
+
     // MARK: - sameas with incomparable
 
     @Test("sameas with incomparable types")

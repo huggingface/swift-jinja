@@ -147,6 +147,13 @@ public enum Value: Sendable {
         return false
     }
 
+    /// This value with a Boolean replaced by 0 or 1,
+    /// because Python's `bool` is a subclass of `int`.
+    var booleanAsInt: Value {
+        if case let .boolean(value) = self { return .int(value ? 1 : 0) }
+        return self
+    }
+
     /// Returns `true` if this value is an integer.
     public var isInt: Bool {
         if case .int = self { return true }
@@ -423,6 +430,10 @@ public enum Value: Sendable {
             return a < val ? -1 : a > val ? 1 : 0
         case let (.string(a), .string(b)):
             return a < b ? -1 : a > b ? 1 : 0
+        case (.boolean, .boolean), (.boolean, .int), (.boolean, .double),
+            (.int, .boolean), (.double, .boolean):
+            // Python orders booleans as the integers 0 and 1.
+            return try booleanAsInt.compare(to: other.booleanAsInt)
         default:
             throw JinjaError.runtime(
                 "Cannot compare values of different types (\(self) and \(other))"

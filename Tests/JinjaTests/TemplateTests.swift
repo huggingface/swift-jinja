@@ -28,6 +28,14 @@ struct TemplateTests {
         #expect(result == "True|2")
     }
 
+    @Test("Numeric filters treat booleans as 0 and 1")
+    func booleanNumericFilters() throws {
+        let result = try Template(
+            "{{ true|float }}|{{ true|abs }}|{{ [true, true, 1]|sum }}|{{ [true, 2]|max }}|{{ [false, 0.5]|min }}|{{ [true, 0, 2]|sort }}|{{ true|filesizeformat }}|{{ false < 1 }}"
+        ).render([:])
+        #expect(result == "1.0|1|3|2|False|[0, True, 2]|1 Byte|True")
+    }
+
     @Test("Booleans equal the numbers 0 and 1")
     func booleanNumericEquality() throws {
         let result = try Template(
