@@ -487,6 +487,40 @@ struct FiltersTests {
         #expect(result == expected)
     }
 
+    // Expected strings were rendered with jinja2 3.1.6,
+    // which sorts values with Python's ordering, not by their string forms.
+    @Test(
+        "dictsort filter sorts by value with Python ordering",
+        arguments: [
+            (
+                "{{ d|dictsort(by='value')|map('first')|join(',') }}", ["10": 255, "name": 3.0, "Alpha": 100],
+                "name,Alpha,10"
+            ),
+            ("{{ d|dictsort(by='value')|map('first')|join(',') }}", ["Alpha": -2.5, "role": -1], "Alpha,role"),
+            ("{{ d|dictsort(by='value')|map('first')|join(',') }}", ["a": "b", "b": "A", "c": "C"], "b,a,c"),
+            ("{{ d|dictsort(true, 'value')|map('first')|join(',') }}", ["a": "b", "b": "A", "c": "C"], "b,c,a"),
+            ("{{ d|dictsort(by='value', reverse=true)|map('first')|join(',') }}", ["a": 1, "b": 2, "c": 1], "b,a,c"),
+            ("{{ d|dictsort(by='value')|map('first')|join(',') }}", ["a": true, "b": 0.5, "c": false], "c,b,a"),
+        ] as [(String, Value, String)]
+    )
+    func dictsortByValue(template: String, dict: Value, expected: String) throws {
+        #expect(try Template(template).render(["d": dict]) == expected)
+    }
+
+    @Test(
+        "dictsort filter raises for unorderable values and an invalid by",
+        arguments: [
+            ("{{ d|dictsort(by='value') }}", ["a": "x", "b": 1]),
+            ("{{ d|dictsort(by='other') }}", ["a": 1]),
+            ("{{ d|dictsort(by=1) }}", ["a": 1]),
+        ] as [(String, Value)]
+    )
+    func dictsortErrors(template: String, dict: Value) throws {
+        #expect(throws: JinjaError.self) {
+            try Template(template).render(["d": dict])
+        }
+    }
+
     @Test("pprint filter")
     func pprintFilter() throws {
         let dict = Value.object(["name": .string("test"), "value": .int(42)])

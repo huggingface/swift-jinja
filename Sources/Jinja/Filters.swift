@@ -658,58 +658,57 @@ public enum Filters {
         )
 
         let caseSensitive = arguments["case_sensitive"]!.isTruthy
-        let by: String
-        if case let .string(s) = arguments["by"] {
-            by = s
-        } else {
-            by = "key"
-        }
         let reverse = arguments["reverse"]!.isTruthy
+        // Jinja2 raises FilterArgumentError for any other `by`, including non-strings.
+        guard case let .string(by) = arguments["by"], by == "key" || by == "value" else {
+            throw JinjaError.runtime("dictsort requires by to be key or value")
+        }
+
+        // Python's sort key: the entry's component, lowercased if it's a string
+        // and the sort is case-insensitive.
+        func sortKey(_ component: Value) throws -> Value {
+            if !caseSensitive, case .string = component,
+                case let .function(lower) = try PropertyMembers.evaluate(component, "lower")
+            {
+                return try lower([], [:], env)
+            }
+            return component
+        }
+
+        // Sorts as Python's `sorted(entries, key=..., reverse=reverse)` does,
+        // which keeps equal entries in their original order in both directions.
+        func sorted(_ keyed: [(entry: Value, key: Value)]) throws -> Value {
+            let ordered = try keyed.enumerated().sorted { a, b in
+                let comparison = try a.element.key.compare(to: b.element.key)
+                if comparison == 0 { return a.offset < b.offset }
+                return reverse ? comparison > 0 : comparison < 0
+            }
+            return .array(ordered.map(\.element.entry))
+        }
 
         if let namespace = Namespace.get(dict) {
-            guard by == "key" || by == "value" else {
-                throw JinjaError.runtime("dictsort requires by to be key or value")
-            }
             let position = by == "key" ? 0 : 1
             let entries = try namespaceItems(namespace, env: env)
-            let keyed = try entries.map { entry in
-                var key = try namespaceSortComponent(entry, at: position)
-                if !caseSensitive, case .string = key,
-                    case let .function(lower) = try PropertyMembers.evaluate(key, "lower")
-                {
-                    key = try lower([], [:], env)
+            return try sorted(
+                entries.map { entry in
+                    (entry: entry, key: try sortKey(namespaceSortComponent(entry, at: position)))
                 }
-                return (entry: entry, key: key)
-            }
-            return .array(
-                try keyed.sorted { a, b in
-                    let comparison = try a.key.compare(to: b.key)
-                    return reverse ? comparison > 0 : comparison < 0
-                }.map(\.entry)
             )
         }
 
-        let pairs = Array(dict)
-        let sortedPairs: [(key: ObjectKey, value: Value)]
         if by == "value" {
-            sortedPairs = pairs.sorted { a, b in
-                let comparison =
-                    caseSensitive
-                    ? a.value.description.compare(b.value.description)
-                    : a.value.description.localizedCaseInsensitiveCompare(b.value.description)
-                return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
-            }
-        } else {
-            sortedPairs = pairs.sorted { a, b in
-                let comparison = a.key.compare(b.key, options: caseSensitive ? [] : [.caseInsensitive])
-                return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
-            }
+            return try sorted(
+                dict.map { key, value in
+                    (entry: Value.array([Value(key), value]), key: try sortKey(value))
+                }
+            )
         }
 
-        let resultArray = sortedPairs.map { key, value in
-            Value.array([Value(key), value])
+        let sortedPairs = Array(dict).sorted { a, b in
+            let comparison = a.key.compare(b.key, options: caseSensitive ? [] : [.caseInsensitive])
+            return reverse ? comparison == .orderedDescending : comparison == .orderedAscending
         }
-        return .array(resultArray)
+        return .array(sortedPairs.map { key, value in Value.array([Value(key), value]) })
     }
 
     // MARK: - String Processing Filters
