@@ -286,6 +286,24 @@ struct TestsTests {
         #expect(result3 == false)
     }
 
+    // Expected strings were rendered with jinja2 3.1.6,
+    // where True and False are the integers 1 and 0.
+    @Test(
+        "odd, even, and divisibleby treat booleans as integers",
+        arguments: [
+            ("{{ [true]|reject('odd')|list }}", "[]"),
+            ("{{ true is odd }}{{ true is even }}{{ false is even }}{{ false is odd }}", "TrueFalseTrueFalse"),
+            (
+                "{{ true is divisibleby(1) }}{{ false is divisibleby(2) }}{{ 4 is divisibleby(true) }}"
+                    + "{{ 2.0 is divisibleby(true) }}{{ true is divisibleby(2.0) }}",
+                "TrueTrueTrueTrueFalse"
+            ),
+        ]
+    )
+    func booleanNumberTests(template: String, expected: String) throws {
+        #expect(try Template(template).render([:]) == expected)
+    }
+
     @Test("divisibleby test with divisible integers")
     func divisiblebyWithDivisibleIntegers() throws {
         let result = try Tests.divisibleby([.int(10), .int(2)], kwargs: [:], env: env)

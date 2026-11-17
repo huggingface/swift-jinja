@@ -134,7 +134,8 @@ public enum Tests {
             parameters: ["value"]
         )
 
-        guard let input = arguments["value"] else { return false }
+        // Python's `bool` is a subclass of `int`, so `true is odd`.
+        guard let input = arguments["value"]?.booleanAsInt else { return false }
         switch input {
         case let .int(num):
             return num % 2 == 0
@@ -157,7 +158,8 @@ public enum Tests {
             parameters: ["value"]
         )
 
-        guard let input = arguments["value"] else { return false }
+        // Python's `bool` is a subclass of `int`, so `true is odd`.
+        guard let input = arguments["value"]?.booleanAsInt else { return false }
         switch input {
         case let .int(num):
             return num % 2 != 0
@@ -184,7 +186,8 @@ public enum Tests {
         guard let value = arguments["value"], let divisor = arguments["divisor"] else {
             return false
         }
-        switch (value, divisor) {
+        // Python's `bool` is a subclass of `int`, so `true is divisibleby(1)`.
+        switch (value.booleanAsInt, divisor.booleanAsInt) {
         case let (.int(a), .int(b)):
             // `Int.min % -1` overflows in Swift; the remainder is 0.
             return b != 0 && a.remainderReportingOverflow(dividingBy: b).partialValue == 0
