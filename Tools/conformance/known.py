@@ -44,7 +44,7 @@ PRECISE = {
     "crash", "timeout", "plus-ws", "concat-nonstr", "bool-arith", "float-mod", "bigint",
     "format-spec", "lenient-undefined", "lenient-str-plus", "ns-attr", "loopctl-outside", "condexpr-in-tag",
     "filter-on-undefined", "slice-nonseq", "chained-condexpr", "lenient-filter-types",
-    "lenient-other", "markup-repr", "callable-repr", "tuple-subscript", "sort-none",
+    "lenient-other", "markup-repr", "callable-repr", "tuple-subscript",
 }
 
 
@@ -449,13 +449,3 @@ def _(case, jr, sr, cls):
 @rule("split-ws-index", "str.split() without arguments doesn't split on newlines or tabs, so a later part is undefined", "harness:str-methods")
 def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"\.split\(\s*\)\[\s*-?[1-9]", T(case)) is not None
-
-
-@rule("sort-none", "sort raises when it compares none with none", "new (minor)")
-def _(case, jr, sr, cls):
-    return cls == "b" and "sort" in T(case) and "Cannot compare values of different types (None and None)" in SE(sr)
-
-
-@rule("sort-undefined", "sort raises when it compares undefined values, which Jinja2 treats as equal", "new (previously hidden by list-of-dict)")
-def _(case, jr, sr, cls):
-    return cls == "b" and "Cannot compare values of different types ( and )" in SE(sr) and re.search(r"\|sort\b", T(case)) is not None

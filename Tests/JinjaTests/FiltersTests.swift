@@ -1312,14 +1312,63 @@ struct FiltersTests {
         #expect(result == .array([.int(3), .int(2), .int(1)]))
     }
 
-    @Test("sort filter with empty attribute")
+    // Jinja2 looks up the empty attribute, so every key is undefined and equal.
+    @Test("sort filter with empty attribute keeps the order")
     func sortFilterEmptyAttribute() throws {
         let result = try Filters.sort(
             [.array([.int(3), .int(1), .int(2)]), .boolean(false), .boolean(false), .string("")],
             kwargs: [:],
             env: env
         )
-        #expect(result == .array([.int(1), .int(2), .int(3)]))
+        #expect(result == .array([.int(3), .int(1), .int(2)]))
+    }
+
+    // Expected strings were rendered with jinja2 3.1.6.
+    // Its sort keys are lists, which compare equal values with == before <.
+    @Test(
+        "sort filter matches Jinja2's attribute keys and ordering",
+        arguments: [
+            ("{{ l|sort(attribute='') }}", [3, 1, 2], "[3, 1, 2]"),
+            ("{{ l|sort(attribute='') }}", [[:], nil], "[{}, None]"),
+            ("{% for x in l|sort(attribute='') %}{% endfor %}", [[], 1], ""),
+            (
+                "{{ l|sort(attribute='a.b')|map(attribute='i')|join }}",
+                [["a": ["b": 2], "i": 1], ["a": ["b": 1], "i": 2]], "21"
+            ),
+            ("{{ l|sort(attribute='1')|map('first')|join }}", [["x", 2], ["y", 1]], "yx"),
+            ("{{ l|sort(attribute=1)|map('first')|join }}", [["x", 2], ["y", 1]], "yx"),
+            (
+                "{{ l|sort(attribute='a, b')|map(attribute='i')|join }}",
+                [["a": 1, "b": 2, " b": 1, "i": 1], ["a": 1, "b": 1, " b": 2, "i": 2]], "12"
+            ),
+            (
+                "{{ l|sort(reverse=true, attribute='a')|map(attribute='i')|join }}",
+                [["a": 1, "i": 1], ["a": 1, "i": 2], ["a": 0, "i": 3]], "123"
+            ),
+            ("{{ l|sort(attribute='x')|map(attribute='i')|join }}", [["i": 1], ["i": 2]], "12"),
+            ("{{ l|sort }}", [nil, nil], "[None, None]"),
+            ("{{ l|sort }}", [[1, 2], [1, 1], [1]], "[[1], [1, 1], [1, 2]]"),
+            ("{{ l|sort }}", [[:], [:]], "[{}, {}]"),
+            ("{{ l|sort }}", [["B"], ["a"]], "[['B'], ['a']]"),
+            ("{{ l|sort }}", [true, 0.5, 0], "[0, 0.5, True]"),
+        ] as [(String, Value, String)]
+    )
+    func sortMatchesJinja2(template: String, items: Value, expected: String) throws {
+        #expect(try Template(template).render(["l": items]) == expected)
+    }
+
+    @Test(
+        "sort filter raises when Jinja2 can't order the keys",
+        arguments: [
+            ("{{ l|sort(attribute='x.y') }}", [["i": 1], ["i": 2]]),
+            ("{{ l|sort(attribute='x') }}", [["i": 1], ["x": 2]]),
+            ("{{ l|sort }}", [["a": 1], [:]]),
+        ] as [(String, Value)]
+    )
+    func sortErrors(template: String, items: Value) throws {
+        #expect(throws: JinjaError.self) {
+            try Template(template).render(["l": items])
+        }
     }
 
     @Test("groupby filter with non-array")

@@ -17,13 +17,15 @@ class FixedDifferenceTests(unittest.TestCase):
         self.assertIsNone(self.label("{{ {'a': 10}|list }}", "['a']",
                                     'JinjaError: runtime("Unrelated failure")', cls="b"))
 
-    def test_sort_missing_attributes_keeps_its_own_label(self):
+    def test_sort_of_equal_missing_values_is_unlabeled(self):
         error = 'JinjaError: runtime("Cannot compare values of different types ( and )")'
-        self.assertEqual(self.label("{{ {'a': 1, 'b': 2}|list|sort(attribute='k') }}",
-                                    "['a', 'b']", error, cls="b"), "sort-undefined")
-        self.assertEqual(self.label("{{ [missing, missing]|sort }}",
-                                    "[Undefined, Undefined]", error, cls="b"), "sort-undefined")
-        self.assertIsNone(self.label("{{ {'a': 1}|list }}", "['a']", error, cls="b"))
+        self.assertIsNone(self.label("{{ {'a': 1, 'b': 2}|list|sort(attribute='k') }}",
+                                     "['a', 'b']", error, cls="b"))
+        self.assertIsNone(self.label("{{ [missing, missing]|sort }}",
+                                     "[Undefined, Undefined]", error, cls="b"))
+        self.assertIsNone(self.label("{{ [none, none]|sort }}", "[None, None]",
+                                     'JinjaError: runtime("Cannot compare values of different types (None and None)")',
+                                     cls="b"))
 
     def test_other_fixed_differences_are_unlabeled(self):
         self.assertIsNone(self.label("{{ true|int }}", "1", "0"))

@@ -272,44 +272,17 @@ public enum Filters {
 
         let reverse = arguments["reverse"]!.isTruthy
         let caseSensitive = arguments["case_sensitive"]!.isTruthy
+        let key = multiAttributeGetter(arguments["attribute"]!, caseSensitive: caseSensitive)
 
-        func compare(_ lhs: Value, _ rhs: Value) throws -> Int {
-            try compareValues(lhs, rhs, caseSensitive: caseSensitive)
+        // Sorts as Python's `sorted(items, key=key, reverse=reverse)` does,
+        // which keeps equal items in their original order in both directions.
+        let keyed = try items.map { (item: $0, key: try key($0)) }
+        let ordered = try keyed.enumerated().sorted { a, b in
+            let comparison = try pythonOrder(.array(a.element.key), .array(b.element.key))
+            if comparison == 0 { return a.offset < b.offset }
+            return reverse ? comparison > 0 : comparison < 0
         }
-
-        func stableSorted(_ values: [Value], by comparator: (Value, Value) throws -> Int) rethrows
-            -> [Value]
-        {
-            return try values.enumerated().sorted { a, b in
-                let comparison = try comparator(a.element, b.element)
-                if comparison == 0 { return a.offset < b.offset }
-                return comparison < 0
-            }.map(\.element)
-        }
-
-        let sortedItems: [Value]
-        if case let .string(attribute) = arguments["attribute"] {
-            let attributes = attribute.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-
-            if attributes.isEmpty {
-                sortedItems = try stableSorted(items, by: compare)
-            } else {
-                var sorted = items
-                for attr in attributes.reversed() {
-                    sorted = try stableSorted(sorted) { a, b in
-                        let aValue = try resolveAttributeValue(a, attribute: .string(String(attr)))
-                        let bValue = try resolveAttributeValue(b, attribute: .string(String(attr)))
-                        return try compare(aValue, bValue)
-                    }
-                }
-                sortedItems = sorted
-            }
-        } else {
-            sortedItems = try stableSorted(items, by: compare)
-        }
-
-        return .array(reverse ? Array(sortedItems.reversed()) : sortedItems)
+        return .array(ordered.map(\.element.item))
     }
 
     /// Groups items by a given attribute.
@@ -2271,6 +2244,87 @@ private func resolveAttributeValue(_ item: Value, attribute: Value) throws -> Va
     default:
         return .undefined
     }
+}
+
+/// Returns a sort key function that matches Jinja2's `make_multi_attrgetter`.
+///
+/// The attribute is a comma-separated list of dotted paths,
+/// split without trimming whitespace.
+/// A path component of only digits is an integer index.
+/// Each key holds one value for each path,
+/// or the item itself when the attribute is `none`.
+/// A missing value is `undefined`,
+/// and looking up a component of an undefined value throws.
+/// Strings are lowercased unless `caseSensitive` is true.
+///
+/// - Parameters:
+///   - attribute: The attribute: `none`, a string of paths, or an integer index.
+///   - caseSensitive: A Boolean value that indicates whether to keep the case of string keys.
+/// - Returns: A function that returns an item's sort key.
+private func multiAttributeGetter(
+    _ attribute: Value,
+    caseSensitive: Bool
+) -> (Value) throws -> [Value] {
+    let paths: [[Value]]
+    switch attribute {
+    case .null:
+        paths = [[]]
+    case let .string(string):
+        paths = string.split(separator: ",", omittingEmptySubsequences: false).map { path in
+            path.split(separator: ".", omittingEmptySubsequences: false).map { component in
+                if !component.isEmpty, component.allSatisfy(\.isASCII), component.allSatisfy(\.isNumber),
+                    let index = Int(component)
+                {
+                    return .int(index)
+                }
+                return .string(String(component))
+            }
+        }
+    default:
+        paths = [[attribute]]
+    }
+
+    return { item in
+        try paths.map { path in
+            var value = item
+            for component in path {
+                if value == .undefined {
+                    throw JinjaError.runtime("Cannot read \(component) of an undefined value")
+                }
+                value = try resolveAttributeValue(value, attribute: component)
+            }
+            if !caseSensitive, case let .string(string) = value {
+                return .string(string.lowercased())
+            }
+            return value
+        }
+    }
+}
+
+/// Orders two values as Python's `<` does for sort keys.
+///
+/// Lists compare element by element:
+/// the first pair of elements that aren't equal decides the order,
+/// and otherwise the shorter list comes first.
+/// Equal values, including two `none` or two undefined values, are equal
+/// without an ordering comparison.
+///
+/// - Parameters:
+///   - lhs: The left-hand value.
+///   - rhs: The right-hand value.
+/// - Returns: A negative value if `lhs` precedes `rhs`,
+///   zero if they are equal,
+///   and a positive value if `lhs` follows `rhs`.
+/// - Throws: An error if Python can't order the first pair of values that differ.
+private func pythonOrder(_ lhs: Value, _ rhs: Value) throws -> Int {
+    if case let .array(left) = lhs, case let .array(right) = rhs {
+        for (a, b) in zip(left, right) where !a.isEquivalent(to: b) {
+            return try pythonOrder(a, b)
+        }
+        return left.count < right.count ? -1 : left.count > right.count ? 1 : 0
+    }
+    if lhs.isEquivalent(to: rhs) { return 0 }
+    return try lhs.compare(to: rhs)
 }
 
 /// Compares two values for ordering.
