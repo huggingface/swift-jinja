@@ -289,11 +289,6 @@ def _(case, jr, sr, cls):
     return cls == "a" and "|title" in T(case)
 
 
-@rule("split-ws", "str.split() without arguments splits only on some whitespace", "harness:str-methods")
-def _(case, jr, sr, cls):
-    return cls == "a" and ".split()" in T(case)
-
-
 @rule("cased-test", "`'' is lower` / `is upper` are true for strings without cased characters", "new (minor)")
 def _(case, jr, sr, cls):
     return cls in ("a", "b") and re.search(r"is (not )?(lower|upper)\b", T(case)) is not None
@@ -433,8 +428,3 @@ def _(case, jr, sr, cls):
 @rule("loop-set-scope", "a `set` in a loop body keeps its value in the next iteration; Jinja2 starts each iteration with the outer value", "harness:loop-other")
 def _(case, jr, sr, cls):
     return re.search(r"\{%-?\s*for\b(?:(?!\{%-?\s*endfor).)*?\{%-?\s*set\s+(\w+)\s*=(?:(?!%\}).)*\b\1\b", T(case), re.S) is not None
-
-
-@rule("split-ws-index", "str.split() without arguments doesn't split on newlines or tabs, so a later part is undefined", "harness:str-methods")
-def _(case, jr, sr, cls):
-    return cls == "b" and re.search(r"\.split\(\s*\)\[\s*-?[1-9]", T(case)) is not None

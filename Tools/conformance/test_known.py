@@ -64,6 +64,13 @@ class FixedDifferenceTests(unittest.TestCase):
         self.assertIsNone(self.label("{{ missing is not iterable }}", "False", "True"))
         self.assertIsNone(self.label("{{ missing is callable }}", "False", "True"))
 
+    def test_whitespace_split_is_fixed(self):
+        self.assertIsNone(self.label("{{ s.split() }}", "['a', 'b']", "['a\\u3000b']",
+                                     context={"s": "a\u3000b"}))
+        self.assertIsNone(self.label("{{ s.split()[1] }}", "b",
+                                     'JinjaError: runtime("Index out of range")',
+                                     context={"s": "a\nb"}, cls="b"))
+
     def test_non_namespace_assignment_remains_labeled(self):
         case = {"template": "{% set x = {} %}{% set x.a = 1 %}{{ x.a }}",
                 "context": {}, "mode": "default", "options": {}}

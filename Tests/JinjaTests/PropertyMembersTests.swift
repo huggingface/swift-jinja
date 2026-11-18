@@ -317,6 +317,22 @@ struct PropertyMembersTests {
         #expect(splitResult == expected)
     }
 
+    @Test(
+        "String split without separator splits on Python whitespace",
+        arguments: [
+            ("{{ s.split() }}", "['a', 'b', 'c', 'd', 'e', 'f', 'g\\u200bh']"),
+            ("{{ ('\u{2028}' ~ '\u{2028}').split() }}", "[]"),
+            ("{{ s.split(none, 2) }}", "['a', 'b', 'c\\x85d\\x1ce\\xa0f\\u3000g\\u200bh ']"),
+            ("{{ s.split(maxsplit=0) }}", "['a b\\tc\\x85d\\x1ce\\xa0f\\u3000g\\u200bh ']"),
+        ]
+    )
+    func stringSplitOnPythonWhitespace(template: String, expected: String) throws {
+        let context: [String: Value] = [
+            "s": .string("\u{2028} a b\tc\u{85}d\u{1C}e\u{A0}f\u{3000}g\u{200B}h ")
+        ]
+        #expect(try Template(template).render(context) == expected)
+    }
+
     @Test("String split with separator")
     func stringSplitWithSeparator() throws {
         let value = Value.string("a,b,c,d")

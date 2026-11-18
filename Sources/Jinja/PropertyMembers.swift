@@ -395,9 +395,35 @@ private func split(string: String, separator: String?, limit: Int?) -> [String] 
             return string.components(separatedBy: separator)
         }
     } else {
-        // Split on whitespace
-        return string.split(separator: " ").map(String.init)
+        return splitOnWhitespace(string: string, limit: limit)
     }
+}
+
+/// Splits a string on runs of whitespace the way Python's `str.split()` does.
+///
+/// Whitespace is every scalar for which Python's `str.isspace()` is true.
+/// Leading and trailing whitespace produce no empty components.
+/// After `limit` splits, the remainder keeps its trailing whitespace.
+private func splitOnWhitespace(string: String, limit: Int?) -> [String] {
+    let scalars = string.unicodeScalars
+    var components: [String] = []
+    var index = scalars.startIndex
+    while true {
+        while index < scalars.endIndex, scalars[index].isPythonWhitespace {
+            index = scalars.index(after: index)
+        }
+        guard index < scalars.endIndex else { break }
+        if let limit, components.count == limit {
+            components.append(String(String.UnicodeScalarView(scalars[index...])))
+            break
+        }
+        let start = index
+        while index < scalars.endIndex, !scalars[index].isPythonWhitespace {
+            index = scalars.index(after: index)
+        }
+        components.append(String(String.UnicodeScalarView(scalars[start ..< index])))
+    }
+    return components
 }
 
 /// Formats a string the way Python's `str.format` does.
