@@ -360,17 +360,6 @@ def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
-@rule("undefined-tests", "undefined values are not iterable in swift-jinja", "new (minor)")
-def _(case, jr, sr, cls):
-    if cls != "a":
-        return False
-    test = re.search(r"is (not )?iterable\b", T(case))
-    if test is None:
-        return False
-    expected = ("False", "True") if test[1] else ("True", "False")
-    return (JO(jr).strip(), SO(sr).strip()) == expected
-
-
 @rule("bigint-div", "int / int converts to Double before dividing (precision for ints above 2**53)", "new (minor)")
 def _(case, jr, sr, cls):
     return cls == "a" and "/" in T(case) and any(isinstance(v, int) and not isinstance(v, bool) and abs(v) > 2 ** 53 for v in case["context"].values())

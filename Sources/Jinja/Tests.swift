@@ -117,7 +117,9 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isIterable
+        // Jinja2's `Undefined` defines `__iter__`, which yields nothing,
+        // so an undefined value is iterable.
+        return input.isIterable || input == .undefined
     }
 
     // MARK: - Numeric Tests

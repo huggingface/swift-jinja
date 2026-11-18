@@ -173,6 +173,15 @@ struct TestsTests {
         #expect(result == false)
     }
 
+    @Test("iterable test with undefined value")
+    func iterableWithUndefinedValue() throws {
+        #expect(try Tests.iterable([.undefined], kwargs: [:], env: env) == true)
+        #expect(try Tests.iterable([.null], kwargs: [:], env: env) == false)
+
+        let template = try Template("{{ missing is iterable }} {{ missing is not iterable }}")
+        #expect(try template.render([:]) == "True False")
+    }
+
     @Test("iterable test with empty values")
     func iterableWithEmptyValues() throws {
         #expect(throws: JinjaError.self) {
