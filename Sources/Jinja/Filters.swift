@@ -1217,8 +1217,7 @@ public enum Filters {
             defaults: [:]
         )
 
-        let str = softString(args.first)
-        return .string(str.prefix(1).uppercased() + str.dropFirst().lowercased())
+        return .string(PropertyMembers.capitalize(softString(args.first)))
     }
 
     /// Centers a string within a specified width.

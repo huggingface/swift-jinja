@@ -92,6 +92,42 @@ struct PropertyMembersTests {
         #expect(result == "\(title)|\(lower)|\(upper)")
     }
 
+    @Test(
+        "String capitalize method matches Python",
+        arguments: [
+            ("hello WORLD", "Hello world"),
+            ("user", "User"),
+            ("", ""),
+            ("1abc", "1abc"),
+            ("éCOLE", "École"),
+            ("ǆUNG", "ǅung"),
+            ("ßabc", "Ssabc"),
+            ("ﬃABC", "Ffiabc"),
+            ("ΑΣ ΑΣ", "Ας ας"),
+            ("a\u{0301}B", "A\u{0301}b"),
+            ("ŉ", "ʼN"),
+        ]
+    )
+    func stringCapitalize(input: String, expected: String) throws {
+        let result = try Template("{{ s.capitalize() }}|{{ s | capitalize }}")
+            .render(["s": .string(input)])
+        #expect(result == "\(expected)|\(expected)")
+    }
+
+    @Test("Chat template calling capitalize on the role")
+    func chatTemplateCapitalizesRole() throws {
+        let template = try Template(
+            "{% for message in messages %}{{ message['role'].capitalize() }}: {{ message['content'] }}\n{% endfor %}"
+        )
+        let result = try template.render([
+            "messages": [
+                ["role": "user", "content": "Hi"],
+                ["role": "assistant", "content": "Hello"],
+            ]
+        ])
+        #expect(result == "User: Hi\nAssistant: Hello\n")
+    }
+
     @Test("String strip method")
     func stringStrip() throws {
         let value = Value.string("  hello world  ")

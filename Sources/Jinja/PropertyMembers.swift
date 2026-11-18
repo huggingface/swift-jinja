@@ -43,10 +43,23 @@ enum PropertyMembers {
         return before?.properties.isCased == true && after?.properties.isCased != true ? "ς" : "σ"
     }
 
+    /// Python's `str.capitalize`: title-cases the first scalar and lowercases the rest.
+    static func capitalize(_ str: String) -> String {
+        let scalars = Array(str.unicodeScalars)
+        guard let first = scalars.first else { return "" }
+        return first.properties.titlecaseMapping
+            + scalars.indices.dropFirst().map { lowercaseMapping(scalars, at: $0) }.joined()
+    }
+
     private static func evaluateStringProperty(_ str: String, _ propertyName: String) throws
         -> Value
     {
         switch propertyName {
+        case "capitalize":
+            return .function { args, kwargs, _ in
+                _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
+                return .string(capitalize(str))
+            }
         case "upper":
             return .function { args, kwargs, _ in
                 _ = try resolveCallArguments(args: args, kwargs: kwargs, parameters: [])
