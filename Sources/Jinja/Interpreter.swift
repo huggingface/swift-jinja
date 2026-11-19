@@ -531,8 +531,9 @@ enum Interpreter {
                 let evaluatedValue = try evaluateExpression(valueExpr, env: env)
                 try assign(target: target, value: evaluatedValue, env: env)
             } else {
+                // Like Jinja2, assignments in the block body stay local to the block.
                 var bodyBuffer = ""
-                try interpret(body, env: env, into: &bodyBuffer)
+                try interpret(body, env: Environment(parent: env), into: &bodyBuffer)
                 let renderedBody = bodyBuffer
                 let valueToAssign = Value.string(renderedBody)
                 try assign(target: target, value: valueToAssign, env: env)
@@ -606,8 +607,9 @@ enum Interpreter {
             }
 
         case let .filter(filterExpr, body):
+            // Like Jinja2, assignments in the block body stay local to the block.
             var bodyBuffer = ""
-            try interpret(body, env: env, into: &bodyBuffer)
+            try interpret(body, env: Environment(parent: env), into: &bodyBuffer)
             let renderedBody = bodyBuffer
 
             if case let .filter(_, name, args, _) = filterExpr {
@@ -629,7 +631,9 @@ enum Interpreter {
             }
 
         case let .generation(body):
-            try interpret(body, env: env, into: &buffer)
+            // transformers renders the body as a call block,
+            // so assignments in the body stay local to it.
+            try interpret(body, env: Environment(parent: env), into: &buffer)
 
         case .break:
             throw ControlFlow.break
@@ -645,8 +649,9 @@ enum Interpreter {
                 let evaluatedValue = try evaluateExpression(valueExpr, env: env)
                 try assign(target: target, value: evaluatedValue, env: env)
             } else {
+                // Like Jinja2, assignments in the block body stay local to the block.
                 var bodyBuffer = ""
-                try interpret(body, env: env, into: &bodyBuffer)
+                try interpret(body, env: Environment(parent: env), into: &bodyBuffer)
                 let renderedBody = bodyBuffer
                 let valueToAssign = Value.string(renderedBody)
                 try assign(target: target, value: valueToAssign, env: env)

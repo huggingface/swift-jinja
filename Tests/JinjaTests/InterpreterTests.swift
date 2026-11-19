@@ -345,6 +345,31 @@ struct InterpreterTests {
         #expect(result == expected)
     }
 
+    /// Jinja2 keeps assignments in a block body local to the block,
+    /// but a namespace attribute that the body sets stays set.
+    /// Expected strings were rendered with jinja2 3.1.6.
+    @Test(
+        "Assignments in a block body stay local to the block",
+        arguments: [
+            ("{% set blk %}{% set v = 1 %}{% set ns.a = 2 %}{% endset %}{{ v is defined }} {{ ns.a }}", "False 2"),
+            (
+                "{% filter upper %}{% set v = 1 %}{% set ns.a = 3 %}{% endfilter %}"
+                    + "{{ v is defined }} {{ ns.a }}",
+                "False 3"
+            ),
+            (
+                "{% generation %}{% set v = 1 %}{% set ns.a = 4 %}{% endgeneration %}"
+                    + "{{ v is defined }} {{ ns.a }}",
+                "False 4"
+            ),
+            ("{% set v = 5 %}{% filter upper %}{{ v }}{% set v = 6 %}{{ v }}{% endfilter %}{{ v }}", "565"),
+        ]
+    )
+    func blockBodyAssignmentsStayLocal(template: String, expected: String) throws {
+        let source = "{% set ns = namespace(a=1) %}" + template
+        #expect(try Template(source).render([:]) == expected)
+    }
+
     @Test("Filtered for loop skips the else block when an item passes the test")
     func filteredForLoopNoElse() throws {
         let template = try Template("{% for x in items if x > 1 %}{{ x }}{% else %}empty{% endfor %}")
