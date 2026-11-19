@@ -21,6 +21,14 @@ struct MacroTests {
         #expect(macro.body == [.text("Hello")])
     }
 
+    /// Jinja2 prints a macro with its `repr()`.
+    /// Expected strings were rendered with jinja2 3.1.6.
+    @Test("Printing a macro writes its Python representation")
+    func printMacro() throws {
+        let template = try Template("{% macro m1(p='') %}{% endmacro %}{{ m1 }} {{ [m1] }}")
+        #expect(try template.render([:]) == "<Macro 'm1'> [<Macro 'm1'>]")
+    }
+
     @Test("Initialization with empty defaults and body")
     func emptyDefaultsAndBody() {
         let macro = Macro(

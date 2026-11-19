@@ -536,10 +536,9 @@ extension Value: CustomStringConvertible {
         case .string(let s): return s
         case .double(let n): return String(n)
         case .int(let i): return String(i)
-        case .boolean, .null, .array, .object: return pythonRepr
+        case .boolean, .null, .array, .object, .macro: return pythonRepr
         case .undefined: return ""
         case .function: return "[Function]"
-        case .macro(let m): return "[Macro \(m.name)]"
         }
     }
 
