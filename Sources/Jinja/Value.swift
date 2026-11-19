@@ -343,7 +343,9 @@ public enum Value: Sendable {
         case let (.int(a), .int(b)):
             guard b != 0 else { throw JinjaError.runtime("Modulo by zero") }
             // `Int.min % -1` overflows in Swift; the remainder is 0.
-            return .int(a.remainderReportingOverflow(dividingBy: b).partialValue)
+            let remainder = a.remainderReportingOverflow(dividingBy: b).partialValue
+            // Python's `%` takes the sign of the divisor; Swift's takes the sign of the dividend.
+            return .int(remainder != 0 && (remainder < 0) != (b < 0) ? remainder + b : remainder)
         default:
             throw JinjaError.runtime("Modulo operation requires integers (\(self) and \(other))")
         }
@@ -357,8 +359,10 @@ public enum Value: Sendable {
         switch (self, other) {
         case let (.int(a), .int(b)):
             guard b != 0 else { throw JinjaError.runtime("Division by zero") }
-            // Integer division in Swift already floors
-            return .int(try checkedInt(a.dividedReportingOverflow(by: b), "\(a) // \(b)"))
+            // Swift's integer division truncates toward zero; Python's `//` floors.
+            let quotient = try checkedInt(a.dividedReportingOverflow(by: b), "\(a) // \(b)")
+            let flooring = a % b != 0 && (a < 0) != (b < 0)
+            return .int(flooring ? quotient - 1 : quotient)
         case let (.double(a), .double(b)):
             guard b != 0 else { throw JinjaError.runtime("Division by zero") }
             return .int(try truncatedInt(floor(a / b)))

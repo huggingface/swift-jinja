@@ -650,6 +650,12 @@ struct ValueTests {
     @Test("Modulo operation")
     func moduloOperation() throws {
         #expect(try Value.int(10).modulo(by: .int(3)) == .int(1))
+        // Python's `%` takes the sign of the divisor.
+        #expect(try Value.int(-7).modulo(by: .int(2)) == .int(1))
+        #expect(try Value.int(7).modulo(by: .int(-2)) == .int(-1))
+        #expect(try Value.int(-7).modulo(by: .int(-2)) == .int(-1))
+        #expect(try Value.int(-6).modulo(by: .int(2)) == .int(0))
+        #expect(try Value.int(.min).modulo(by: .int(-1)) == .int(0))
         #expect(throws: JinjaError.self) {
             _ = try Value.int(10).modulo(by: .int(0))
         }
@@ -661,6 +667,12 @@ struct ValueTests {
     @Test("Floor divide operation")
     func floorDivideOperation() throws {
         #expect(try Value.int(7).floorDivide(by: .int(2)) == .int(3))
+        // Python's `//` floors toward negative infinity.
+        #expect(try Value.int(-1).floorDivide(by: .int(2)) == .int(-1))
+        #expect(try Value.int(-7).floorDivide(by: .int(2)) == .int(-4))
+        #expect(try Value.int(7).floorDivide(by: .int(-2)) == .int(-4))
+        #expect(try Value.int(-7).floorDivide(by: .int(-2)) == .int(3))
+        #expect(try Value.int(-6).floorDivide(by: .int(2)) == .int(-3))
         #expect(try Value.double(7.5).floorDivide(by: .double(2.0)) == .int(3))
         #expect(throws: JinjaError.self) {
             _ = try Value.int(1).floorDivide(by: .int(0))

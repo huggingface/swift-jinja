@@ -19,6 +19,20 @@ struct InterpreterTests {
             #expect(result == .int(2))
         }
 
+        /// Expected strings were rendered with jinja2 3.1.6.
+        @Test(
+            "Floor division and modulo with negative integers floor",
+            arguments: [
+                ("{{ -1 // 2 }}", "-1"),
+                ("{{ -7 // 2 }} {{ 7 // -2 }} {{ -7 // -2 }}", "-4 -4 3"),
+                ("{{ -7 % 2 }} {{ 7 % -2 }} {{ -7 % -2 }}", "1 -1 -1"),
+                ("{% if x // 2 %}T{% elif missing|tojson %}E{% endif %}", "T"),
+            ]
+        )
+        func floorDivisionNegative(template: String, expected: String) throws {
+            #expect(try Template(template).render(["x": -1]) == expected)
+        }
+
         @Test("Floor division by zero throws error")
         func floorDivisionByZero() throws {
             #expect(throws: JinjaError.self) {

@@ -248,11 +248,6 @@ def _(case, jr, sr, cls):
     return cls == "a" and "//" in T(case) and re.search(r"\.0\b", JO(jr) or "") is not None
 
 
-@rule("neg-mod", "`%` and `//` with negative operands truncate instead of flooring", "harness:operators")
-def _(case, jr, sr, cls):
-    return cls == "a" and re.search(r"%|//", T(case)) is not None
-
-
 @rule("str-iter-filters", "list filters on a string do not iterate its characters (sort, batch, slice, map, groupby, select, unique)", "new")
 def _(case, jr, sr, cls):
     return cls == "a" and SO(sr) in ("[]", "") and re.search(r"(\'[^']*\'|\"[^\"]*\"|s\d|_token|ch\d+)\|(sort|batch|slice|map|groupby|select|reject|unique|reverse)", T(case)) is not None
