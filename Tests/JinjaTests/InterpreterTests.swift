@@ -329,6 +329,22 @@ struct InterpreterTests {
         #expect(result == "empty")
     }
 
+    /// Jinja2 runs the `else` block unless an iteration reaches the end of the body.
+    /// Expected strings were rendered with jinja2 3.1.6.
+    @Test(
+        "For loop runs the else block when no iteration completes",
+        arguments: [
+            ("{% for x in items %}{% break %}{% else %}A{% endfor %}", "A"),
+            ("{% for x in items %}{% continue %}{% else %}B{% endfor %}", "B"),
+            ("{% for x in items %}{% if x == 1 %}{% continue %}{% endif %}{% else %}C{% endfor %}", ""),
+            ("{% for x in items %}{% if x == 2 %}{% break %}{% endif %}{{ x }}{% else %}D{% endfor %}", "1"),
+        ]
+    )
+    func forLoopElseAfterLoopControl(template: String, expected: String) throws {
+        let result = try Template(template).render(["items": .array([.int(1), .int(2)])])
+        #expect(result == expected)
+    }
+
     @Test("Filtered for loop skips the else block when an item passes the test")
     func filteredForLoopNoElse() throws {
         let template = try Template("{% for x in items if x > 1 %}{{ x }}{% else %}empty{% endfor %}")

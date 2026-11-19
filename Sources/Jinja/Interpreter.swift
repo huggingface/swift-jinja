@@ -485,6 +485,9 @@ enum Interpreter {
             let childEnv = Environment(parent: env)
             var index = 0
             var previtem = Value.undefined
+            // Like Jinja2, the `else` block runs unless an iteration reaches the end of the body,
+            // so an iteration that ends with `break` or `continue` doesn't count.
+            var completedIteration = false
             for item in items {
                 if testEachItem, let test = test {
                     try bindLoopVariables(loopVar, to: item, in: testEnv)
@@ -501,6 +504,7 @@ enum Interpreter {
                 previtem = item
 
                 var shouldBreak = false
+                var shouldContinue = false
                 for node in body {
                     do {
                         try interpretNode(node, env: childEnv, into: &buffer)
@@ -508,13 +512,15 @@ enum Interpreter {
                         shouldBreak = true
                         break
                     } catch ControlFlow.continue {
+                        shouldContinue = true
                         break  // Break from inner loop (current iteration)
                     }
                 }
                 if shouldBreak { break }
+                if !shouldContinue { completedIteration = true }
             }
 
-            if index == 0 {
+            if !completedIteration {
                 for node in elseBody {
                     try interpretNode(node, env: env, into: &buffer)
                 }
