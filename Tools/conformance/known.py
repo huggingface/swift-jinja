@@ -125,9 +125,14 @@ def _(case, jr, sr, cls):
     return cls == "a" and "Markup(" in (JO(jr) or "")
 
 
-@rule("iterator-subscript", "subscripting the iterator that |items returns gives Undefined in Jinja2", "accepted artifact")
+GENERATOR_SUBSCRIPT = r"\|(?:items|slice\([^()]*\)|batch\([^()]*\))\)\["
+
+
+@rule("iterator-subscript", "subscripting the generator that |items, |slice, or |batch returns gives Undefined in Jinja2; in an if or elif condition, swift-jinja takes a branch that Jinja2 skips", "accepted artifact")
 def _(case, jr, sr, cls):
-    return cls == "a" and re.search(r"\|items\)\[", T(case)) is not None
+    if cls == "a":
+        return re.search(GENERATOR_SUBSCRIPT, T(case)) is not None
+    return cls == "b" and re.search(r"\{%-?\s*(?:el)?if\b[^%]*" + GENERATOR_SUBSCRIPT, T(case)) is not None
 
 
 @rule("newline-norm", "\\r and \\r\\n in template text are not normalized to \\n; lstrip_blocks rewrites \\r\\n, U+2028, U+2029, U+0085, \\v, \\f to \\n", "harness:ws-preprocess (CRLF cases); new for lone \\r and Unicode line separators")
@@ -360,17 +365,6 @@ def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"Cannot compare values of different types \((.* and )?\)", SE(sr)) is not None and re.search(r"is\s+(?:not\s+)?in\b|[\'\"]in[\'\"]", T(case)) is not None
 
 
-@rule("undefined-tests", "undefined values are not iterable in swift-jinja", "new (minor)")
-def _(case, jr, sr, cls):
-    if cls != "a":
-        return False
-    test = re.search(r"is (not )?iterable\b", T(case))
-    if test is None:
-        return False
-    expected = ("False", "True") if test[1] else ("True", "False")
-    return (JO(jr).strip(), SO(sr).strip()) == expected
-
-
 @rule("bigint-div", "int / int converts to Double before dividing (precision for ints above 2**53)", "new (minor)")
 def _(case, jr, sr, cls):
     return cls == "a" and "/" in T(case) and any(isinstance(v, int) and not isinstance(v, bool) and abs(v) > 2 ** 53 for v in case["context"].values())
@@ -431,11 +425,6 @@ def _(case, jr, sr, cls):
 # Causes that the fuzzer found at the batch for 3.0.0 (#95, #96, #97, #98).
 # Each predates the batch.  Most change a value in a condition,
 # so swift-jinja takes another branch and fails in it (class "b").
-@rule("undefined-iterable", "a missing attribute or item is not `iterable`; Jinja2's Undefined is iterable", "new (minor)")
-def _(case, jr, sr, cls):
-    return cls in ("a", "b", "c") and re.search(r"(?:\.\w+|\])\s+is\s+(?:not\s+)?iterable\b", T(case)) is not None
-
-
 @rule("tuple-subscript", "a subscript with a tuple key (`x[a, b]`) fails to parse", "new (minor)")
 def _(case, jr, sr, cls):
     return cls == "b" and re.search(r"Expected \\?'\]\\?' after index\. Got \\?',\\?' \(comma\)", SE(sr)) is not None

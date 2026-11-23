@@ -105,6 +105,8 @@ public enum Tests {
     }
 
     /// Tests if the input is iterable.
+    ///
+    /// An undefined value is iterable, as Jinja2's `Undefined` is.
     @Sendable public static func iterable(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -117,12 +119,14 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isIterable
+        return input.isIterable || input.isUndefined
     }
 
     // MARK: - Numeric Tests
 
     /// Tests if a number is even.
+    ///
+    /// Booleans are the integers 1 and 0, as they are in Python.
     @Sendable public static func even(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -135,7 +139,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        switch input {
+        switch integerForBoolean(input) {
         case let .int(num):
             return num % 2 == 0
         case let .double(num):
@@ -146,6 +150,8 @@ public enum Tests {
     }
 
     /// Tests if a number is odd.
+    ///
+    /// Booleans are the integers 1 and 0, as they are in Python.
     @Sendable public static func odd(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -158,7 +164,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        switch input {
+        switch integerForBoolean(input) {
         case let .int(num):
             return num % 2 != 0
         case let .double(num):
@@ -170,6 +176,8 @@ public enum Tests {
     }
 
     /// Tests if a number is divisible by another number.
+    ///
+    /// Booleans are the integers 1 and 0, as they are in Python.
     @Sendable public static func divisibleby(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -184,7 +192,7 @@ public enum Tests {
         guard let value = arguments["value"], let divisor = arguments["divisor"] else {
             return false
         }
-        switch (value, divisor) {
+        switch (integerForBoolean(value), integerForBoolean(divisor)) {
         case let (.int(a), .int(b)):
             // `Int.min % -1` overflows in Swift; the remainder is 0.
             return b != 0 && a.remainderReportingOverflow(dividingBy: b).partialValue == 0
@@ -197,6 +205,12 @@ public enum Tests {
         default:
             return false
         }
+    }
+
+    /// Returns a Boolean as the integer 1 or 0, and other values unchanged.
+    private static func integerForBoolean(_ value: Value) -> Value {
+        if case let .boolean(flag) = value { return .int(flag ? 1 : 0) }
+        return value
     }
 
     // MARK: - Comparison Tests

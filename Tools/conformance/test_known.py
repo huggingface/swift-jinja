@@ -57,12 +57,34 @@ class FixedDifferenceTests(unittest.TestCase):
             with self.subTest(expression=expression):
                 self.assertIsNone(self.label(template, jinja, swift))
 
-    def test_undefined_iterability_difference_remains_labeled(self):
-        self.assertEqual(self.label("{{ missing is iterable }}", "True", "False"),
-                         "undefined-tests")
-        self.assertEqual(self.label("{{ missing is not iterable }}", "False", "True"),
-                         "undefined-tests")
+    def test_undefined_iterability_is_fixed(self):
+        self.assertIsNone(self.label("{{ missing is iterable }}", "True", "False"))
+        self.assertIsNone(self.label("{{ missing is not iterable }}", "False", "True"))
+        self.assertIsNone(self.label("{{ d.missing is iterable }}", "True", "False"))
         self.assertIsNone(self.label("{{ missing is callable }}", "False", "True"))
+
+    def test_generator_subscripts_are_labeled(self):
+        self.assertEqual(self.label("{{ (l1|slice(1))[0] }}", "", "[]", {"l1": []}),
+                         "iterator-subscript")
+        self.assertEqual(self.label("{{ (l1|batch(1))[0] }}", "", "[1]", {"l1": [1, 2]}),
+                         "iterator-subscript")
+        self.assertEqual(self.label("{{ (d|items)[0] }}", "", "('a', 1)", {"d": {"a": 1}}),
+                         "iterator-subscript")
+        error = 'JinjaError: runtime("Cannot call non-function value")'
+        for template in [
+            "a b{% if ({\"Alpha\": tools}|items)[0] %}{% set ns1 = namespace(items=[][0].keys()|list) -%}{%- endif %} \n",
+            "{% if false %}{% elif not (d1|items)[1] %}{% else %}{{ m2(1, 2) }}{%- endif %}",
+            "{%- if (l1|slice(2))[0] %}{{ [][0].keys() }}{% endif %}",
+        ]:
+            with self.subTest(template=template):
+                self.assertEqual(self.label(template, "", error, cls="b"), "iterator-subscript")
+
+    def test_other_slice_and_batch_differences_are_unlabeled(self):
+        self.assertIsNone(self.label("{{ [1, 2, 3]|slice(2)|list }}", "[[1, 2], [3]]", "[[1, 2, 3]]"))
+        self.assertIsNone(self.label("{{ [1, 2, 3]|batch(2)|list }}", "[[1, 2], [3]]", "[[1], [2], [3]]"))
+        self.assertIsNone(self.label("{{ (l1|slice(1)|list)[0] }}", "[]", "", {"l1": []}))
+        error = 'JinjaError: runtime("Cannot call non-function value")'
+        self.assertIsNone(self.label("{{ (l1|slice(1))[0] }}{{ [][0].keys() }}", "", error, cls="b"))
 
     def test_non_namespace_assignment_remains_labeled(self):
         case = {"template": "{% set x = {} %}{% set x.a = 1 %}{{ x.a }}",

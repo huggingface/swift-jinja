@@ -173,6 +173,12 @@ struct TestsTests {
         #expect(result == false)
     }
 
+    @Test("iterable test with undefined value")
+    func iterableWithUndefinedValue() throws {
+        let result = try Tests.iterable([.undefined], kwargs: [:], env: env)
+        #expect(result == true)
+    }
+
     @Test("iterable test with empty values")
     func iterableWithEmptyValues() throws {
         #expect(throws: JinjaError.self) {
@@ -284,6 +290,18 @@ struct TestsTests {
 
         let result3 = try Tests.odd([.double(0.1)], kwargs: [:], env: env)
         #expect(result3 == false)
+    }
+
+    @Test("even, odd, and divisibleby tests treat Booleans as 1 and 0")
+    func numericTestsWithBooleans() throws {
+        #expect(try Tests.odd([.boolean(true)], kwargs: [:], env: env))
+        #expect(try !Tests.odd([.boolean(false)], kwargs: [:], env: env))
+        #expect(try Tests.even([.boolean(false)], kwargs: [:], env: env))
+        #expect(try !Tests.even([.boolean(true)], kwargs: [:], env: env))
+        #expect(try Tests.divisibleby([.boolean(true), .int(1)], kwargs: [:], env: env))
+        #expect(try Tests.divisibleby([.int(4), .boolean(true)], kwargs: [:], env: env))
+        #expect(try Tests.divisibleby([.boolean(false), .double(2.0)], kwargs: [:], env: env))
+        #expect(try !Tests.divisibleby([.int(4), .boolean(false)], kwargs: [:], env: env))
     }
 
     @Test("divisibleby test with divisible integers")
