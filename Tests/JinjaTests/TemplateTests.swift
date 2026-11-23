@@ -12,6 +12,14 @@ struct TemplateTests {
         #expect(result == "True|True|done")
     }
 
+    @Test("The reject filter treats true as odd")
+    func rejectOddBoolean() throws {
+        let result = try Template(
+            "{{ l1|reject('odd')|list if li|min is divisibleby 2 else 0 }}|{{ [true, false, 3]|select('even')|list }}"
+        ).render(["l1": [true], "li": [3, 42, 2]])
+        #expect(result == "[]|[False]")
+    }
+
     @Test("Fuzz cases for striptags and indent match Jinja2")
     func striptagsAndIndentFuzzCases() throws {
         let striptags = try Template(#"{{- "<b>&amp;</b>"|striptags }}"#).render([:])

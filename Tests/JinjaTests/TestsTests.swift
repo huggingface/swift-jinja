@@ -292,6 +292,18 @@ struct TestsTests {
         #expect(result3 == false)
     }
 
+    @Test("even, odd, and divisibleby tests treat Booleans as 1 and 0")
+    func numericTestsWithBooleans() throws {
+        #expect(try Tests.odd([.boolean(true)], kwargs: [:], env: env))
+        #expect(try !Tests.odd([.boolean(false)], kwargs: [:], env: env))
+        #expect(try Tests.even([.boolean(false)], kwargs: [:], env: env))
+        #expect(try !Tests.even([.boolean(true)], kwargs: [:], env: env))
+        #expect(try Tests.divisibleby([.boolean(true), .int(1)], kwargs: [:], env: env))
+        #expect(try Tests.divisibleby([.int(4), .boolean(true)], kwargs: [:], env: env))
+        #expect(try Tests.divisibleby([.boolean(false), .double(2.0)], kwargs: [:], env: env))
+        #expect(try !Tests.divisibleby([.int(4), .boolean(false)], kwargs: [:], env: env))
+    }
+
     @Test("divisibleby test with divisible integers")
     func divisiblebyWithDivisibleIntegers() throws {
         let result = try Tests.divisibleby([.int(10), .int(2)], kwargs: [:], env: env)
