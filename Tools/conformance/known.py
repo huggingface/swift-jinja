@@ -125,9 +125,14 @@ def _(case, jr, sr, cls):
     return cls == "a" and "Markup(" in (JO(jr) or "")
 
 
-@rule("iterator-subscript", "subscripting the iterator that |items returns gives Undefined in Jinja2", "accepted artifact")
+GENERATOR_SUBSCRIPT = r"\|(?:items|slice\([^()]*\)|batch\([^()]*\))\)\["
+
+
+@rule("iterator-subscript", "subscripting the generator that |items, |slice, or |batch returns gives Undefined in Jinja2; in an if or elif condition, swift-jinja takes a branch that Jinja2 skips", "accepted artifact")
 def _(case, jr, sr, cls):
-    return cls == "a" and re.search(r"\|items\)\[", T(case)) is not None
+    if cls == "a":
+        return re.search(GENERATOR_SUBSCRIPT, T(case)) is not None
+    return cls == "b" and re.search(r"\{%-?\s*(?:el)?if\b[^%]*" + GENERATOR_SUBSCRIPT, T(case)) is not None
 
 
 @rule("newline-norm", "\\r and \\r\\n in template text are not normalized to \\n; lstrip_blocks rewrites \\r\\n, U+2028, U+2029, U+0085, \\v, \\f to \\n", "harness:ws-preprocess (CRLF cases); new for lone \\r and Unicode line separators")
