@@ -57,11 +57,10 @@ class FixedDifferenceTests(unittest.TestCase):
             with self.subTest(expression=expression):
                 self.assertIsNone(self.label(template, jinja, swift))
 
-    def test_undefined_iterability_difference_remains_labeled(self):
-        self.assertEqual(self.label("{{ missing is iterable }}", "True", "False"),
-                         "undefined-tests")
-        self.assertEqual(self.label("{{ missing is not iterable }}", "False", "True"),
-                         "undefined-tests")
+    def test_undefined_iterability_is_fixed(self):
+        self.assertIsNone(self.label("{{ missing is iterable }}", "True", "False"))
+        self.assertIsNone(self.label("{{ missing is not iterable }}", "False", "True"))
+        self.assertIsNone(self.label("{{ d.missing is iterable }}", "True", "False"))
         self.assertIsNone(self.label("{{ missing is callable }}", "False", "True"))
 
     def test_non_namespace_assignment_remains_labeled(self):

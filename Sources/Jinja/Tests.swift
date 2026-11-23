@@ -105,6 +105,8 @@ public enum Tests {
     }
 
     /// Tests if the input is iterable.
+    ///
+    /// An undefined value is iterable, as Jinja2's `Undefined` is.
     @Sendable public static func iterable(
         _ args: [Value],
         kwargs: [String: Value] = [:],
@@ -117,7 +119,7 @@ public enum Tests {
         )
 
         guard let input = arguments["value"] else { return false }
-        return input.isIterable
+        return input.isIterable || input.isUndefined
     }
 
     // MARK: - Numeric Tests

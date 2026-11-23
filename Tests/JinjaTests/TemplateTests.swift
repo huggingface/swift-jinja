@@ -4,6 +4,14 @@ import Testing
 
 @Suite("Template Tests")
 struct TemplateTests {
+    @Test("Undefined values are iterable")
+    func undefinedIsIterable() throws {
+        let result = try Template(
+            "{{ missing is iterable }}|{{ d.missing is iterable }}|{% if missing is not iterable %}{% for x in 'a' if missing|tojson %}{% endfor %}{% endif %}done"
+        ).render(["d": [:]])
+        #expect(result == "True|True|done")
+    }
+
     @Test("Fuzz cases for striptags and indent match Jinja2")
     func striptagsAndIndentFuzzCases() throws {
         let striptags = try Template(#"{{- "<b>&amp;</b>"|striptags }}"#).render([:])
