@@ -12,6 +12,12 @@ class FixedDifferenceTests(unittest.TestCase):
                            {"ok": True, "output": swift} if cls == "a"
                            else {"ok": False, "error": swift}, cls)
 
+    def matches(self, key, template, jinja, swift, context=None):
+        """Whether one rule matches a class "a" case, whichever rule comes first."""
+        case = {"template": template, "context": context or {}, "mode": "default", "options": {}}
+        rule = next(fn for k, _desc, _origin, fn in known.RULES if k == key)
+        return rule(case, {"ok": True, "output": jinja}, {"ok": True, "output": swift}, "a")
+
     def test_dictionary_list_regression_is_unlabeled(self):
         self.assertIsNone(self.label("{{ {'a': 10}|list }}", "['a']", "[10]"))
         self.assertIsNone(self.label("{{ {'a': 10}|list }}", "['a']",
@@ -85,6 +91,44 @@ class FixedDifferenceTests(unittest.TestCase):
         self.assertIsNone(self.label("{{ (l1|slice(1)|list)[0] }}", "[]", "", {"l1": []}))
         error = 'JinjaError: runtime("Cannot call non-function value")'
         self.assertIsNone(self.label("{{ (l1|slice(1))[0] }}{{ [][0].keys() }}", "", error, cls="b"))
+
+    def test_plus_on_markup_is_labeled(self):
+        for template, jinja, swift in [
+            ('{{ ((eos_token ~ "x").lower() + bos_token|escape) }}',
+             "&lt;/s&gt;x&lt;|begin_of_text|&gt;", "</s>x&lt;|begin_of_text|&gt;"),
+            ('{{ "a<" + "b"|escape }}', "a&lt;b", "a<b"),
+            ('{{ "b"|escape + "a<" }}', "ba&lt;", "ba<"),
+            ('{{ ("b"|e).lower() + "<" }}', "b&lt;", "b<"),
+            ('{% set y = "b"|e %}{{ "<" + y }}', "&lt;b", "<b"),
+            ('{{ "<"|safe + "<" }}', "<&lt;", "<<"),
+            ('{{ "&lt;"|safe + "&lt;" }}', "&lt;&amp;lt;", "&lt;&lt;"),
+        ]:
+            with self.subTest(template=template):
+                self.assertTrue(self.matches("markup-concat", template, jinja, swift))
+
+    def test_other_escape_differences_are_unlabeled(self):
+        for template, jinja, swift in [
+            ("{{ s|escape }}|{{ t }}", "&lt;|&lt;", "&lt;|<"),
+            ("a + b {{ s|escape }}|{{ t }}", "a + b &lt;|&lt;", "a + b &lt;|<"),
+            ('{{ "<"|e + "a" }}', "&lt;a", "&lt;b"),
+            ('{{ "<" + "b" }}|{{ s }}', "<b|&lt;", "<b|<"),
+        ]:
+            with self.subTest(template=template):
+                self.assertFalse(self.matches("markup-concat", template, jinja, swift))
+                self.assertIsNone(self.label(template, jinja, swift))
+
+    def test_counted_tuple_strings_are_labeled(self):
+        context = {"s1": "True", "n2": 10}
+        self.assertEqual(self.label("{{ (s1 ~ (n2,))|count }}", "9", "8", context), "tuple-repr")
+        self.assertEqual(self.label("{{ ((1,)|string ~ (2,)|string)|length }}", "8", "6"), "tuple-repr")
+
+    def test_other_counted_differences_are_unlabeled(self):
+        context = {"s1": "True", "n2": 10}
+        self.assertIsNone(self.label("{{ (s1 ~ (n2,))|count }}", "9", "7", context))
+        self.assertIsNone(self.label("{{ (s1 ~ (n2,))|count }}", "8", "9", context))
+        self.assertIsNone(self.label("{{ (s1 ~ (n2, 1))|count }}", "11", "10", context))
+        self.assertIsNone(self.label("{{ (s1 ~ n2)|count }}", "6", "5", context))
+        self.assertIsNone(self.label("{{ [(n2,)]|count }}", "2", "1", context))
 
     def test_non_namespace_assignment_remains_labeled(self):
         case = {"template": "{% set x = {} %}{% set x.a = 1 %}{{ x.a }}",

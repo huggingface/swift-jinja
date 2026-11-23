@@ -13,6 +13,7 @@ reproducers of one cause group together.
 
 from __future__ import annotations
 
+import html
 import json
 import re
 
@@ -176,16 +177,30 @@ def _(case, jr, sr, cls):
     return "support the format spec" in SE(sr) or "conversion" in SE(sr) and ".format(" in T(case)
 
 
-@rule("tuple-repr", "tuples, dict.items(), range() print as lists", "harness:py-str")
+@rule("tuple-repr", "tuples, dict.items(), range() print as lists; a one-element tuple's string is one character shorter, which changes its |count or |length", "harness:py-str")
 def _(case, jr, sr, cls):
     if cls != "a":
         return False
+    if _tuple_string_length(case, jr, sr):
+        return True
     j = _j(jr)
     j2 = re.sub(r"dict_(items|keys|values)\((.*)\)", r"\2", j)
     j2 = re.sub(r"range\((-?\d+), (-?\d+)(?:, (-?\d+))?\)",
                 lambda m: str(list(range(int(m.group(1)), int(m.group(2)), int(m.group(3) or 1)))), j2)
     j2 = j2.replace(",)", ")").replace("(", "[").replace(")", "]")
     return j2 == _s(sr).replace("(", "[").replace(")", "]") and j != _s(sr)
+
+
+def _tuple_string_length(case, jr, sr):
+    """`(x,)` prints as `[x]`, one character shorter, so a count of the string is lower."""
+    j, s = (_j(jr) or "").strip(), (_s(sr) or "").strip()
+    if not (re.fullmatch(r"\d+", j) and re.fullmatch(r"\d+", s)):
+        return False
+    template = re.sub(STR, "S", T(case))
+    singles = len(re.findall(r",\s*\)", template))
+    return (singles > 0 and re.search(r"~|\|string\b", template) is not None
+            and re.search(r"\|(count|length)\b", template) is not None
+            and 1 <= int(j) - int(s) <= singles)
 
 
 @rule("lenient-undefined", "swift-jinja renders where Jinja2 raises UndefinedError (attribute/item of undefined, missing index)", "harness:strict-undefined")
@@ -337,7 +352,29 @@ def _(case, jr, sr, cls):
 @rule("markup-concat", "escape (and tojson in the default environment) return Markup, and Markup + str escapes the str", "accepted artifact")
 def _(case, jr, sr, cls):
     pat = r"\|(tojson|e|escape|forceescape|safe)\b" if case["mode"] == "default" else r"\|(e|escape|forceescape|safe)\b"
-    return cls == "a" and re.search(pat, T(case)) is not None and re.search(r"&(lt|gt|amp|#39|#34|quot);", JO(jr) or "") is not None and re.search(r"&(lt|gt|amp|#39|#34|quot);", SO(sr) or "") is None
+    if cls != "a" or re.search(pat, T(case)) is None:
+        return False
+    if re.search(ENTITY, JO(jr) or "") is not None and re.search(ENTITY, SO(sr) or "") is None:
+        return True
+    # With `+` on a Markup value, Jinja2 escapes the other operand,
+    # so the outputs differ only in escaping, even when both have entities.
+    return _has_plus(case) and JO(jr) != SO(sr) and _unescape(JO(jr)) == _unescape(SO(sr))
+
+
+ENTITY = r"&(lt|gt|amp|#39|#34|quot);"
+
+
+def _has_plus(case):
+    tags = re.findall(r"\{\{.*?\}\}|\{%.*?%\}", T(case), flags=re.S)
+    return any("+" in re.sub(STR, "", tag) for tag in tags)
+
+
+def _unescape(text):
+    while True:
+        unescaped = html.unescape(text)
+        if unescaped == text:
+            return text
+        text = unescaped
 
 
 @rule("list-compare", "lists (and dicts) cannot be compared, so sort fails on lists of pairs", "harness:operators")
