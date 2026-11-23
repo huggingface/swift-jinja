@@ -117,6 +117,19 @@ class FixedDifferenceTests(unittest.TestCase):
                 self.assertFalse(self.matches("markup-concat", template, jinja, swift))
                 self.assertIsNone(self.label(template, jinja, swift))
 
+    def test_counted_tuple_strings_are_labeled(self):
+        context = {"s1": "True", "n2": 10}
+        self.assertEqual(self.label("{{ (s1 ~ (n2,))|count }}", "9", "8", context), "tuple-repr")
+        self.assertEqual(self.label("{{ ((1,)|string ~ (2,)|string)|length }}", "8", "6"), "tuple-repr")
+
+    def test_other_counted_differences_are_unlabeled(self):
+        context = {"s1": "True", "n2": 10}
+        self.assertIsNone(self.label("{{ (s1 ~ (n2,))|count }}", "9", "7", context))
+        self.assertIsNone(self.label("{{ (s1 ~ (n2,))|count }}", "8", "9", context))
+        self.assertIsNone(self.label("{{ (s1 ~ (n2, 1))|count }}", "11", "10", context))
+        self.assertIsNone(self.label("{{ (s1 ~ n2)|count }}", "6", "5", context))
+        self.assertIsNone(self.label("{{ [(n2,)]|count }}", "2", "1", context))
+
     def test_non_namespace_assignment_remains_labeled(self):
         case = {"template": "{% set x = {} %}{% set x.a = 1 %}{{ x.a }}",
                 "context": {}, "mode": "default", "options": {}}
