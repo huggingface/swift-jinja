@@ -232,8 +232,11 @@ internal func htmlUnescape(_ string: String) -> String {
             index = end
             continue
         }
-        // `[^\t\n\f <&#;]{1,32};?`
-        while end < scalars.count, end - index - 1 < 32, !"\t\n\u{0C} <&#;".unicodeScalars.contains(scalars[end]) {
+        // HTML entity names are ASCII. Swift string keys would also match
+        // canonically equivalent scalars, such as the Kelvin sign for K.
+        while end < scalars.count, end - index - 1 < 32, scalars[end].isASCII,
+            !"\t\n\u{0C} <&#;".unicodeScalars.contains(scalars[end])
+        {
             end += 1
         }
         guard end > index + 1 else {
