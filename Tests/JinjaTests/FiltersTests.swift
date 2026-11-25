@@ -1613,6 +1613,13 @@ struct FiltersTests {
         }
     }
 
+    @Test("striptags matches HTML entity names by code point")
+    func striptagsEntityNames() throws {
+        let template = try Template("{{ text | striptags }}")
+        let output = try template.render(["text": "<b>&Kappa; &\u{212A}appa; &amp\u{212A}</b>"])
+        #expect(output.utf8.elementsEqual("Κ &\u{212A}appa; &\u{212A}".utf8))
+    }
+
     @Test("striptags filter removes comments and stops at an unclosed tag")
     func striptagsFilterCommentsAndUnclosedTags() throws {
         let cases: [(String, String)] = [
